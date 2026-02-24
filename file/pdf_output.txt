@@ -1,0 +1,95 @@
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could get FontBBox from font descriptor because None cannot be parsed as 4 floats
+=== PAGE 1 ===
+Software Requirements Specification (SRS)
+Fitur: Live Chat Multi-Admin (Queue, Claim, & Handover)
+1. Pendahuluan
+Dokumen ini merinci spesifikasi teknis untuk fitur Live Chat yang memungkinkan banyak admin
+melayani pengguna secara real-time. Sistem ini menggunakan metode Queue & Claim untuk
+memastikan efisiensi distribusi pesan dan menghindari tumpang tindih pengerjaan.
+2. Arsitektur Data (Database Schema)
+2.1. Tabel users
+id (Primary Key, UUID/INT)
+name (VARCHAR)
+email (VARCHAR, Unique)
+is_online (BOOLEAN)
+is_blocked (BOOLEAN) - Untuk menangani user spam.
+2.2. Tabel admins
+id (Primary Key, UUID/INT)
+username (VARCHAR)
+role (ENUM: 'super_admin', 'agent')
+status (ENUM: 'online', 'busy', 'offline')
+2.3. Tabel conversations
+id (Primary Key, UUID/INT)
+user_id (Foreign Key -> users.id)
+admin_id (Foreign Key -> admins.id, Nullable)
+status (ENUM: 'pending', 'active', 'closed', 'queued')
+last_message_at (TIMESTAMP)
+2.4. Tabel messages
+id (Primary Key, UUID/INT)
+conversation_id (Foreign Key -> conversations.id)
+sender_id (INT/UUID)
+sender_type (ENUM: 'user', 'admin', 'system')
+
+=== PAGE 2 ===
+message_type (ENUM: 'text', 'image', 'file', 'whisper') - 'whisper' adalah pesan internal
+antar admin.
+content (TEXT)
+created_at (TIMESTAMP)
+3. Alur Sistem (Logic Flow)
+3.1. Inisiasi & Antrean (Queue Management)
+1. User mengirim pesan.
+2. Probabilitas: Semua Admin Sibuk/Offline.
+Jika tidak ada admin online , sistem mengirim pesan otomatis: "Saat ini kami sedang
+offline, silakan tinggalkan pesan."
+Jika admin online tapi mencapai max_active_chats , status conversation menjadi
+queued . User diberitahu posisi antrean mereka.
+3.2. Klaim Chat (Admin Side)
+1. Probabilitas: Double Claim.
+Jika Admin A dan Admin B klik "Ambil" secara bersamaan, sistem menggunakan
+Optimistic Locking. Siapa yang requestnya sampai ke server lebih dulu (milidetik) akan
+menang, admin kedua mendapat notifikasi: "Chat ini sudah diambil oleh Admin A".
+3.3. Interaksi & Probabilitas Lainnya
+Skenario Logika Sistem
+Handover (Oper Kolom admin_id diupdate ke Admin B. Admin A kehilangan akses tulis, Admin B
+Chat) mendapat akses tulis dan melihat seluruh riwayat.
+Whisper Admin A bisa mengirim pesan dengan message_type = 'whisper' . Pesan ini
+(Internal Note) hanya muncul di dashboard Admin (untuk koordinasi) dan tidak terlihat oleh User.
+Admin Terputus Jika heartbeat WebSocket Admin A hilang selama > 2 menit saat chat active ,
+(DC) sistem mengirim notifikasi ke admin lain: "Admin A terputus, apakah ingin mengambil
+alih?".
+User Jika user tidak membalas > 15 menit, sistem mengirim Warning. Jika tetap tidak ada
+Menghilang balasan > 30 menit, status otomatis closed oleh system .
+User Admin memiliki tombol "Block". Jika ditekan, users.is_blocked menjadi true ,
+Spam/Toxic chat otomatis berakhir, dan user tidak bisa memulai chat baru.
+Multitab User Jika user membuka chat di 2 tab browser, WebSocket akan melakukan broadcast ke
+semua tab milik user_id yang sama agar sinkron.
+
+=== PAGE 3 ===
+3.4. Penutupan Chat
+1. Status menjadi closed .
+2. Admin dapat mengisi "Kategori Masalah" (misal: Komplain, Tanya Harga) untuk laporan
+bulanan.
+4. Relasi Antar Tabel (Entity Relationship Diagram)
+1 User -> M Conversations (Satu user bisa punya banyak sesi di waktu berbeda).
+1 Admin -> M Conversations (Satu admin bisa pegang beberapa chat aktif).
+1 Conversation -> M Messages (Pesan diurutkan berdasarkan created_at ).
+5. Rekomendasi Teknologi
+Real-time: Socket.io (Node.js) atau Laravel Reverb.
+Notification: Push Notifications (Firebase Cloud Messaging) jika admin tidak sedang
+membuka tab dashboard.
+Storage: Redis untuk menyimpan temporary state (siapa sedang mengetik/typing
+indicator).
+
