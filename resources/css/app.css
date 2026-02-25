@@ -9,3 +9,42 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* Custom CSS to unify user chat colors with admin panel colors */
+/* Targeted using body[x-data*="chatApp"] to avoid modifying blade files directly and limit scope */
+
+body[x-data*="chatApp"] .bg-blue-100 {
+    background-color: rgba(10, 29, 55, 0.1) !important; /* Light navy for header icon background */
+}
+
+body[x-data*="chatApp"] .text-blue-600 {
+    color: #0a1d37 !important; /* Dark navy for header icon text */
+}
+
+body[x-data*="chatApp"] .bg-blue-50 {
+    background-color: #fef2f2 !important; /* red-50 for system messages */
+}
+
+body[x-data*="chatApp"] .text-blue-800 {
+    color: #991b1b !important; /* red-800 for system messages */
+}
+
+body[x-data*="chatApp"] .border-blue-100 {
+    border-color: #fee2e2 !important; /* red-100 for system messages */
+}
+
+body[x-data*="chatApp"] .bg-blue-600 {
+    background-color: #dc2626 !important; /* red-600 for user message bubbles and send button */
+}
+
+body[x-data*="chatApp"] .focus\:border-blue-500:focus {
+    border-color: #ef4444 !important; /* red-500 for textarea focus border */
+}
+
+body[x-data*="chatApp"] .focus\:ring-blue-200:focus {
+    --tw-ring-color: #fecaca !important; /* red-200 for textarea focus ring */
+}
+
+body[x-data*="chatApp"] .hover\:bg-blue-700:hover {
+    background-color: #b91c1c !important; /* red-700 for send button hover */
+}
