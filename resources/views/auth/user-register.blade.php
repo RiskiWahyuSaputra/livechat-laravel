@@ -4,108 +4,179 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar - LiveChat</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Load Tailwind CSS via Vite -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        body { font-family: 'Inter', sans-serif; }
+        
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+            -webkit-text-fill-color: #0f2a4a !important;
         }
-        .login-card {
-            background: #fff;
-            border-radius: 20px;
-            padding: 48px 40px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+
+        .eye-icon { transition: color 0.15s ease; }
+        .eye-icon:hover { color: #0f2a4a; cursor: pointer; }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.4s ease-out forwards;
+            opacity: 0;
+            transform: translateY(15px);
         }
-        .logo { text-align: center; margin-bottom: 28px; }
-        .logo-icon {
-            width: 56px; height: 56px;
-            background: linear-gradient(135deg, #0ea5e9, #6366f1);
-            border-radius: 16px;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 24px; margin-bottom: 12px;
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(0); }
         }
-        .logo h1 { color: #0f172a; font-size: 22px; font-weight: 700; }
-        .logo p  { color: #64748b; font-size: 13px; margin-top: 4px; }
-        .tabs {
-            display: flex; background: #f1f5f9; border-radius: 10px;
-            padding: 4px; margin-bottom: 28px;
-        }
-        .tab {
-            flex: 1; text-align: center; padding: 8px; border-radius: 8px;
-            font-size: 13px; font-weight: 500; cursor: pointer;
-            text-decoration: none; color: #64748b; transition: all 0.2s;
-        }
-        .tab.active { background: #fff; color: #6366f1; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 16px; }
-        label { display: block; color: #374151; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
-        input[type="email"], input[type="password"], input[type="text"] {
-            width: 100%; padding: 12px 16px; background: #f8fafc;
-            border: 1px solid #e2e8f0; border-radius: 10px; color: #0f172a;
-            font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s;
-        }
-        input:focus { border-color: #6366f1; background: #fff; }
-        .error-text { color: #ef4444; font-size: 12px; margin-top: 5px; }
-        .btn-login {
-            width: 100%; padding: 13px;
-            background: linear-gradient(135deg, #0ea5e9, #6366f1);
-            color: #fff; border: none; border-radius: 10px; font-size: 15px;
-            font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s; margin-top: 8px;
-        }
-        .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
     </style>
 </head>
-<body>
-    <div class="login-card">
-        <div class="logo">
-            <div class="logo-icon">💬</div>
-            <h1>LiveChat</h1>
-            <p>Buat akun untuk mulai chat</p>
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased selection:bg-[#d11f26] selection:text-white flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 overflow-hidden fade-in-up">
+        
+        <!-- Top Colored Border Accent -->
+        <div class="flex h-1.5 w-full">
+            <div class="w-1/2 bg-[#0f2a4a]"></div> <!-- Navy Blue -->
+            <div class="w-1/2 bg-[#d11f26]"></div> <!-- Red -->
         </div>
 
-        <div class="tabs">
-            <a href="{{ route('user.login') }}" class="tab">Masuk</a>
-            <a href="{{ route('user.register') }}" class="tab active">Daftar</a>
+        <div class="px-8 py-10 sm:px-10">
+            <!-- Header & Logo -->
+            <div class="flex flex-col items-center mb-6">
+                <!-- Placeholder untuk Logo Asli -->
+                <div class="h-14 mb-4 flex justify-center items-center relative group">
+                    <!-- Ganti 'images/logo.png' dengan path dan nama file logo Anda -->
+                    <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="max-h-full max-w-[120px] object-contain drop-shadow-sm" onerror="this.outerHTML='<div class=\'text-xs text-slate-400 border border-dashed border-slate-300 rounded p-1.5 text-center\'>Logo<br/>Not Found</div>'">
+                </div>
+
+                <h2 class="text-2xl font-bold tracking-tight text-[#0f2a4a]">Buat Akun Baru</h2>
+                <p class="mt-2 text-[14px] text-slate-500 font-medium">Daftar sekarang untuk mulai mengobrol.</p>
+            </div>
+
+            <!-- Authentic Tabs -->
+            <div class="flex mb-8 border-b border-slate-200">
+                <a href="{{ route('user.login') }}" class="w-1/2 py-3 text-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                    Masuk
+                </a>
+                <a href="{{ route('user.register') }}" class="w-1/2 py-3 text-center text-sm font-semibold text-[#0f2a4a] border-b-2 border-[#d11f26]">
+                    Daftar
+                </a>
+            </div>
+
+            <form method="POST" action="{{ route('user.register') }}" class="space-y-5">
+                @csrf
+                
+                <!-- Name Field -->
+                <div>
+                    <label for="name" class="block text-sm font-semibold leading-6 text-[#0f2a4a]">Nama Lengkap</label>
+                    <div class="mt-1.5">
+                        <input id="name" name="name" type="text" value="{{ old('name') }}" required autofocus
+                            class="block w-full rounded-lg border-0 py-2.5 px-3.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#d11f26] sm:text-sm sm:leading-6 transition-colors duration-200" 
+                            placeholder="Nama kamu">
+                    </div>
+                    @error('name')
+                        <p class="mt-1.5 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Email Field -->
+                <div>
+                    <label for="email" class="block text-sm font-semibold leading-6 text-[#0f2a4a]">Alamat Email</label>
+                    <div class="mt-1.5">
+                        <input id="email" name="email" type="email" autocomplete="email" value="{{ old('email') }}" required
+                            class="block w-full rounded-lg border-0 py-2.5 px-3.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#d11f26] sm:text-sm sm:leading-6 transition-colors duration-200" 
+                            placeholder="email@kamu.com">
+                    </div>
+                    @error('email')
+                        <p class="mt-1.5 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <label for="password" class="block text-sm font-semibold leading-6 text-[#0f2a4a]">Password</label>
+                    <div class="mt-1.5 relative">
+                        <input id="password" name="password" type="password" autocomplete="new-password" required
+                            class="block w-full rounded-lg border-0 py-2.5 pl-3.5 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#d11f26] sm:text-sm sm:leading-6 transition-colors duration-200" 
+                            placeholder="Minimal 6 karakter">
+                            
+                        <!-- Eye Icon -->
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <button type="button" tabindex="-1" class="text-slate-400 hover:text-[#0f2a4a] focus:outline-none transition-colors" onclick="togglePassword('password', 'eyeOpen1', 'eyeClosed1')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5" id="eyeOpen1">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 hidden" id="eyeClosed1">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    @error('password')
+                        <p class="mt-1.5 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Confirm Password Field -->
+                <div>
+                    <label for="password_confirmation" class="block text-sm font-semibold leading-6 text-[#0f2a4a]">Konfirmasi Password</label>
+                    <div class="mt-1.5 relative">
+                        <input id="password_confirmation" name="password_confirmation" type="password" required
+                            class="block w-full rounded-lg border-0 py-2.5 pl-3.5 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#d11f26] sm:text-sm sm:leading-6 transition-colors duration-200" 
+                            placeholder="Ulangi password">
+                            
+                        <!-- Eye Icon -->
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <button type="button" tabindex="-1" class="text-slate-400 hover:text-[#0f2a4a] focus:outline-none transition-colors" onclick="togglePassword('password_confirmation', 'eyeOpen2', 'eyeClosed2')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5" id="eyeOpen2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 hidden" id="eyeClosed2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-4">
+                    <button type="submit" 
+                        class="flex w-full justify-center rounded-lg bg-[#d11f26] px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-[#b01a20] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d11f26] transition-all duration-200">
+                        Buat Akun Sekarang
+                    </button>
+                </div>
+            </form>
+            
         </div>
-
-        <form method="POST" action="{{ route('user.register') }}">
-            @csrf
-            <div class="form-group">
-                <label for="name">Nama Lengkap</label>
-                <input type="text" id="name" name="name" value="{{ old('name') }}"
-                       placeholder="Nama kamu" required autofocus>
-                @error('name')<p class="error-text">{{ $message }}</p>@enderror
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}"
-                       placeholder="email@kamu.com" required>
-                @error('email')<p class="error-text">{{ $message }}</p>@enderror
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password"
-                       placeholder="Minimal 6 karakter" required>
-                @error('password')<p class="error-text">{{ $message }}</p>@enderror
-            </div>
-
-            <div class="form-group">
-                <label for="password_confirmation">Konfirmasi Password</label>
-                <input type="password" id="password_confirmation" name="password_confirmation"
-                       placeholder="Ulangi password" required>
-            </div>
-
-            <button type="submit" class="btn-login">Daftar & Mulai Chat</button>
-        </form>
+        
     </div>
+
+    <!-- Password Visibility Script -->
+    <script>
+        function togglePassword(inputId, openIconId, closedIconId) {
+            const pwd = document.getElementById(inputId);
+            const eyeOpen = document.getElementById(openIconId);
+            const eyeClosed = document.getElementById(closedIconId);
+            
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                eyeOpen.classList.add('hidden');
+                eyeClosed.classList.remove('hidden');
+            } else {
+                pwd.type = 'password';
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
+            }
+        }
+    </script>
 </body>
 </html>
