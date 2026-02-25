@@ -37,8 +37,8 @@
                     <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="w-full h-full object-contain">
                 </div>
                 <div class="hidden xs:block">
-                    <h1 class="font-black text-slate-900 text-sm md:text-base tracking-tighter leading-none">BEST <span class="text-red-600">CORP</span></h1>
-                    <span class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1 block">Support Studio</span>
+                    <h1 class="font-black text-slate-900 text-base md:text-lg tracking-widest leading-none">BEST</h1>
+                    <span class="text-[10px] md:text-[11px] font-bold text-red-600 uppercase tracking-[0.2em] mt-1 block">Helpdesk</span>
                 </div>
             </div>
         </div>
@@ -200,7 +200,6 @@
                     <div class="w-24 h-24 md:w-40 md:h-40 bg-white rounded-[40px] shadow-2xl border border-slate-100 flex items-center justify-center mb-8 relative">
                         <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="w-2/3 h-2/3 object-contain opacity-20 grayscale">
                         <div class="absolute inset-0 flex items-center justify-center">
-                             <svg class="w-12 h-12 text-red-600 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                         </div>
                     </div>
                     <h3 class="text-2xl font-black text-slate-800 mb-2 tracking-tighter uppercase">Support Workspace</h3>
@@ -374,7 +373,7 @@
                 },
 
                 get adminStatusText() {
-                    if (this.adminStatus === 'online') return 'Tersedia';
+                    if (this.adminStatus === 'online') return 'Online';
                     if (this.adminStatus === 'busy') return 'Istirahat';
                     return 'Offline';
                 },
