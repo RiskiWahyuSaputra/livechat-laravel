@@ -8,7 +8,7 @@
     <script>
         window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
     </script>
-    <title>Live Chat - Bantuan</title>
+    <title>Dashboard - Live Chat</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <style>

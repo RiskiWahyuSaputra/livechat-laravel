@@ -109,3 +109,11 @@ body[x-data*="chatApp"] .hover\:bg-blue-700:hover {
     box-shadow: inset 0px 0px 0px 1px rgba(220, 38, 38, 0.2) !important; /* Adjust dark mode shadow to red theme */
 }
 
+.fab-pulse {
+    animation: fab-pulse-animation 2s infinite;
+}
+@keyframes fab-pulse-animation {
+    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}

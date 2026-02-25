@@ -1,11 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth; // Ensure Auth facade is used
 use App\Http\Controllers\Auth\UserAuthController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\UserHomeController; // Added
+use App\Http\Controllers\UserDashboardController; // Changed from UserHomeController
 
 // Halaman utama → redirect ke login user
 Route::get('/', function () {
@@ -25,7 +26,7 @@ Route::middleware('guest')->group(function () {
 
 // Routes yang butuh login user
 Route::middleware('auth')->group(function () {
-    Route::get('/home',             [UserHomeController::class, 'index'])->name('user.home'); // Added
+    Route::get('/home',             [UserDashboardController::class, 'index'])->name('user.home'); // Changed controller
     Route::post('/logout',          [UserAuthController::class, 'logout'])->name('user.logout');
     Route::get('/chat',             [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/send',       [ChatController::class, 'sendMessage'])->name('chat.send');
