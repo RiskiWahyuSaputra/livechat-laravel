@@ -97,6 +97,7 @@ class ChatController extends Controller
             conversationId: $request->conversation_id,
             senderId:       $user->id,
             senderType:     'user',
+            senderRole:     'user',
             senderName:     $user->name,
             isTyping:       $request->boolean('is_typing')
         ))->toOthers();
