@@ -36,9 +36,10 @@
                 <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1 border border-slate-100 shadow-sm">
                     <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="w-full h-full object-contain">
                 </div>
-                <div class="hidden xs:block">
+                <div class="flex flex-col">
                     <h1 class="font-black text-slate-900 text-base md:text-lg tracking-widest leading-none">BEST</h1>
-                    <span class="text-[10px] md:text-[11px] font-bold text-red-600 uppercase tracking-[0.2em] mt-1 block">Helpdesk</span>
+                    <div class="h-[2px] bg-red-600 w-full rounded-full my-0.5"></div>
+                    <span class="text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] block leading-none">Helpdesk</span>
                 </div>
             </div>
         </div>
