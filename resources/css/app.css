@@ -48,3 +48,64 @@ body[x-data*="chatApp"] .focus\:ring-blue-200:focus {
 body[x-data*="chatApp"] .hover\:bg-blue-700:hover {
     background-color: #b91c1c !important; /* red-700 for send button hover */
 }
+
+/* Custom CSS to unify user homepage colors with admin panel colors */
+/* Targeted using .user-homepage class added to the body tag */
+
+.user-homepage.bg-\[\#FDFDFC\] {
+    background-color: #f8fafc !important; /* Admin light body background */
+}
+
+.user-homepage.dark\:bg-\[\#0a0a0a\] {
+    background-color: #0d1a2f !important; /* A dark blue/gray for admin dark mode */
+}
+
+.user-homepage.text-\[\#1b1b18\] {
+    color: #1e293b !important; /* Tailwind slate-800 */
+}
+
+.user-homepage.dark\:text-\[\#EDEDEC\] {
+    color: #e2e8f0 !important; /* Tailwind slate-200 for better contrast */
+}
+
+.user-homepage .text-\[\#f53003\] {
+    color: #dc2626 !important; /* Admin red-600 */
+}
+
+.user-homepage .dark\:text-\[\#FF4433\] {
+    color: #ef4444 !important; /* Admin red-500 for dark mode contrast */
+}
+
+.user-homepage .bg-\[\#fff2f2\] {
+    background-color: #fef2f2 !important; /* Admin red-50 */
+}
+
+.user-homepage .dark\:bg-\[\#1D0002\] {
+    background-color: #0a1d37 !important; /* Admin dark navy */
+}
+
+.user-homepage .bg-\[\#1b1b18\] {
+    background-color: #0a1d37 !important; /* Admin dark navy for Deploy now button */
+}
+
+.user-homepage .dark\:bg-\[\#eeeeec\] {
+    background-color: #dc2626 !important; /* Admin red-600 for dark mode deploy button */
+    color: white !important; /* Ensure text is white on red */
+}
+
+.user-homepage .border-\[\#19140035\] {
+    border-color: #e2e8f0 !important; /* Tailwind slate-200 */
+}
+
+.user-homepage .dark\:border-\[\#3E3E3A\] {
+    border-color: #334155 !important; /* Tailwind slate-700 */
+}
+
+.user-homepage .shadow-\[inset\_0px\_0px\_0px\_1px\_rgba\(26\,26\,0\,0\.16\)\] {
+    box-shadow: inset 0px 0px 0px 1px rgba(10, 29, 55, 0.16) !important; /* Adjust shadow to match navy theme */
+}
+
+.user-homepage .dark\:shadow-\[inset\_0px\_0px\_0px\_1px\_\#fffaed2d\] {
+    box-shadow: inset 0px 0px 0px 1px rgba(220, 38, 38, 0.2) !important; /* Adjust dark mode shadow to red theme */
+}
+
