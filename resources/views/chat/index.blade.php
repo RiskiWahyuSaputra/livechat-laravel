@@ -91,7 +91,7 @@
                             <!-- Nama Pengirim (Opsional, hanya tampil untuk admin) -->
                             <span x-show="msg.sender_type !== 'user'" class="text-[11px] text-slate-400 font-medium mb-1 ml-1">Live Support</span>
                             
-                            <div class="px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed relative"
+                            <div class="px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed relative break-words overflow-hidden"
                                  :class="msg.sender_type === 'user' 
                                     ? 'bg-blue-600 text-white rounded-br-sm' 
                                     : 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200'">
