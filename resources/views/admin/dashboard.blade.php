@@ -29,22 +29,87 @@
             </div>
         </div>
         
-        <div class="flex items-center gap-4">
-            <!-- Dropdown Status -->
-            <select x-model="adminStatus" @change="updateStatus()" 
-                    class="bg-slate-800 border bg-none border-slate-700 text-white text-xs font-semibold rounded-lg px-3 py-1.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer">
-                <option value="online">🟢 Sedang Online</option>
-                <option value="busy">🔴 Sibuk / Jeda</option>
-                <option value="offline">⚫ Offline</option>
-            </select>
-            
-            <form method="POST" action="{{ route('admin.logout') }}">
-                @csrf
-                <button type="submit" class="text-xs font-semibold bg-slate-800 border border-slate-700 text-rose-400 hover:text-white hover:bg-rose-600 hover:border-rose-600 transition-colors px-4 py-1.5 rounded-lg flex items-center gap-2">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    Keluar
-                </button>
-            </form>
+        <div class="flex items-center gap-4 relative" x-data="{ showProfile: false }">
+            <!-- Profile Trigger -->
+            <button @click="showProfile = !showProfile" @click.away="showProfile = false" 
+                    class="flex items-center gap-3 hover:bg-slate-800 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-slate-700">
+                <div class="relative">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-sm border-2 border-slate-700">
+                        {{ strtoupper(substr($admin->username, 0, 1)) }}
+                    </div>
+                    <!-- Indicator Status Kecil -->
+                    <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900"
+                          :class="{
+                              'bg-emerald-500': adminStatus === 'online',
+                              'bg-rose-500': adminStatus === 'busy',
+                              'bg-slate-500': adminStatus === 'offline'
+                          }"></span>
+                </div>
+                <div class="text-left hidden sm:block">
+                    <p class="text-xs font-bold leading-none mb-1">{{ $admin->username }}</p>
+                    <p class="text-[10px] text-slate-400 font-medium leading-none uppercase tracking-tighter" x-text="adminStatusText"></p>
+                </div>
+                <svg class="w-4 h-4 text-slate-500 transition-transform" :class="showProfile ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+
+            <!-- Profile Popup / Dropdown -->
+            <div x-show="showProfile" x-cloak 
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="transform opacity-0 scale-95"
+                 x-transition:enter-end="transform opacity-100 scale-100"
+                 class="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 text-slate-800 z-50 overflow-hidden">
+                
+                <!-- Info Header -->
+                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+                    <div class="flex items-center gap-3 mb-3">
+                         <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-blue-500/20">
+                            {{ strtoupper(substr($admin->username, 0, 1)) }}
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-800 truncate max-w-[130px]">{{ $admin->username }}</p>
+                            <p class="text-[11px] font-bold text-blue-600 uppercase tracking-widest">{{ $admin->role }}</p>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 font-medium truncate">{{ $admin->email }}</p>
+                </div>
+
+                <!-- Status Selector -->
+                <div class="p-2">
+                    <p class="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Update Status Anda</p>
+                    
+                    <button @click="adminStatus = 'online'; updateStatus(); showProfile = false" 
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-emerald-50 transition-colors group">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
+                        <span class="text-sm font-semibold text-slate-700 group-hover:text-emerald-700">Online</span>
+                        <svg x-show="adminStatus === 'online'" class="w-4 h-4 ml-auto text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+
+                    <button @click="adminStatus = 'busy'; updateStatus(); showProfile = false" 
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-rose-50 transition-colors group">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]"></span>
+                        <span class="text-sm font-semibold text-slate-700 group-hover:text-rose-700">Sibuk / Jeda</span>
+                        <svg x-show="adminStatus === 'busy'" class="w-4 h-4 ml-auto text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+
+                    <button @click="adminStatus = 'offline'; updateStatus(); showProfile = false" 
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-colors group">
+                        <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+                        <span class="text-sm font-semibold text-slate-700 group-hover:text-slate-900">Offline</span>
+                        <svg x-show="adminStatus === 'offline'" class="w-4 h-4 ml-auto text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Footer / Logout -->
+                <div class="mt-1 p-2 border-t border-slate-100">
+                    <form method="POST" action="{{ route('admin.logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors font-bold text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Keluar dari Sesi
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -278,6 +343,12 @@
                                 this.handleStatusChange(e);
                             });
                     }
+                },
+
+                get adminStatusText() {
+                    if (this.adminStatus === 'online') return 'Sedang Online';
+                    if (this.adminStatus === 'busy') return 'Sibuk / Jeda';
+                    return 'Offline';
                 },
 
                 playNotif() {

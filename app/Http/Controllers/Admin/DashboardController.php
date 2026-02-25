@@ -251,6 +251,7 @@ class DashboardController extends Controller
             conversationId: $request->conversation_id,
             senderId:       $admin->id,
             senderType:     'admin',
+            senderRole:     $admin->role,
             senderName:     $admin->username,
             isTyping:       $request->boolean('is_typing')
         ))->toOthers();
