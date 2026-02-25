@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
+    </script>
     <title>Live Chat - Bantuan</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <style>
         /* Sembunyikan elemen sebelum Alpine load penuh untuk mencegah loncatan layout */
         [x-cloak] { display: none !important; }
@@ -109,7 +113,7 @@
         <div class="shrink-0 bg-white">
             <!-- Typing Indicator Ringan -->
             <div x-show="isTyping" x-cloak class="px-5 py-2 flex items-center gap-2 bg-slate-50/50">
-                <span class="text-xs italic text-slate-500 font-medium">Agen sedang merespon</span>
+                <span class="text-xs italic text-slate-500 font-medium" x-text="typingMessage"></span>
                 <div class="flex gap-1">
                     <div class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0ms"></div>
                     <div class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 150ms"></div>
@@ -152,6 +156,7 @@
                 newMessage: '',
                 isSending: false,
                 isTyping: false,
+                typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
 
                 init() {
@@ -188,6 +193,7 @@
                         .listen('.typing', (e) => {
                             if (e.sender_type === 'admin') {
                                 this.isTyping = e.is_typing;
+                                this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
                                 clearTimeout(this.typingTimeout);
                                 if (this.isTyping) {
                                     this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
