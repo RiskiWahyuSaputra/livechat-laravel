@@ -141,7 +141,7 @@
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
                             <p class="text-xs font-bold text-slate-500">Belum ada antrean masuk.</p>
-                            <span class="text-[10px] text-slate-400 font-medium">Anda bisa bersantai sejenak! ☕</span>
+                            <span class="text-[10px] text-slate-400 font-medium">Anda bisa bersantai sejenak!</span>
                         </div>
 
                         <template x-for="chat in filteredChats.filter(c => ['pending', 'queued'].includes(c.status))" :key="chat.id">
@@ -150,11 +150,11 @@
                                  :class="selectedChat && selectedChat.id === chat.id ? 'bg-red-50/50 border-red-500/30' : 'bg-white hover:bg-slate-50 border-slate-50'">
                                 <div class="flex items-center gap-4 relative z-10">
                                     <div class="w-12 h-12 rounded-2xl bg-[#0a1d37] flex items-center justify-center font-black text-white shrink-0 pulse-red">
-                                        <span x-text="chat.user.name.charAt(0).toUpperCase()"></span>
+                                        <span x-text="chat.customer.name.charAt(0).toUpperCase()"></span>
                                     </div>
                                     <div class="flex-1 overflow-hidden">
                                         <div class="flex justify-between items-start mb-0.5">
-                                            <p class="font-black text-[14px] text-slate-800 truncate" x-text="chat.user.name"></p>
+                                            <p class="font-black text-[14px] text-slate-800 truncate" x-text="chat.customer.name"></p>
                                             <span class="text-[10px] font-black text-red-600" x-text="formatTime(chat.last_message_at)"></span>
                                         </div>
                                         <p class="text-[11px] font-bold text-red-500 uppercase tracking-tighter" x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"></p>
@@ -192,11 +192,11 @@
                                          :class="selectedChat && selectedChat.id === chat.id 
                                             ? 'bg-red-600 border-red-500 text-white' 
                                             : (chat.admin_id === adminId ? 'bg-[#0a1d37] border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-400')">
-                                        <span x-text="chat.user.name.charAt(0).toUpperCase()"></span>
+                                        <span x-text="chat.customer.name.charAt(0).toUpperCase()"></span>
                                     </div>
                                     <div class="flex-1 overflow-hidden">
                                         <div class="flex justify-between items-start mb-0.5">
-                                            <p class="font-black text-[14px] truncate" :class="selectedChat && selectedChat.id === chat.id ? 'text-white' : 'text-slate-800'" x-text="chat.user.name"></p>
+                                            <p class="font-black text-[14px] truncate" :class="selectedChat && selectedChat.id === chat.id ? 'text-white' : 'text-slate-800'" x-text="chat.customer.name"></p>
                                             <span class="text-[10px] font-bold" :class="selectedChat && selectedChat.id === chat.id ? 'text-slate-400' : 'text-slate-400'" x-text="formatTime(chat.last_message_at)"></span>
                                         </div>
                                         <p class="text-[11px] font-medium truncate" :class="selectedChat && selectedChat.id === chat.id ? 'text-slate-300' : 'text-slate-500'" x-text="getPreviewText(chat)"></p>
@@ -236,17 +236,17 @@
 
                         <div class="flex items-center gap-3 md:gap-4 overflow-hidden mt-1">
                             <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-[#0a1d37] flex items-center justify-center font-black text-white text-base md:text-xl shrink-0 shadow-lg shadow-slate-200">
-                                <span x-text="selectedChat.user.name.charAt(0).toUpperCase()"></span>
+                                <span x-text="selectedChat.customer.name.charAt(0).toUpperCase()"></span>
                             </div>
                             <div class="overflow-hidden">
-                                <h3 class="font-black text-slate-900 text-base md:text-xl leading-tight truncate" x-text="selectedChat.user.name"></h3>
+                                <h3 class="font-black text-slate-900 text-base md:text-xl leading-tight truncate" x-text="selectedChat.customer.name"></h3>
                                 <div class="flex items-center gap-2 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                                     <span class="flex items-center gap-1.5 shrink-0 text-red-600">
                                         <div class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
                                         <span x-text="selectedChat.status"></span>
                                     </span>
                                     <span class="hidden xs:inline text-slate-200">|</span>
-                                    <span class="truncate hidden xs:inline" x-text="(selectedChat.user.contact || '') + ' - ' + (selectedChat.user.origin || '')"></span>
+                                    <span class="truncate hidden xs:inline" x-text="(selectedChat.customer.contact || '') + ' - ' + (selectedChat.customer.origin || '')"></span>
                                 </div>
                             </div>
                         </div>
@@ -262,23 +262,21 @@
 
                             <template x-if="selectedChat.status === 'active' && selectedChat.admin_id === adminId">
                                 <div class="flex items-center gap-1 md:gap-2">
-                                    <button class="flex items-center gap-1.5 px-3 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all shadow-sm"
-                                            @click="showUserInfo = !showUserInfo">
-                                        <svg class="w-4 h-4" :class="showUserInfo ? 'rotate-180 transition-transform' : 'transition-transform'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        <span class="hidden md:inline">INFO</span>
+                                    <button class="w-10 h-10 flex items-center justify-center rounded-2xl text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all shadow-sm"
+                                            @click="showUserInfo = !showUserInfo" title="Info Pelanggan">
+                                        <svg class="w-5 h-5" :class="showUserInfo ? 'rotate-180 transition-transform' : 'transition-transform'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     </button>
                                     
                                     <div class="w-px h-6 bg-slate-200 mx-1 hidden md:block"></div>
 
-                                    <button class="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm font-black bg-[#0a1d37] text-white hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
-                                            @click="showHandoverModal = true">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                                        <span class="hidden md:inline">OPER</span>
+                                    <button class="w-10 h-10 flex items-center justify-center rounded-2xl bg-[#0a1d37] text-white hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                                            @click="showHandoverModal = true" title="Oper Chat">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                                     </button>
-                                    <button class="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm font-black bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-200"
-                                            @click="showCloseModal = true">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                                        <span class="hidden md:inline">SELESAI</span>
+                                    
+                                    <button class="w-10 h-10 flex items-center justify-center rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+                                            @click="showCloseModal = true" title="Selesaikan Chat">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                                     </button>
                                     
                                     <div class="w-px h-6 bg-slate-200 mx-1 hidden md:block"></div>
@@ -315,15 +313,15 @@
                                 <div class="flex flex-col items-center text-center mb-6">
                                     <div class="relative mb-4 ring-4 ring-slate-50 rounded-3xl">
                                         <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-[#0a1d37] to-slate-700 flex items-center justify-center font-black text-white text-4xl shadow-lg shadow-slate-200">
-                                            <span x-text="selectedChat.user.name.charAt(0).toUpperCase()"></span>
+                                            <span x-text="selectedChat.customer.name.charAt(0).toUpperCase()"></span>
                                         </div>
                                         <div class="absolute -bottom-2 -right-2 w-7 h-7 rounded-xl border-4 border-white flex items-center justify-center"
-                                             :class="selectedChat.user.is_online ? 'bg-emerald-500' : 'bg-slate-300'">
+                                             :class="selectedChat.customer.is_online ? 'bg-emerald-500' : 'bg-slate-300'">
                                         </div>
                                     </div>
-                                    <h3 class="font-black text-xl text-slate-900 leading-tight mb-1" x-text="selectedChat.user.name"></h3>
-                                    <p class="text-xs font-bold text-slate-500" x-text="selectedChat.user.contact"></p>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5 rounded-md bg-slate-50 px-2 py-1 inline-block" x-text="selectedChat.user.origin"></p>
+                                    <h3 class="font-black text-xl text-slate-900 leading-tight mb-1" x-text="selectedChat.customer.name"></h3>
+                                    <p class="text-xs font-bold text-slate-500" x-text="selectedChat.customer.contact"></p>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5 rounded-md bg-slate-50 px-2 py-1 inline-block" x-text="selectedChat.customer.origin"></p>
                                 </div>
 
                                 <div class="space-y-4">
@@ -331,8 +329,8 @@
                                         <p class="text-[10px] font-black text-[#0a1d37] uppercase tracking-widest mb-1">Status Akun</p>
                                         <div class="flex items-center gap-2">
                                             <span class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"
-                                                  :class="selectedChat.user.is_blocked ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'"
-                                                  x-text="selectedChat.user.is_blocked ? 'DIBLOKIR' : 'AKTIF'"></span>
+                                                  :class="selectedChat.customer.is_blocked ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'"
+                                                  x-text="selectedChat.customer.is_blocked ? 'DIBLOKIR' : 'AKTIF'"></span>
                                         </div>
                                     </div>
 
@@ -342,7 +340,7 @@
                                         </div>
                                         <div>
                                             <p class="text-[10px] font-black text-[#0a1d37] uppercase tracking-widest mb-0.5">Bergabung Sejak</p>
-                                            <p class="text-sm font-bold text-slate-700" x-text="formatDate(selectedChat.user.created_at)"></p>
+                                            <p class="text-sm font-bold text-slate-700" x-text="formatDate(selectedChat.customer.created_at)"></p>
                                         </div>
                                     </div>
                                     
@@ -352,7 +350,7 @@
                                         </div>
                                         <div>
                                             <p class="text-[10px] font-black text-[#0a1d37] uppercase tracking-widest mb-0.5">ID Pelanggan</p>
-                                            <p class="text-sm font-bold text-slate-700" x-text="'USR-' + String(selectedChat.user.id).padStart(4, '0')"></p>
+                                            <p class="text-sm font-bold text-slate-700" x-text="'USR-' + String(selectedChat.customer.id).padStart(4, '0')"></p>
                                         </div>
                                     </div>
                                 </div>
@@ -457,9 +455,9 @@
                     if (!this.searchQuery.trim()) return this.chats;
                     const query = this.searchQuery.toLowerCase();
                     return this.chats.filter(chat => 
-                        (chat.user.name || '').toLowerCase().includes(query) || 
-                        (chat.user.contact || '').toLowerCase().includes(query) ||
-                        (chat.user.origin || '').toLowerCase().includes(query)
+                        (chat.customer.name || '').toLowerCase().includes(query) || 
+                        (chat.customer.contact || '').toLowerCase().includes(query) ||
+                        (chat.customer.origin || '').toLowerCase().includes(query)
                     );
                 },
 

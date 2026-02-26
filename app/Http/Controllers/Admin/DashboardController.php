@@ -8,7 +8,7 @@ use App\Events\TypingIndicator;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
-use App\Models\User;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,19 +23,19 @@ class DashboardController extends Controller
         
         // Statistik Ringkas
         $stats = [
-            'total_users' => User::count(),
-            'online_users' => User::where('is_online', true)->count(),
-            'today_users' => User::whereDate('created_at', now()->today())->count(),
-            'yesterday_users' => User::whereDate('created_at', now()->yesterday())->count(),
+            'total_users' => Customer::count(),
+            'online_users' => Conversation::where('status', 'active')->count(), // Perkiraan berdasarkan chat aktif
+            'today_users' => Customer::whereDate('created_at', now()->today())->count(),
+            'yesterday_users' => Customer::whereDate('created_at', now()->yesterday())->count(),
         ];
 
         // Filter Pelanggan
-        $query = User::query();
+        $query = Customer::query();
 
         if ($request->has('filter')) {
             switch ($request->filter) {
                 case 'online':
-                    $query->where('is_online', true);
+                    // Custom logic untuk online (berdasar chat aktif saja jika ada)
                     break;
                 case 'today':
                     $query->whereDate('created_at', now()->today());
@@ -54,9 +54,9 @@ class DashboardController extends Controller
             });
         }
 
-        $users = $query->latest()->paginate(10)->withQueryString();
+        $customers = $query->latest()->paginate(10)->withQueryString();
 
-        return view('admin.dashboard', compact('admin', 'stats', 'users'));
+        return view('admin.dashboard', compact('admin', 'stats', 'customers'));
     }
 
     /**
@@ -66,13 +66,13 @@ class DashboardController extends Controller
     {
         $admin = Auth::guard('admin')->user();
 
-        $pendingConversations = Conversation::with('user')
+        $pendingConversations = Conversation::with('customer')
             ->whereIn('status', ['pending', 'queued'])
             ->orderBy('queue_position')
             ->orderBy('last_message_at')
             ->get();
 
-        $activeConversations = Conversation::with(['user', 'admin', 'messages' => function ($q) {
+        $activeConversations = Conversation::with(['customer', 'admin', 'messages' => function ($q) {
                 $q->latest()->limit(1);
             }])
             ->where('status', 'active')
@@ -93,8 +93,9 @@ class DashboardController extends Controller
     {
         $admin    = Auth::guard('admin')->user();
         $messages = $conversation->messages()->get();
+        $quickReplies = \App\Models\QuickReply::pluck('content')->toArray();
 
-        return view('admin.conversation', compact('conversation', 'messages', 'admin'));
+        return view('admin.conversation', compact('conversation', 'messages', 'admin', 'quickReplies'));
     }
 
     /**
@@ -228,6 +229,8 @@ class DashboardController extends Controller
             'problem_category' => $request->problem_category,
         ]);
 
+        $conversation->delete(); // Soft delete memindahkannya ke arsip
+
         $sysMessage = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => 0,
@@ -249,9 +252,10 @@ class DashboardController extends Controller
     {
         $admin = Auth::guard('admin')->user();
 
-        $conversation->user->update(['is_blocked' => true]);
+        $conversation->customer->update(['is_blocked' => true]);
 
         $conversation->update(['status' => 'closed']);
+        $conversation->delete();
 
         Message::create([
             'conversation_id' => $conversation->id,
