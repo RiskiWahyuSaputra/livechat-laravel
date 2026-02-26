@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
+    </script>
     <title>Dashboard User</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -49,23 +52,20 @@
             <!-- Profile Dropdown -->
             <div x-show="showProfile" x-cloak 
                  x-transition:enter="transition ease-out duration-200"
-                 class="absolute right-0 top-full mt-2 w-64 md:w-72 bg-white rounded-[2rem] shadow-2xl border border-slate-200 py-3 text-slate-800 z-50 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-100 bg-[#0a1d37] mb-2 rounded-t-[1.8rem] text-white">
-                    <p class="text-[9px] font-black text-red-500 uppercase tracking-[0.3em] mb-3">User Account</p>
-                    <div class="flex items-center gap-4">
-                         <div class="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-red-900/40">
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                        </div>
-                        <div class="overflow-hidden">
-                            <p class="font-black text-white text-lg truncate">{{ Auth::user()->name }}</p>
-                            <p class="text-xs text-slate-300 font-medium truncate">{{ Auth::user()->email }}</p>
-                        </div>
+                 class="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 text-slate-800 z-50 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white shrink-0">
+                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                    </div>
+                    <div class="overflow-hidden">
+                        <p class="font-bold text-slate-900 text-sm truncate">{{ Auth::user()->name }}</p>
+                        <p class="text-xs text-slate-500 font-medium truncate">{{ Auth::user()->email }}</p>
                     </div>
                 </div>
-                <div class="mt-3 px-3 pt-3 border-t border-slate-100">
+                <div class="px-2 pt-2 border-t border-slate-100 pb-2">
                     <form method="POST" action="{{ route('user.logout') }}">
                         @csrf
-                        <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition-all font-black text-sm">
+                        <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-all font-bold text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                             Logout
                         </button>
@@ -76,39 +76,327 @@
     </header>
 
     <main class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        <h2 class="text-2xl font-black text-slate-800 mb-4">Riwayat Percakapan Anda</h2>
-        
-        @if ($conversations->isEmpty())
-            <div class="w-full max-w-md bg-white rounded-3xl shadow-lg p-8 flex flex-col items-center justify-center border border-slate-100">
-                <svg class="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                <p class="text-slate-500 font-bold text-sm">Anda belum memiliki riwayat percakapan. Mulai obrolan baru kapan saja!</p>
-            </div>
-        @else
-            <div class="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-4 space-y-2 overflow-y-auto max-h-[calc(100vh-200px)] border border-slate-100">
-                @foreach ($conversations as $conversation)
-                    <a href="{{ route('chat.index') }}?conversation_id={{ $conversation->id }}" class="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer border border-slate-100">
-                        <div class="w-12 h-12 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white shrink-0 text-lg">
-                            A
-                        </div>
-                        <div class="flex-1 text-left">
-                            <p class="font-bold text-slate-800">Percakapan dengan Admin</p>
-                            <p class="text-sm text-slate-500 truncate">
-                                {{ $conversation->latestMessage ? $conversation->latestMessage->content : 'Belum ada pesan.' }}
-                            </p>
-                        </div>
-                        <span class="text-xs text-slate-400">
-                            {{ $conversation->updated_at->diffForHumans() }}
-                        </span>
-                    </a>
-                @endforeach
-            </div>
-        @endif
+        <div class="max-w-md">
+            <h2 class="text-3xl font-black text-[#0a1d37] mb-4 tracking-tight">Selamat Datang di <span class="text-red-600">BEST CORP</span></h2>
+            <p class="text-slate-500 font-medium text-sm">Dashboard ini merupakan portal utama Anda. Butuh bantuan? Silakan gunakan fitur Live Chat yang tersedia di pojok kanan bawah.</p>
+        </div>
     </main>
 
-    <!-- Chat Bubble (placeholder, will be replaced by actual widget) -->
-    <a href="{{ route('chat.index') }}" 
-       class="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-white shadow-xl hover:bg-red-700 transition-all transform hover:scale-105 fab-pulse z-50">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-    </a>
+    <!-- Chat Widget Container -->
+    <div x-data="chatWidget()" x-init="initWidget()" class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
+        
+        <!-- Chat Popup Window -->
+        <div x-show="isOpen" x-cloak
+             x-transition:enter="transition ease-out duration-300 transform origin-bottom-right"
+             x-transition:enter-start="opacity-0 scale-50 translate-y-4"
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200 transform origin-bottom-right"
+             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+             x-transition:leave-end="opacity-0 scale-50 translate-y-4"
+             class="bg-white w-[340px] sm:w-[380px] h-[500px] max-h-[75vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden mb-4 relative"
+             style="display: none;">
+            
+            <!-- Loading Overlay -->
+            <div x-show="isLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+            </div>
+
+            <!-- Header -->
+            <header class="bg-white px-4 py-3 flex items-center justify-between shrink-0 shadow-sm relative border-b border-slate-100">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-red-600"></div>
+                <div class="flex items-center gap-3 mt-1">
+                    <div class="w-10 h-10 rounded-xl bg-[#0a1d37] flex items-center justify-center shadow-md">
+                        <span class="font-black text-white text-lg">CS</span>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-[#0a1d37] text-sm leading-tight">Layanan Pelanggan</h3>
+                        <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                            <span class="flex items-center gap-1 shrink-0"
+                                :class="{
+                                    'text-red-500': status === 'pending' || status === 'queued',
+                                    'text-emerald-500': status === 'active',
+                                    'text-slate-400': status === 'closed'
+                                }">
+                                <div class="w-1.5 h-1.5 rounded-full"
+                                    :class="{
+                                        'bg-red-500 animate-pulse': status === 'pending' || status === 'queued',
+                                        'bg-emerald-500': status === 'active',
+                                        'bg-slate-400': status === 'closed'
+                                    }"></div>
+                                <span x-text="statusText"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
+                <div class="text-center mb-4">
+                    <span class="text-slate-400 font-medium text-[10px] text-center w-full inline-block">Percakapan Dimulai</span>
+                </div>
+
+                <template x-for="msg in messages" :key="msg.id || msg.temp_id">
+                    <div class="flex flex-col w-full" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
+                        
+                        <!-- System Message -->
+                        <template x-if="msg.sender_type === 'system'">
+                            <div class="w-full flex justify-center my-2">
+                                <div class="bg-red-50 text-red-800 text-[10px] px-3 py-1.5 rounded-lg border border-red-100 text-center max-w-[85%] shadow-sm">
+                                    <span class="block font-medium" x-text="msg.content"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Normal Text Bubble -->
+                        <template x-if="msg.sender_type !== 'system'">
+                            <div class="max-w-[85%] flex flex-col" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
+                                <span x-show="msg.sender_type !== 'user'" class="text-[10px] text-slate-400 font-medium mb-0.5 ml-1">Live Support</span>
+                                
+                                <div class="px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed break-words shadow-sm relative overflow-hidden"
+                                    :class="msg.sender_type === 'user' 
+                                        ? 'bg-red-600 text-white rounded-br-sm' 
+                                        : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'">
+                                    <span x-text="msg.content"></span>
+                                </div>
+                                <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <div id="widget-scroll-anchor" class="h-1"></div>
+            </div>
+
+            <!-- Typing Indicator & Footer -->
+            <div class="shrink-0 bg-white">
+                <div x-show="isTyping" x-cloak class="px-4 py-1.5 flex items-center gap-2 bg-slate-50/80 border-t border-slate-100">
+                    <span class="text-[10px] italic text-slate-400 font-medium" x-text="typingMessage"></span>
+                    <div class="flex gap-1">
+                        <div class="w-1 h-1 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0ms"></div>
+                        <div class="w-1 h-1 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 150ms"></div>
+                        <div class="w-1 h-1 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 300ms"></div>
+                    </div>
+                </div>
+
+                <div x-show="status === 'closed'" x-cloak class="bg-slate-100 text-slate-500 text-xs text-center p-2.5 border-t border-slate-200 font-medium">
+                    Sesi pertanyaan ini telah ditutup oleh agen.
+                </div>
+
+                <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="border-t border-slate-200 p-2.5 bg-white flex items-end gap-2">
+                    <textarea x-model="newMessage" 
+                            @input="sendTypingEvent"
+                            @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
+                            :disabled="isSending || isLoading"
+                            placeholder="Ketik balasan Anda..." 
+                            class="flex-1 max-h-24 min-h-[40px] bg-slate-100 border-transparent focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors resize-none overflow-y-auto"
+                            rows="1"></textarea>
+                    <button type="submit" 
+                            :disabled="!newMessage.trim() || isSending || isLoading"
+                            class="shrink-0 w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        <svg class="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Float Button (FAB) -->
+        <button @click="toggleChat" 
+           class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-red-600 flex items-center justify-center text-white shadow-xl shadow-red-600/30 hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 z-50 relative group">
+            
+            <svg x-show="!isOpen" class="w-7 h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <svg x-show="isOpen" style="display: none;" class="w-7 h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            
+            <!-- Unread Badge -->
+            <div x-show="unreadCount > 0 && !isOpen" class="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#0a1d37] text-[10px] font-black text-white shadow-sm border-2 border-white">
+                <span x-text="unreadCount"></span>
+            </div>
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('chatWidget', () => ({
+                isOpen: false,
+                isLoading: false,
+                isInitialized: false,
+                
+                conversationId: null,
+                userId: null,
+                status: 'pending',
+                messages: [],
+                newMessage: '',
+                isSending: false,
+                isTyping: false,
+                typingMessage: 'Agen sedang merespon',
+                typingTimeout: null,
+                unreadCount: 0,
+
+                get statusText() {
+                    if (this.status === 'pending') return 'Menunggu Agen';
+                    if (this.status === 'queued') return 'Dalam Antrean';
+                    if (this.status === 'active') return 'Terhubung';
+                    return 'Sesi Ditutup';
+                },
+
+                initWidget() {
+                    // Start init in background (optional feature, we can do it later if needed)
+                },
+
+                async toggleChat() {
+                    this.isOpen = !this.isOpen;
+                    if (this.isOpen) {
+                        this.unreadCount = 0;
+                        if (!this.isInitialized) {
+                            await this.fetchChatData();
+                        } else {
+                            this.scrollToBottom();
+                        }
+                    }
+                },
+
+                async fetchChatData() {
+                    this.isLoading = true;
+                    try {
+                        const response = await fetch('{{ route('chat.init') }}', {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        
+                        this.conversationId = data.conversation.id;
+                        this.userId = data.user_id;
+                        this.status = data.status;
+                        
+                        // Format messages
+                        this.messages = data.messages.map(m => ({
+                            id: m.id,
+                            sender_type: m.sender_type,
+                            content: m.content,
+                            created_at: m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''
+                        }));
+
+                        this.isInitialized = true;
+                        this.listenForEvents();
+                        
+                        this.$nextTick(() => {
+                            this.scrollToBottom();
+                        });
+                    } catch (e) {
+                        console.error('Failed to init chat', e);
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                listenForEvents() {
+                    if (typeof window.Echo === 'undefined' || !this.conversationId) return;
+
+                    window.Echo.private(`conversation.${this.conversationId}`)
+                        .listen('.message.sent', (e) => {
+                            if (e.sender_id == this.userId && e.sender_type === 'user') return;
+                            if (e.is_whisper) return;
+
+                            this.messages.push({
+                                id: e.id,
+                                sender_type: e.sender_type,
+                                content: e.content,
+                                created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
+                            
+                            if (this.isOpen) {
+                                this.scrollToBottom();
+                            } else {
+                                this.unreadCount++;
+                            }
+                        })
+                        .listen('.conversation.status.changed', (e) => {
+                            this.status = e.status;
+                        })
+                        .listen('.typing', (e) => {
+                            if (e.sender_type === 'admin') {
+                                this.isTyping = e.is_typing;
+                                this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
+                                clearTimeout(this.typingTimeout);
+                                if (this.isTyping) {
+                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                }
+                            }
+                        });
+                },
+
+                async sendMessage() {
+                    if (!this.newMessage.trim() || this.isSending) return;
+
+                    const content = this.newMessage;
+                    this.newMessage = ''; 
+                    this.isSending = true;
+
+                    const tempId = Date.now();
+                    this.messages.push({
+                        temp_id: tempId,
+                        sender_type: 'user',
+                        content: content,
+                        created_at: ''
+                    });
+                    this.scrollToBottom();
+
+                    try {
+                        const response = await fetch('{{ route('chat.send') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                conversation_id: this.conversationId,
+                                content: content
+                            })
+                        });
+
+                        const data = await response.json();
+                        
+                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                        if (msgIndex !== -1 && data.success) {
+                            this.messages[msgIndex].id = data.message.id;
+                            this.messages[msgIndex].created_at = data.message.created_at;
+                        }
+
+                    } catch (error) {
+                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                    } finally {
+                        this.isSending = false;
+                        this.sendTypingEvent(false);
+                    }
+                },
+
+                sendTypingEvent(isTyping = true) {
+                    if (this.status !== 'active') return;
+
+                    fetch('{{ route('chat.typing') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            conversation_id: this.conversationId,
+                            is_typing: isTyping ? this.newMessage.length > 0 : false
+                        })
+                    });
+                },
+
+                scrollToBottom() {
+                    setTimeout(() => {
+                        const anchor = document.getElementById('widget-scroll-anchor');
+                        if (anchor) anchor.scrollIntoView({behavior: 'smooth', block: 'end'});
+                    }, 50);
+                }
+            }));
+        });
+    </script>
 </body>
 </html>

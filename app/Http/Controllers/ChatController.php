@@ -35,6 +35,31 @@ class ChatController extends Controller
     }
 
     /**
+     * Initialize chat widget
+     */
+    public function initChat(Request $request)
+    {
+        $user = Auth::user();
+
+        // Ambil conversation aktif user (pending/active/queued)
+        $conversation = $user->activeConversation()->first();
+
+        // Jika belum ada, buat conversation baru
+        if (!$conversation) {
+            $conversation = $this->createConversation($user);
+        }
+
+        $messages = $conversation->publicMessages()->get();
+
+        return response()->json([
+            'conversation' => $conversation,
+            'messages'     => $messages,
+            'user_id'      => $user->id,
+            'status'       => $conversation->status,
+        ]);
+    }
+
+    /**
      * Kirim pesan baru dari user.
      */
     public function sendMessage(Request $request)

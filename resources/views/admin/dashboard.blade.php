@@ -137,6 +137,16 @@
                     </div>
                     
                     <div class="space-y-2">
+                        <!-- Empty State: Antrean -->
+                        <div x-show="filteredChats.filter(c => ['pending', 'queued'].includes(c.status)).length === 0" x-cloak
+                             class="py-8 px-4 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
+                            <div class="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-sm text-slate-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <p class="text-xs font-bold text-slate-500">Belum ada antrean masuk.</p>
+                            <span class="text-[10px] text-slate-400 font-medium">Anda bisa bersantai sejenak! ☕</span>
+                        </div>
+
                         <template x-for="chat in filteredChats.filter(c => ['pending', 'queued'].includes(c.status))" :key="chat.id">
                             <div @click="selectChat(chat)" 
                                  class="p-4 rounded-3xl cursor-pointer transition-all duration-300 group relative border-2 border-transparent"
@@ -166,6 +176,16 @@
                     </div>
                     
                     <div class="space-y-2">
+                        <!-- Empty State: Aktif -->
+                        <div x-show="filteredChats.filter(c => c.status === 'active').length === 0" x-cloak
+                             class="py-8 px-4 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
+                            <div class="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-sm text-slate-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                            </div>
+                            <p class="text-xs font-bold text-slate-500">Belum ada progres.</p>
+                            <span class="text-[10px] text-slate-400 font-medium">Bantu pelanggan di antrean!</span>
+                        </div>
+
                         <template x-for="chat in filteredChats.filter(c => c.status === 'active')" :key="chat.id">
                             <div @click="selectChat(chat)" 
                                  class="p-4 rounded-3xl cursor-pointer transition-all duration-300 group border-2"
@@ -245,6 +265,14 @@
 
                             <template x-if="selectedChat.status === 'active' && selectedChat.admin_id === adminId">
                                 <div class="flex items-center gap-1 md:gap-2">
+                                    <button class="flex items-center gap-1.5 px-3 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all shadow-sm"
+                                            @click="showUserInfo = !showUserInfo">
+                                        <svg class="w-4 h-4" :class="showUserInfo ? 'rotate-180 transition-transform' : 'transition-transform'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <span class="hidden md:inline">INFO</span>
+                                    </button>
+                                    
+                                    <div class="w-px h-6 bg-slate-200 mx-1 hidden md:block"></div>
+
                                     <button class="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm font-black bg-[#0a1d37] text-white hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
                                             @click="showHandoverModal = true">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
@@ -267,9 +295,71 @@
                         </div>
                     </div>
 
-                    <!-- Chat Iframe -->
-                    <div class="flex-1 bg-slate-50 relative">
-                        <iframe class="w-full h-full border-none" :src="'/admin/conversation/' + selectedChat.id"></iframe>
+                    <!-- Middle Section: Iframe & User Info Panel -->
+                    <div class="flex-1 flex overflow-hidden relative">
+                        <!-- Chat Iframe -->
+                        <div class="flex-1 bg-slate-50 relative">
+                            <iframe class="w-full h-full border-none" :src="'/admin/conversation/' + selectedChat.id"></iframe>
+                        </div>
+
+                        <!-- User Info Sidebar Panel -->
+                        <div x-show="showUserInfo" 
+                             x-collapse.horizontal.duration.300ms
+                             class="w-full sm:w-80 md:w-96 bg-white border-l border-slate-200 shrink-0 overflow-y-auto hidden sm:block shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] z-20"
+                             style="display: none;">
+                            <div class="p-6">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h4 class="font-black text-[#0a1d37] text-lg uppercase tracking-tighter">Profil Pelanggan</h4>
+                                    <button @click="showUserInfo = false" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </div>
+
+                                <div class="flex flex-col items-center text-center mb-6">
+                                    <div class="relative mb-4 ring-4 ring-slate-50 rounded-3xl">
+                                        <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-[#0a1d37] to-slate-700 flex items-center justify-center font-black text-white text-4xl shadow-lg shadow-slate-200">
+                                            <span x-text="selectedChat.user.name.charAt(0).toUpperCase()"></span>
+                                        </div>
+                                        <div class="absolute -bottom-2 -right-2 w-7 h-7 rounded-xl border-4 border-white flex items-center justify-center"
+                                             :class="selectedChat.user.is_online ? 'bg-emerald-500' : 'bg-slate-300'">
+                                        </div>
+                                    </div>
+                                    <h3 class="font-black text-xl text-slate-900 leading-tight mb-1" x-text="selectedChat.user.name"></h3>
+                                    <p class="text-xs font-bold text-slate-500" x-text="selectedChat.user.email"></p>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                        <p class="text-[10px] font-black text-[#0a1d37] uppercase tracking-widest mb-1">Status Akun</p>
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"
+                                                  :class="selectedChat.user.is_blocked ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'"
+                                                  x-text="selectedChat.user.is_blocked ? 'DIBLOKIR' : 'AKTIF'"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-start gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] font-black text-[#0a1d37] uppercase tracking-widest mb-0.5">Bergabung Sejak</p>
+                                            <p class="text-sm font-bold text-slate-700" x-text="formatDate(selectedChat.user.created_at)"></p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-start gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] font-black text-[#0a1d37] uppercase tracking-widest mb-0.5">ID Pelanggan</p>
+                                            <p class="text-sm font-bold text-slate-700" x-text="'USR-' + String(selectedChat.user.id).padStart(4, '0')"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -344,6 +434,7 @@
                 isSubmitting: false,
                 showCloseModal: false,
                 showHandoverModal: false,
+                showUserInfo: false,
                 closeCategory: '',
                 handoverToAdminId: '',
                 notifSound: new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'),
@@ -387,6 +478,12 @@
                     return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 },
 
+                formatDate(datetimeString) {
+                    if (!datetimeString) return '-';
+                    const date = new Date(datetimeString);
+                    return date.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
+                },
+
                 getPreviewText(chat) {
                     if (chat.status === 'pending') return 'Menunggu respon...';
                     if (chat.status === 'queued') return `Antrean: #${chat.queue_position}`;
@@ -398,6 +495,7 @@
 
                 selectChat(chat) {
                     this.selectedChat = chat;
+                    this.showUserInfo = false; // tutup info panel saat ganti chat
                     if (window.innerWidth < 1024) this.showSidebar = false;
                 },
 
