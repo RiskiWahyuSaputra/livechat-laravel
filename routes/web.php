@@ -28,7 +28,8 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/home',             [UserDashboardController::class, 'index'])->name('user.home'); // Changed controller
     Route::post('/logout',          [UserAuthController::class, 'logout'])->name('user.logout');
-    Route::get('/chat',             [ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat',             function () { return redirect()->route('user.home'); })->name('chat.index'); // Redirect to home instead of full page
+    Route::get('/chat/init',        [ChatController::class, 'initChat'])->name('chat.init');
     Route::post('/chat/send',       [ChatController::class, 'sendMessage'])->name('chat.send');
     Route::post('/chat/typing',     [ChatController::class, 'typing'])->name('chat.typing');
 });
