@@ -8,7 +8,7 @@
     <script>
         window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
     </script>
-    <title>Live Chat - Bantuan</title>
+    <title>Dashboard - Live Chat</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <style>
@@ -25,37 +25,39 @@
       x-data="chatApp({{ $conversation->id }}, {{ Auth::id() }}, '{{ $conversation->status }}', {{ Js::from($messages) }})">
 
     <!-- Header Navbar Minimalist -->
-    <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0 shadow-sm">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+    <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0 shadow-sm relative">
+        <!-- Red Accent Bar -->
+        <div class="absolute top-0 left-0 right-0 h-1 bg-red-600"></div>
+
+        <div class="flex items-center gap-3 md:gap-4 overflow-hidden mt-1">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-[#0a1d37] flex items-center justify-center font-black text-white text-base md:text-xl shrink-0 shadow-lg shadow-slate-200">
+                <span>{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
             </div>
-            <div>
-                <h1 class="font-semibold text-slate-800 text-sm leading-tight">Layanan Pelanggan</h1>
+            <div class="overflow-hidden">
+                <h1 class="font-black text-[#0a1d37] text-base md:text-xl leading-tight truncate">Layanan Pelanggan</h1>
                 <!-- Indikator Status -->
-                <div class="flex items-center gap-1.5 mt-0.5">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                              :class="{
-                                  'bg-yellow-400': status === 'pending' || status === 'queued', 
-                                  'bg-green-400': status === 'active',
-                                  'bg-slate-400 hidden': status === 'closed'
-                              }"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2"
-                              :class="{
-                                  'bg-yellow-500': status === 'pending' || status === 'queued', 
-                                  'bg-green-500': status === 'active',
-                                  'bg-slate-400': status === 'closed'
-                              }"></span>
+                <div class="flex items-center gap-2 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    <span class="flex items-center gap-1.5 shrink-0"
+                          :class="{
+                              'text-red-600': status === 'pending' || status === 'queued',
+                              'text-emerald-600': status === 'active',
+                              'text-slate-400': status === 'closed'
+                          }">
+                        <div class="w-2 h-2 rounded-full"
+                             :class="{
+                                 'bg-red-600 animate-pulse': status === 'pending' || status === 'queued',
+                                 'bg-emerald-600': status === 'active',
+                                 'bg-slate-400': status === 'closed'
+                             }"></div>
+                        <span x-text="statusText"></span>
                     </span>
-                    <span class="text-xs text-slate-500 font-medium" x-text="statusText"></span>
                 </div>
             </div>
         </div>
         
         <form method="POST" action="{{ route('user.logout') }}">
             @csrf
-            <button type="submit" class="text-xs text-slate-500 hover:text-red-600 font-medium transition-colors px-3 py-1.5 rounded-md hover:bg-red-50">
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white shadow-xl shadow-red-200 text-xs md:text-sm font-black px-4 md:px-8 py-2.5 md:py-3 rounded-2xl transition-all hover:scale-105 active:scale-95">
                 Akhiri Percakapan
             </button>
         </form>
@@ -69,7 +71,7 @@
             
             <!-- Pesan Pembuka Default -->
             <div class="flex justify-center mb-6">
-                <span class="text-[11px] font-medium text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                <span class="text-slate-500 font-medium text-xs">
                     Percakapan Dimulai
                 </span>
             </div>
@@ -80,7 +82,7 @@
                     <!-- Pesan Sistem -->
                     <template x-if="msg.sender_type === 'system'">
                         <div class="w-full flex justify-center my-2">
-                            <div class="bg-blue-50 text-blue-800 text-xs px-4 py-2 rounded-lg border border-blue-100 text-center max-w-[85%] shadow-sm">
+                            <div class="bg-red-50 text-red-800 text-xs px-4 py-2 rounded-lg border border-red-100 text-center max-w-[85%] shadow-sm">
                                 <span class="block font-medium" x-text="msg.content"></span>
                             </div>
                         </div>
@@ -94,7 +96,7 @@
                             
                             <div class="px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed relative break-words overflow-hidden"
                                  :class="msg.sender_type === 'user' 
-                                    ? 'bg-blue-600 text-white rounded-br-sm' 
+                                    ? 'bg-red-600 text-white rounded-br-sm' 
                                     : 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200'">
                                 <span x-text="msg.content"></span>
                             </div>
@@ -134,12 +136,12 @@
                           @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
                           :disabled="isSending"
                           placeholder="Ketik balasan Anda..." 
-                          class="flex-1 max-h-32 min-h-[44px] bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl px-4 py-2.5 text-sm transition-colors resize-none overflow-y-auto"
+                          class="flex-1 max-h-32 min-h-[44px] bg-slate-100 border-transparent focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-4 py-2.5 text-sm transition-colors resize-none overflow-y-auto"
                           rows="1"></textarea>
                           
                 <button type="submit" 
                         :disabled="!newMessage.trim() || isSending"
-                        class="shrink-0 w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        class="shrink-0 w-11 h-11 rounded-xl bg-red-600 text-white flex items-center justify-center hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                     <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                 </button>
             </form>
@@ -166,10 +168,10 @@
                 },
 
                 get statusText() {
-                    if (this.status === 'pending') return 'Mencari Agen Tersedia...';
-                    if (this.status === 'queued') return 'Menunggu Antrean';
+                    if (this.status === 'pending') return 'Menunggu Agen';
+                    if (this.status === 'queued') return 'Dalam Antrean';
                     if (this.status === 'active') return 'Terhubung dengan Agen';
-                    return 'Percakapan Selesai';
+                    return 'Sesi Ditutup';
                 },
 
                 listenForEvents() {
