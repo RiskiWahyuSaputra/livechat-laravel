@@ -60,6 +60,23 @@ class DashboardController extends Controller
     }
 
     /**
+     * Hapus user secara permanen.
+     */
+    public function destroyUser(User $user)
+    {
+        // Hapus semua percakapan dan pesan terkait jika ada (opsional, tergantung cascade di DB)
+        // Jika tidak cascade, hapus manual:
+        foreach ($user->conversations as $conv) {
+            $conv->messages()->delete();
+            $conv->delete();
+        }
+        
+        $user->delete();
+
+        return back()->with('success', 'User berhasil dihapus secara permanen.');
+    }
+
+    /**
      * Workspace Chat — tampilkan semua antrian dan chat aktif.
      */
     public function chatWorkspace()
