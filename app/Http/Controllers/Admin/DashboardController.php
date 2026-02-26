@@ -59,6 +59,8 @@ class DashboardController extends Controller
         return view('admin.dashboard', compact('admin', 'stats', 'customers'));
     }
 
+
+
     /**
      * Workspace Chat — tampilkan semua antrian dan chat aktif.
      */
