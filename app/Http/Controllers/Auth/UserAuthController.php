@@ -14,7 +14,7 @@ class UserAuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('chat.index');
+            return redirect()->route('user.home');
         }
         return view('auth.user-login');
     }
@@ -23,7 +23,7 @@ class UserAuthController extends Controller
     public function showRegister()
     {
         if (Auth::check()) {
-            return redirect()->route('chat.index');
+            return redirect()->route('user.home');
         }
         return view('auth.user-register');
     }
@@ -48,7 +48,7 @@ class UserAuthController extends Controller
             $request->session()->regenerate();
             // Set user online
             Auth::user()->update(['is_online' => true]);
-            return redirect()->intended(route('chat.index'));
+            return redirect()->intended(route('user.home'));
         }
 
         return back()->withErrors([
@@ -74,7 +74,7 @@ class UserAuthController extends Controller
         Auth::login($user);
         $user->update(['is_online' => true]);
 
-        return redirect()->route('chat.index');
+        return redirect()->route('user.home');
     }
 
     // Logout user

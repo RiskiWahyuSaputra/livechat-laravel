@@ -10,12 +10,6 @@ class UserDashboardController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
-        $conversations = Conversation::where('user_id', $user->id)
-                                    ->with('latestMessage') // Eager load the latest message for preview
-                                    ->latest()
-                                    ->get();
-
-        return view('user.dashboard', compact('conversations'));
+        return view('user.dashboard');
     }
 }
