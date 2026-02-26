@@ -15,9 +15,54 @@ use Illuminate\Support\Facades\Auth;
 class DashboardController extends Controller
 {
     /**
-     * Dashboard admin — tampilkan semua antrian dan chat aktif.
+     * Dashboard Utama — Statistik dan daftar pelanggan.
      */
-    public function index()
+    public function index(Request $request)
+    {
+        $admin = Auth::guard('admin')->user();
+        
+        // Statistik Ringkas
+        $stats = [
+            'total_users' => User::count(),
+            'online_users' => User::where('is_online', true)->count(),
+            'today_users' => User::whereDate('created_at', now()->today())->count(),
+            'yesterday_users' => User::whereDate('created_at', now()->yesterday())->count(),
+        ];
+
+        // Filter Pelanggan
+        $query = User::query();
+
+        if ($request->has('filter')) {
+            switch ($request->filter) {
+                case 'online':
+                    $query->where('is_online', true);
+                    break;
+                case 'today':
+                    $query->whereDate('created_at', now()->today());
+                    break;
+                case 'yesterday':
+                    $query->whereDate('created_at', now()->yesterday());
+                    break;
+            }
+        }
+
+        if ($request->has('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('contact', 'like', '%' . $request->search . '%')
+                  ->orWhere('origin', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $users = $query->latest()->paginate(10)->withQueryString();
+
+        return view('admin.dashboard', compact('admin', 'stats', 'users'));
+    }
+
+    /**
+     * Workspace Chat — tampilkan semua antrian dan chat aktif.
+     */
+    public function chatWorkspace()
     {
         $admin = Auth::guard('admin')->user();
 
@@ -38,7 +83,7 @@ class DashboardController extends Controller
             ->where('status', '!=', 'offline')
             ->get();
 
-        return view('admin.dashboard', compact('admin', 'pendingConversations', 'activeConversations', 'otherAdmins'));
+        return view('admin.chat', compact('admin', 'pendingConversations', 'activeConversations', 'otherAdmins'));
     }
 
     /**
