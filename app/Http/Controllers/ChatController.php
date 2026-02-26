@@ -8,6 +8,7 @@ use App\Events\TypingIndicator;
 use App\Models\Admin;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,6 +33,54 @@ class ChatController extends Controller
         $messages = $conversation->publicMessages()->get();
 
         return view('chat.index', compact('conversation', 'messages'));
+    }
+
+    /**
+     * Register guest user dari form landing page
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name'    => 'required|string|max:255',
+            'contact' => 'required|string|max:255',
+            'origin'  => 'required|string|max:255',
+        ]);
+
+        $contact = $request->contact;
+        $isEmail = strpos($contact, '@') !== false;
+
+        $user = User::where('contact', $contact)
+                    ->orWhere('email', $contact)
+                    ->first();
+
+        if (!$user) {
+            $user = User::create([
+                'name'      => $request->name,
+                'email'     => $isEmail ? $contact : $contact . '@' . \Illuminate\Support\Str::random(5) . '.guest.local',
+                'contact'   => $contact,
+                'origin'    => $request->origin,
+                'password'  => bcrypt(\Illuminate\Support\Str::random(16)),
+                'is_online' => true,
+            ]);
+        } else {
+            $user->update([
+                'name'      => $request->name,
+                'origin'    => $request->origin,
+                'is_online' => true,
+            ]);
+        }
+
+        Auth::login($user, true);
+
+        return response()->json([
+            'success' => true,
+            'user'    => [
+                'id'      => $user->id,
+                'name'    => $user->name,
+                'contact' => $user->contact,
+                'origin'  => $user->origin,
+            ]
+        ]);
     }
 
     /**
@@ -171,6 +220,15 @@ class ChatController extends Controller
             'last_message_at'=> now(),
         ]);
 
+        // Kirim pesan otomatis (User Intro)
+        $intro = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => $user->id,
+            'sender_type'     => 'user',
+            'message_type'    => 'text',
+            'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin terhubung dengan tim Support.",
+        ]);
+
         // Kirim pesan sistem otomatis jika diperlukan
         if ($autoMessage) {
             Message::create([
@@ -179,6 +237,14 @@ class ChatController extends Controller
                 'sender_type'     => 'system',
                 'message_type'    => 'text',
                 'content'         => $autoMessage,
+            ]);
+        } else {
+            Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'system',
+                'message_type'    => 'text',
+                'content'         => "Permintaan Anda telah diterima. Mohon tunggu sebentar sampai agen kami terhubung.",
             ]);
         }
 
