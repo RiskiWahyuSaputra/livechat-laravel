@@ -48,6 +48,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/logout', [AdminAuthController::class , 'logout'])->name('logout');
 
             Route::get('/dashboard', [DashboardController::class , 'index'])->name('dashboard');
+            Route::delete('/user/{user}', [DashboardController::class, 'destroyUser'])->name('user.destroy');
+            Route::post('/status', [DashboardController::class , 'updateStatus'])->name('status.update');
             // --- Menu 2: Live Chat Workspace ---
             Route::middleware('admin.permission:view_chat')->group(function () {
                 Route::get('/chat', [DashboardController::class, 'chatWorkspace'])->name('chat');
