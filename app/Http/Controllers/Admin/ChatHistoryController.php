@@ -27,7 +27,7 @@ class ChatHistoryController extends Controller
 
     public function show($id)
     {
-        $conversation = Conversation::onlyTrashed()->with(['customer', 'admin', 'messages.sender'])->findOrFail($id);
+        $conversation = Conversation::onlyTrashed()->with(['customer', 'admin', 'messages'])->findOrFail($id);
         return view('admin.history.show', compact('conversation'));
     }
 }

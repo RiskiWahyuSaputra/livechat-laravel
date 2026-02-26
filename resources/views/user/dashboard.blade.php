@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="shortcut icon" href="{{ asset('images/best-logo-1.png') }}">
     <script>
         window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
     </script>
@@ -229,7 +230,8 @@
                 isOpen: false,
                 isLoading: false,
                 isInitialized: false,
-                isAuthenticated: {{ Auth::check() ? 'true' : 'false' }},
+                isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
+                csrfToken: '{{ csrf_token() }}',
                 
                 // Form Data
                 regForm: {
@@ -296,6 +298,7 @@
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
+                            if (data.csrf_token) this.csrfToken = data.csrf_token;
                             this.isAuthenticated = true;
                             // Reset form
                             this.regForm = { name: '', contact: '', origin: '' };
@@ -320,8 +323,18 @@
                                 'Accept': 'application/json'
                             }
                         });
+                        
+                        if (response.status === 401) {
+                            this.isAuthenticated = false;
+                            this.isInitialized = false;
+                            return;
+                        }
+
                         const data = await response.json();
                         
+                        if (!response.ok) throw new Error(data.error || 'Failed to init');
+
+                        if (data.csrf_token) this.csrfToken = data.csrf_token;
                         this.conversationId = data.conversation.id;
                         this.userId = data.user_id;
                         this.status = data.status;
@@ -352,6 +365,11 @@
 
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
+                            // If it's our own message (we've already added it locally with temp_id)
+                            // then we just update our existing message's ID or skip.
+                            const alreadyExists = this.messages.some(m => m.id === e.id);
+                            if (alreadyExists) return;
+
                             if (e.sender_id == this.userId && e.sender_type === 'user') return;
                             if (e.is_whisper) return;
 
@@ -391,11 +409,12 @@
                     this.isSending = true;
 
                     const tempId = Date.now();
+                    const now = new Date();
                     this.messages.push({
                         temp_id: tempId,
                         sender_type: 'user',
                         content: content,
-                        created_at: ''
+                        created_at: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     });
                     this.scrollToBottom();
 
@@ -404,7 +423,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-CSRF-TOKEN': this.csrfToken,
                                 'Accept': 'application/json'
                             },
                             body: JSON.stringify({
@@ -415,10 +434,14 @@
 
                         const data = await response.json();
                         
-                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
-                        if (msgIndex !== -1 && data.success) {
-                            this.messages[msgIndex].id = data.message.id;
-                            this.messages[msgIndex].created_at = data.message.created_at;
+                        if (response.ok && data.success) {
+                            const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                            if (msgIndex !== -1) {
+                                this.messages[msgIndex].id = data.message.id;
+                            }
+                        } else {
+                            this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                            alert('Gagal mengirim: ' + (data.error || data.message || 'Server Error ' + response.status));
                         }
 
                     } catch (error) {
@@ -436,7 +459,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-CSRF-TOKEN': this.csrfToken,
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
