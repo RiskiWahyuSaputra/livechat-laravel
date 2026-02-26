@@ -14,26 +14,88 @@
         ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-800 font-sans antialiased h-screen flex overflow-hidden">
+<body class="bg-[#f8fafc] text-slate-800 font-sans antialiased h-screen flex overflow-hidden"
+      x-data="adminDashboard({{ $admin->id }})">
 
     @include('admin.partials.sidebar')
 
     <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Header -->
-        <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 z-30 shadow-sm">
-            <div>
-                <h1 class="font-black text-slate-900 text-2xl tracking-tighter uppercase">Statistik Pelanggan</h1>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Ringkasan interaksi dan pertumbuhan</p>
-            </div>
+        <!-- Navbar dengan Identitas Best Corporation -->
+        <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0 z-30 shadow-sm relative">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-red-600"></div>
 
-            <div class="flex items-center gap-4">
-                 <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 px-4 py-2 rounded-2xl">
-                    <div class="w-8 h-8 rounded-lg bg-[#0a1d37] flex items-center justify-center font-bold text-white text-xs">
-                        {{ strtoupper(substr($admin->username, 0, 1)) }}
+            <div class="flex items-center gap-3 md:gap-4 mt-1">
+                <!-- Mobile Toggle -->
+                <button @click="showSidebar = !showSidebar" class="lg:hidden p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                    <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+
+                <div class="flex flex-col">
+                    <h2 class="font-black text-[#0a1d37] text-lg tracking-tighter uppercase">Statistik Pelanggan</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ringkasan interaksi dan pertumbuhan</p>
+                </div>
+            </div>
+            
+            <!-- Profile Section dengan Aksen Navy/Red -->
+            <div class="flex items-center gap-4 relative" x-data="{ showProfile: false }">
+                <button @click="showProfile = !showProfile" @click.away="showProfile = false" 
+                        class="flex items-center gap-2 md:gap-3 hover:bg-slate-50 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:border-slate-200">
+                    <div class="relative">
+                        <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
+                            {{ strtoupper(substr($admin->username, 0, 1)) }}
+                        </div>
+                        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white"
+                              :class="{
+                                  'bg-emerald-500': adminStatus === 'online',
+                                  'bg-rose-500': adminStatus === 'busy',
+                                  'bg-slate-400': adminStatus === 'offline'
+                              }"></span>
                     </div>
-                    <div class="text-left">
-                        <p class="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">Login Sebagai</p>
-                        <p class="text-xs font-bold text-slate-900 leading-none">{{ $admin->username }}</p>
+                    <div class="text-left hidden md:block">
+                        <p class="text-xs font-bold text-slate-900 leading-none mb-1">{{ $admin->username }}</p>
+                        <p class="text-[10px] text-slate-500 font-semibold leading-none uppercase" x-text="adminStatusText"></p>
+                    </div>
+                </button>
+
+                <!-- Profile Dropdown -->
+                <div x-show="showProfile" x-cloak 
+                     x-transition:enter="transition ease-out duration-200"
+                     class="absolute right-0 top-full mt-2 w-64 md:w-72 bg-white rounded-[2rem] shadow-2xl border border-slate-200 py-3 text-slate-800 z-50 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-[#0a1d37] mb-2 rounded-t-[1.8rem] text-white">
+                        <p class="text-[9px] font-black text-red-500 uppercase tracking-[0.3em] mb-3">Administrator Access</p>
+                        <div class="flex items-center gap-4">
+                             <div class="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-red-900/40">
+                                {{ strtoupper(substr($admin->username, 0, 1)) }}
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="font-black text-white text-lg truncate">{{ $admin->username }}</p>
+                                <p class="text-xs text-slate-300 font-medium truncate">{{ $admin->email }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-3 space-y-1">
+                        <p class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status Kehadiran</p>
+                        <button @click="adminStatus = 'online'; updateStatus(); showProfile = false" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl hover:bg-emerald-50 transition-all group">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span class="text-sm font-bold text-slate-700">Online / Tersedia</span>
+                        </button>
+                        <button @click="adminStatus = 'busy'; updateStatus(); showProfile = false" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl hover:bg-rose-50 transition-all group">
+                            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                            <span class="text-sm font-bold text-slate-700">Sibuk / Istirahat</span>
+                        </button>
+                        <button @click="adminStatus = 'offline'; updateStatus(); showProfile = false" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl hover:bg-slate-100 transition-all group">
+                            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            <span class="text-sm font-bold text-slate-700">Offline</span>
+                        </button>
+                    </div>
+                    <div class="mt-3 px-3 pt-3 border-t border-slate-100">
+                        <form method="POST" action="{{ route('admin.logout') }}">
+                            @csrf
+                            <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition-all font-black text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                Logout Sesi
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -220,5 +282,34 @@
         </main>
     </div>
 
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('adminDashboard', (adminId) => ({
+                adminId: adminId,
+                showSidebar: window.innerWidth >= 1024,
+                adminStatus: '{{ $admin->status }}',
+
+                init() {
+                    window.addEventListener('resize', () => {
+                        if (window.innerWidth >= 1024) this.showSidebar = true;
+                    });
+                },
+
+                get adminStatusText() {
+                    if (this.adminStatus === 'online') return 'Online';
+                    if (this.adminStatus === 'busy') return 'Istirahat';
+                    return 'Offline';
+                },
+
+                async updateStatus() {
+                    fetch('{{ route('admin.status.update') }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ status: this.adminStatus })
+                    });
+                }
+            }));
+        });
+    </script>
 </body>
 </html>
