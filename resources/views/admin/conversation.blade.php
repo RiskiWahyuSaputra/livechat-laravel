@@ -258,8 +258,7 @@
 
                 insertQuickReply(text) {
                     this.newMessage = text;
-                    this.$refs.messageInput.focus();
-                    this.sendTypingEvent(true);
+                    this.sendMessage();
                 },
 
                 sendTypingEvent(isTyping = true) {
