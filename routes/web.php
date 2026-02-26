@@ -45,6 +45,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/logout', [AdminAuthController::class , 'logout'])->name('logout');
 
             Route::get('/dashboard', [DashboardController::class , 'index'])->name('dashboard');
+            Route::delete('/user/{user}', [DashboardController::class, 'destroyUser'])->name('user.destroy');
             Route::get('/chat', [DashboardController::class, 'chatWorkspace'])->name('chat');
             Route::get('/conversation/{conversation}', [DashboardController::class , 'showConversation'])->name('conversation.show');
             Route::post('/chat/send', [DashboardController::class , 'sendMessage'])->name('chat.send');
