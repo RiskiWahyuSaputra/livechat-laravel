@@ -92,26 +92,15 @@
         <form class="p-3 bg-white" @submit.prevent="sendMessage" x-show="canReply" x-cloak>
             
             <!-- Type Toggle & Quick Replies -->
-            <div class="flex flex-col gap-3 mb-3 ml-1">
-                <!-- Toggles -->
-                <div class="flex items-center gap-4">
-                    <label class="flex items-center gap-1.5 text-[11px] font-bold cursor-pointer text-slate-500 hover:text-blue-600 transition-colors uppercase tracking-wide">
-                        <input type="radio" value="text" x-model="messageType" class="text-blue-600 focus:ring-blue-500">
-                        BALASAN PELANGGAN
-                    </label>
-                    <label class="flex items-center gap-1.5 text-[11px] font-bold cursor-pointer text-amber-500 hover:text-amber-600 transition-colors uppercase tracking-wide">
-                        <input type="radio" value="whisper" x-model="messageType" class="text-amber-500 focus:ring-amber-500">
-                        INTERNAL NOTE
-                    </label>
-                </div>
-                
+            <div class="flex flex-col gap-2 mb-3">
                 <!-- Quick Replies Pills -->
-                <div class="flex flex-wrap items-center gap-2" x-show="messageType === 'text'" x-transition>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">Balasan Cepat:</span>
+                <div class="flex items-center gap-2 overflow-x-auto pb-1" x-show="messageType === 'text'" x-transition 
+                     style="scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1 shrink-0">Balasan Cepat:</span>
                     <template x-for="(reply, index) in quickReplies" :key="index">
                         <button type="button" 
                                 @click="insertQuickReply(reply)"
-                                class="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-full text-[11px] font-semibold transition-all shadow-sm max-w-[200px] truncate text-left"
+                                class="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-full text-[11px] font-semibold transition-all shadow-sm max-w-[200px] truncate text-left"
                                 :title="reply">
                             <span x-text="reply"></span>
                         </button>
@@ -120,13 +109,23 @@
             </div>
             
             <!-- Input Textarea & Submit Button -->
-            <div class="flex items-end gap-2">
+            <div class="flex items-end gap-2 relative">
+                <!-- Internal Note Toggle Button -->
+                <button type="button" 
+                        @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
+                        class="absolute left-3 bottom-2.5 w-8 h-8 rounded-full flex items-center justify-center transition-colors z-10"
+                        :class="messageType === 'whisper' ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'"
+                        :title="messageType === 'whisper' ? 'Mode Catatan Internal Aktif' : 'Nyalakan Mode Catatan Internal'">
+                    <svg class="w-4 h-4" x-show="messageType === 'text'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    <svg class="w-4 h-4" x-show="messageType === 'whisper'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </button>
+
                 <textarea x-model="newMessage" x-ref="messageInput"
-                          :placeholder="messageType === 'whisper' ? 'Buat catatan internal agar admin lain yang mengambil alih nanti tahu...' : 'Ketik balasan Anda ke pelanggan...'" 
+                          :placeholder="messageType === 'whisper' ? 'Ketik catatan internal...' : 'Ketik balasan Anda ke pelanggan...'" 
                           @input="sendTypingEvent"
                           @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
                           :disabled="isSending"
-                          class="flex-1 max-h-32 min-h-[44px] border-transparent focus:ring-2 rounded-xl px-4 py-2 text-[13px] transition-colors resize-none overflow-y-auto"
+                          class="flex-1 pl-12 max-h-32 min-h-[44px] border-transparent focus:ring-2 rounded-xl px-4 py-2 text-[13px] transition-colors resize-none overflow-y-auto"
                           :class="messageType === 'whisper' ? 'bg-amber-50 focus:bg-white focus:border-amber-400 focus:ring-amber-200 text-amber-900 placeholder:text-amber-300' : 'bg-slate-100 focus:bg-white focus:border-blue-500 focus:ring-blue-200 text-slate-800 placeholder:text-slate-400'"
                           rows="1"></textarea>
                        
@@ -152,13 +151,7 @@
                 
                 newMessage: '',
                 messageType: 'text', 
-                quickReplies: [
-                    "Halo! Dengan layanan pelanggan BEST, ada yang bisa kami bantu?",
-                    "Mohon tunggu sebentar, kami sedang melakukan pengecekan data Anda.",
-                    "Terima kasih sudah menunggu. Berikut informasi yang Anda butuhkan.",
-                    "Apakah ada hal lain yang bisa kami bantu hari ini?",
-                    "Terima kasih telah menghubungi kami. Semoga hari Anda menyenangkan!"
-                ],
+                quickReplies: {!! json_encode($quickReplies ?? []) !!},
                 isSending: false,
                 isTyping: false,
                 typingTimeout: null,
@@ -256,10 +249,10 @@
                     }
                 },
 
-                insertQuickReply(text) {
+                async insertQuickReply(text) {
+                    this.messageType = 'text';
                     this.newMessage = text;
-                    this.$refs.messageInput.focus();
-                    this.sendTypingEvent(true);
+                    await this.sendMessage();
                 },
 
                 sendTypingEvent(isTyping = true) {

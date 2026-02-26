@@ -14,6 +14,8 @@ class Admin extends Authenticatable
         'email',
         'password',
         'role',
+        'is_superadmin',
+        'permissions',
         'status',
         'max_active_chats',
     ];
@@ -27,6 +29,8 @@ class Admin extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'is_superadmin' => 'boolean',
+            'permissions' => 'array',
         ];
     }
 
@@ -47,5 +51,15 @@ class Admin extends Authenticatable
     {
         return $this->status !== 'offline'
             && $this->activeConversations()->count() < $this->max_active_chats;
+    }
+
+    // Role-Based Access Control logic
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->is_superadmin) {
+            return true;
+        }
+
+        return is_array($this->permissions) && in_array($permission, $this->permissions);
     }
 }

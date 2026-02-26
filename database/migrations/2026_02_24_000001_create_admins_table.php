@@ -14,6 +14,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->enum('role', ['super_admin', 'agent'])->default('agent');
+            $table->boolean('is_superadmin')->default(false);
+            $table->json('permissions')->nullable();
             $table->enum('status', ['online', 'busy', 'offline'])->default('offline');
             $table->integer('max_active_chats')->default(5);
             $table->rememberToken();

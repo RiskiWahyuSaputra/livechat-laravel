@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Conversation extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
-        'user_id',
+        'customer_id',
         'admin_id',
         'status',
         'queue_position',
@@ -22,10 +25,10 @@ class Conversation extends Model
         ];
     }
 
-    // Relasi ke User
-    public function user()
+    // Relasi ke Customer
+    public function customer()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Customer::class);
     }
 
     // Relasi ke Admin (nullable — belum diklaim = null)
