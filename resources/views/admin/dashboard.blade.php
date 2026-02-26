@@ -122,7 +122,7 @@
                 </div>
                 
                 <div class="relative">
-                    <input type="text" x-model="searchQuery" placeholder="Cari nama atau email..." 
+                    <input type="text" x-model="searchQuery" placeholder="Cari nama, kontak, atau instansi..." 
                            class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-10 py-3 text-sm focus:ring-2 focus:ring-red-500/10 focus:border-red-500/20 placeholder:text-slate-400 font-bold transition-all">
                     <svg class="w-4 h-4 absolute left-4 top-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
@@ -249,7 +249,7 @@
                                         <span x-text="selectedChat.status"></span>
                                     </span>
                                     <span class="hidden xs:inline text-slate-200">|</span>
-                                    <span class="truncate hidden xs:inline" x-text="selectedChat.user.email"></span>
+                                    <span class="truncate hidden xs:inline" x-text="(selectedChat.user.contact || '') + ' - ' + (selectedChat.user.origin || '')"></span>
                                 </div>
                             </div>
                         </div>
@@ -325,7 +325,8 @@
                                         </div>
                                     </div>
                                     <h3 class="font-black text-xl text-slate-900 leading-tight mb-1" x-text="selectedChat.user.name"></h3>
-                                    <p class="text-xs font-bold text-slate-500" x-text="selectedChat.user.email"></p>
+                                    <p class="text-xs font-bold text-slate-500" x-text="selectedChat.user.contact"></p>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5 rounded-md bg-slate-50 px-2 py-1 inline-block" x-text="selectedChat.user.origin"></p>
                                 </div>
 
                                 <div class="space-y-4">
@@ -459,8 +460,9 @@
                     if (!this.searchQuery.trim()) return this.chats;
                     const query = this.searchQuery.toLowerCase();
                     return this.chats.filter(chat => 
-                        chat.user.name.toLowerCase().includes(query) || 
-                        chat.user.email.toLowerCase().includes(query)
+                        (chat.user.name || '').toLowerCase().includes(query) || 
+                        (chat.user.contact || '').toLowerCase().includes(query) ||
+                        (chat.user.origin || '').toLowerCase().includes(query)
                     );
                 },
 
