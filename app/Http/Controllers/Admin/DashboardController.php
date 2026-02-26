@@ -24,14 +24,14 @@ class DashboardController extends Controller
         
         // Statistik Ringkas
         $stats = [
-            'total_users' => Customer::count(),
+            'total_users' => User::count(),
             'online_users' => Conversation::where('status', 'active')->count(), // Perkiraan berdasarkan chat aktif
-            'today_users' => Customer::whereDate('created_at', now()->today())->count(),
-            'yesterday_users' => Customer::whereDate('created_at', now()->yesterday())->count(),
+            'today_users' => User::whereDate('created_at', now()->today())->count(),
+            'yesterday_users' => User::whereDate('created_at', now()->yesterday())->count(),
         ];
 
         // Filter Pelanggan
-        $query = Customer::query();
+        $query = User::query();
 
         if ($request->has('filter')) {
             switch ($request->filter) {
@@ -80,7 +80,7 @@ class DashboardController extends Controller
     /**
      * Workspace Chat — tampilkan semua antrian dan chat aktif.
      */
-    public function chatWorkspace()
+    public function chatWorkspace(Request $request)
     {
         $admin = Auth::guard('admin')->user();
 
@@ -95,6 +95,13 @@ class DashboardController extends Controller
             }])
             ->where('status', 'active')
             ->get();
+
+        if ($request->ajax() || $request->has('ajax')) {
+            return response()->json([
+                'pending' => $pendingConversations,
+                'active'  => $activeConversations,
+            ]);
+        }
 
         // Ambil daftar admin lain yang tidak offline untuk pilihan Handover
         $otherAdmins = \App\Models\Admin::where('id', '!=', $admin->id)
@@ -156,6 +163,8 @@ class DashboardController extends Controller
         ]);
 
         broadcast(new MessageSent($sysMessage));
+        
+        // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
         broadcast(new ConversationStatusChanged($conversation, $admin->username));
 
         // Update posisi antrian untuk conversation lain yang masih queued
@@ -170,7 +179,7 @@ class DashboardController extends Controller
     public function sendMessage(Request $request)
     {
         $request->validate([
-            'conversation_id' => ['required', 'exists:conversations,id'],
+            'conversation_id' => ['required'], // existence checked manually
             'content'         => ['required', 'string', 'max:2000'],
             'message_type'    => ['required', 'in:text,whisper'],
         ]);
@@ -179,7 +188,8 @@ class DashboardController extends Controller
         $conversation = Conversation::findOrFail($request->conversation_id);
 
         // Pastikan admin ini yang menangani conversation ini (kecuali whisper bisa semua admin)
-        if ($request->message_type !== 'whisper' && $conversation->admin_id !== $admin->id) {
+        // Gunakan non-strict comparison agar aman
+        if ($request->message_type !== 'whisper' && $conversation->admin_id != $admin->id) {
             return response()->json(['error' => 'Anda tidak memiliki akses tulis ke chat ini.'], 403);
         }
 
@@ -191,11 +201,25 @@ class DashboardController extends Controller
             'content'         => $request->content,
         ]);
 
+        \Log::info('Message created by admin', ['id' => $message->id]);
+
         $conversation->update(['last_message_at' => now()]);
 
-        broadcast(new MessageSent($message))->toOthers();
+        try {
+            broadcast(new MessageSent($message));
+            \Log::info('Admin Broadcast MessageSent success');
+        } catch (\Exception $e) {
+            \Log::error('Admin Broadcast MessageSent failed', ['error' => $e->getMessage()]);
+        }
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'message' => [
+                'id'         => $message->id,
+                'content'    => $message->content,
+                'created_at' => $message->created_at->format('H:i'),
+            ],
+        ]);
     }
 
     /**
@@ -205,6 +229,7 @@ class DashboardController extends Controller
     {
         $request->validate([
             'to_admin_id' => ['required', 'exists:admins,id'],
+            'internal_note' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $fromAdmin = Auth::guard('admin')->user();
@@ -212,6 +237,18 @@ class DashboardController extends Controller
 
         if ($conversation->admin_id !== $fromAdmin->id) {
             return response()->json(['error' => 'Anda bukan penanganan chat ini.'], 403);
+        }
+
+        // Kirim whisper note jika ada
+        if ($request->internal_note) {
+            $note = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => $fromAdmin->id,
+                'sender_type'     => 'admin',
+                'message_type'    => 'whisper',
+                'content'         => "Catatan Handover: " . $request->internal_note,
+            ]);
+            broadcast(new MessageSent($note));
         }
 
         $conversation->update(['admin_id' => $toAdmin->id]);

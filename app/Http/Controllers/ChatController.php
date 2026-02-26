@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
+use App\Models\User;
+
 class ChatController extends Controller
 {
     /**
@@ -39,42 +41,52 @@ class ChatController extends Controller
         $contact = $request->contact;
         $token = $request->cookie('guest_chat_token');
         
-        // Coba cari dari token dulu, lalu fallback ke contact
-        $customer = null;
+        $user = null;
         if ($token) {
-            $customer = Customer::where('session_token', $token)->first();
+            // Kita simpan token di field email (sebagai ID unik) atau biarkan token di cookie saja
+            // Tapi User butuh email. Kita buat email dummy dari contact.
+            $email = $contact . '@livechat.best';
+            $user = User::where('email', $email)->first();
         }
         
-        if (!$customer) {
-            $customer = Customer::where('contact', $contact)->first();
+        if (!$user) {
+            $email = $contact . '@livechat.best';
+            $user = User::where('email', $email)->orWhere('contact', $contact)->first();
         }
 
-        if (!$customer) {
+        if (!$user) {
             $token = Str::random(40);
-            $customer = Customer::create([
-                'session_token' => $token,
+            $user = User::create([
                 'name'      => $request->name,
+                'email'     => $contact . '@livechat.best',
                 'contact'   => $contact,
                 'origin'    => $request->origin,
+                'password'  => bcrypt('guest123'),
+                'is_online' => true,
             ]);
         } else {
-            $token = $customer->session_token;
-            $customer->update([
+            $user->update([
                 'name'      => $request->name,
                 'origin'    => $request->origin,
+                'is_online' => true,
             ]);
+            $token = $user->email; // Gunakan email sebagai token pengenal di cookie
         }
 
         // Set Cookie berlaku 7 hari
-        Cookie::queue('guest_chat_token', $token, 60 * 24 * 7);
+        Cookie::queue('guest_chat_token', $user->email, 60 * 24 * 7);
+
+        // Login user secara otomatis
+        Auth::guard('web')->login($user, true);
 
         return response()->json([
             'success' => true,
+            'csrf_token' => csrf_token(),
             'user'    => [
-                'id'      => $customer->id,
-                'name'    => $customer->name,
-                'contact' => $customer->contact,
-                'origin'  => $customer->origin,
+                'id'      => $user->id,
+                'name'    => $user->name,
+                'contact' => $user->contact,
+                'origin'  => $user->origin,
             ]
         ]);
     }
@@ -89,38 +101,40 @@ class ChatController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        $customer = Customer::where('session_token', $token)->first();
-        if (!$customer) {
+        $user = User::where('email', $token)->first();
+        if (!$user) {
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        if ($customer->is_blocked) {
+        if ($user->is_blocked) {
             return response()->json(['error' => 'Akun Anda telah diblokir.'], 403);
         }
+        
+        // Mark user online & ensure logged in
+        $user->update(['is_online' => true]);
+        Auth::guard('web')->login($user, true);
 
         // Ambil conversation aktif user (pending/active/queued)
-        // Jika ada conversation yang aktif, kita pakai itu. Jika tidak, buat baru.
-        // Kita juga butuh mengirimkan histori pesan dari semua conversation Budi.
-        
-        $activeConversation = $customer->conversations()
+        $activeConversation = $user->conversations()
             ->whereIn('status', ['pending', 'active', 'queued'])
             ->first();
 
         if (!$activeConversation) {
-            $activeConversation = $this->createConversation($customer);
+            $activeConversation = $this->createConversation($user);
         }
 
-        // Ambil semua pesan dari semua percakapan Budi, termasuk yang soft deleted (closed)
-        $allConversations = $customer->conversations()->withTrashed()->pluck('id');
+        // Ambil semua pesan dari semua percakapan Budi
+        $allConversations = $user->conversations()->withTrashed()->pluck('id');
         $messages = Message::whereIn('conversation_id', $allConversations)
             ->where('message_type', '!=', 'whisper')
             ->orderBy('created_at', 'asc')
             ->get();
 
         return response()->json([
+            'csrf_token'   => csrf_token(),
             'conversation' => $activeConversation,
             'messages'     => $messages,
-            'user_id'      => $customer->id,
+            'user_id'      => $user->id,
             'status'       => $activeConversation->status,
         ]);
     }
@@ -132,17 +146,17 @@ class ChatController extends Controller
     {
         $request->validate([
             'content'         => ['required', 'string', 'max:2000'],
-            'conversation_id' => ['required', 'exists:conversations,id'],
+            'conversation_id' => ['required'], // We handle existence and trash manually
         ]);
 
         $token = $request->cookie('guest_chat_token');
-        $customer = Customer::where('session_token', $token)->first();
+        $user = User::where('email', $token)->first();
         
-        if (!$customer) {
+        if (!$user) {
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        if ($customer->is_blocked) {
+        if ($user->is_blocked) {
             return response()->json(['error' => 'Diblokir'], 403);
         }
 
@@ -153,29 +167,37 @@ class ChatController extends Controller
             return response()->json(['error' => 'Chat tidak ditemukan.'], 404);
         }
 
-        // Pastikan conversation milik user ini
-        if ($conversation->customer_id !== $customer->id) {
+        // Pastikan conversation milik user ini (Gunakan non-strict agar aman dengan type)
+        if ($conversation->user_id != $user->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         // Jika conversation ini sudah ditutup (closed / soft deleted), kita butuh buat tiket baru!
         if (!$conversation->isOpen() || $conversation->trashed()) {
-            $conversation = $this->createConversation($customer);
+            $conversation = $this->createConversation($user);
         }
 
         $message = Message::create([
             'conversation_id' => $conversation->id,
-            'sender_id'       => $customer->id,
-            'sender_type'     => 'customer',
+            'sender_id'       => $user->id,
+            'sender_type'     => 'user',
             'message_type'    => 'text',
             'content'         => $request->content,
         ]);
 
+        \Log::info('Message created by user', ['id' => $message->id]);
+
         // Update waktu pesan terakhir
         $conversation->update(['last_message_at' => now()]);
 
-        // Broadcast pesan real-time ke semua peserta
-        broadcast(new MessageSent($message))->toOthers();
+        try {
+            // Broadcast pesan real-time ke semua peserta
+            broadcast(new MessageSent($message));
+            \Log::info('Broadcast MessageSent success');
+        } catch (\Exception $e) {
+            \Log::error('Broadcast MessageSent failed', ['error' => $e->getMessage()]);
+            // We still return success because it's saved in DB
+        }
 
         return response()->json([
             'success' => true,
@@ -198,18 +220,18 @@ class ChatController extends Controller
         ]);
 
         $token = $request->cookie('guest_chat_token');
-        $customer = Customer::where('session_token', $token)->first();
+        $user = User::where('email', $token)->first();
 
-        if (!$customer) {
+        if (!$user) {
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
         broadcast(new TypingIndicator(
             conversationId: $request->conversation_id,
-            senderId:       $customer->id,
-            senderType:     'customer',
-            senderRole:     'customer',
-            senderName:     $customer->name,
+            senderId:       $user->id,
+            senderType:     'user',
+            senderRole:     'user',
+            senderName:     $user->name,
             isTyping:       $request->boolean('is_typing')
         ))->toOthers();
 
@@ -218,13 +240,8 @@ class ChatController extends Controller
 
     /**
      * Buat conversation baru dan tentukan status awal.
-     *
-     * Logic:
-     * - Ada admin online yang bisa terima chat? → status: pending
-     * - Semua admin offline? → kirim pesan otomatis offline
-     * - Semua admin penuh (max_active_chats)? → status: queued + posisi antrian
      */
-    private function createConversation($customer): Conversation
+    private function createConversation($user): Conversation
     {
         // Cari admin yang bisa terima chat
         $availableAdmin = Admin::where('status', '!=', 'offline')
@@ -250,7 +267,7 @@ class ChatController extends Controller
         }
 
         $conversation = Conversation::create([
-            'customer_id'    => $customer->id,
+            'user_id'        => $user->id,
             'admin_id'       => null,
             'status'         => $status,
             'queue_position' => $queuePosition,
@@ -260,29 +277,34 @@ class ChatController extends Controller
         // Kirim pesan otomatis (User Intro)
         $intro = Message::create([
             'conversation_id' => $conversation->id,
-            'sender_id'       => $customer->id,
-            'sender_type'     => 'customer',
+            'sender_id'       => $user->id,
+            'sender_type'     => 'user',
             'message_type'    => 'text',
-            'content'         => "Halo! Saya {$customer->name} dari {$customer->origin}, ingin terhubung dengan tim Support.",
+            'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin terhubung dengan tim Support.",
         ]);
+
+        // Broadcast intro message
+        broadcast(new MessageSent($intro))->toOthers();
 
         // Kirim pesan sistem otomatis jika diperlukan
         if ($autoMessage) {
-            Message::create([
+            $systemMsg = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'system',
                 'message_type'    => 'text',
                 'content'         => $autoMessage,
             ]);
+            broadcast(new MessageSent($systemMsg))->toOthers();
         } else {
-            Message::create([
+            $systemMsg = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'system',
                 'message_type'    => 'text',
                 'content'         => "Permintaan Anda telah diterima. Mohon tunggu sebentar sampai agen kami terhubung.",
             ]);
+            broadcast(new MessageSent($systemMsg))->toOthers();
         }
 
         // Beritahu semua admin ada chat masuk

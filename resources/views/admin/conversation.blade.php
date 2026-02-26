@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/x-icon" href="{{ asset('images/best-logo-1.png') }}">
+    <link rel="shortcut icon" href="{{ asset('images/best-logo-1.png') }}">
     <script>
         window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
     </script>
@@ -175,6 +175,9 @@
 
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
+                            const alreadyExists = this.messages.some(m => m.id === e.id);
+                            if (alreadyExists) return;
+
                             if (e.sender_id == this.adminId && e.sender_type === 'admin') return;
 
                             this.messages.push({
@@ -215,7 +218,7 @@
                         sender_type: 'admin',
                         message_type: type,
                         content: content,
-                        created_at: ''
+                        created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     });
                     this.scrollToBottom();
 
@@ -234,15 +237,16 @@
                             })
                         });
 
-                        if (!response.ok) throw new Error('Failed');
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || data.message || 'Server Error ' + response.status);
                         
                         const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
                         if (msgIndex !== -1) {
-                            this.messages[msgIndex].id = Date.now(); 
-                            this.messages[msgIndex].created_at = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            this.messages[msgIndex].id = data.message.id;
                         }
                     } catch (error) {
                         this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        alert(error.message);
                     } finally {
                         this.isSending = false;
                         this.sendTypingEvent(false); 

@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Customer::query();
+        $query = User::query();
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -34,7 +34,7 @@ class CustomerController extends Controller
         return view('admin.customers.index', compact('customers'));
     }
 
-    public function update(Request $request, Customer $customer)
+    public function update(Request $request, User $customer)
     {
         $request->validate([
             'is_blocked' => 'required|boolean',
@@ -46,7 +46,7 @@ class CustomerController extends Controller
         return redirect()->route('admin.customers.index')->with('success', "Akun pelanggan berhasil $status.");
     }
 
-    public function destroy(Customer $customer)
+    public function destroy(User $customer)
     {
         $customer->delete();
         return redirect()->route('admin.customers.index')->with('success', 'Data pelanggan berhasil dihapus secara permanen.');

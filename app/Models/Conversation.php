@@ -10,7 +10,7 @@ class Conversation extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'customer_id',
+        'user_id',
         'admin_id',
         'status',
         'queue_position',
@@ -25,10 +25,10 @@ class Conversation extends Model
         ];
     }
 
-    // Relasi ke Customer
+    // Relasi ke User (sebagai customer)
     public function customer()
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     // Relasi ke Admin (nullable — belum diklaim = null)
