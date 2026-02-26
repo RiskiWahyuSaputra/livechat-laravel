@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -59,7 +60,22 @@ class DashboardController extends Controller
         return view('admin.dashboard', compact('admin', 'stats', 'customers'));
     }
 
+    /**
+     * Hapus user secara permanen.
+     */
+    public function destroyUser(User $user)
+    {
+        // Hapus semua percakapan dan pesan terkait jika ada (opsional, tergantung cascade di DB)
+        // Jika tidak cascade, hapus manual:
+        foreach ($user->conversations as $conv) {
+            $conv->messages()->delete();
+            $conv->delete();
+        }
+        
+        $user->delete();
 
+        return back()->with('success', 'User berhasil dihapus secara permanen.');
+    }
 
     /**
      * Workspace Chat — tampilkan semua antrian dan chat aktif.
