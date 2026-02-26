@@ -13,6 +13,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'contact',
+        'origin',
         'password',
         'is_online',
         'is_blocked',
@@ -27,9 +29,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'is_online'         => 'boolean',
-            'is_blocked'        => 'boolean',
+            'password' => 'hashed',
+            'is_online' => 'boolean',
+            'is_blocked' => 'boolean',
         ];
     }
 
