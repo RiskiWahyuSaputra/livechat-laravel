@@ -248,7 +248,7 @@
                                     <p class="text-[10px] font-bold text-slate-400">{{ $customer->created_at->diffForHumans() }}</p>
                                 </td>
                                 <td class="px-8 py-5 text-right">
-                                    <form action="{{ route('admin.user.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Hapus user ini secara permanen? Tindakan ini tidak dapat dibatalkan.');">
+                                    <form action="{{ route('admin.customers.destroy', $customer->id) }}" method="POST" onsubmit="return confirm('Hapus pelanggan ini secara permanen? Tindakan ini tidak dapat dibatalkan.');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus User">
