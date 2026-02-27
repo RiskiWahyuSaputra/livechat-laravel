@@ -270,8 +270,28 @@
             closeCategory: '',
             handoverToAdminId: '',
             handoverNote: '',
+            audioUnlocked: false,
+            notificationSound: null,
 
             init() {
+                // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
+                const unlockAudio = () => {
+                    if (!this.notificationSound) {
+                        this.notificationSound = new Audio('{{ asset('sounds/notification.mp3') }}');
+                        this.notificationSound.volume = 0; // Mute for dummy play
+                        this.notificationSound.play().then(() => {
+                            this.notificationSound.pause();
+                            this.notificationSound.currentTime = 0;
+                            this.notificationSound.volume = 1;
+                            this.audioUnlocked = true;
+                            console.log("🔊 Audio unlocked");
+                        }).catch(e => console.log(e));
+                    }
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('keydown', unlockAudio);
+                };
+                document.addEventListener('click', unlockAudio);
+                document.addEventListener('keydown', unlockAudio);
                 // Gunakan setTimeout agar Echo sudah terinisialisasi dari app.js (Vite)
                 setTimeout(() => {
                     if (window.Echo) {
@@ -293,10 +313,15 @@
             },
 
             playNotification() {
-                const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
-                audio.play().catch(e => {
-                    console.log("Audio play blocked. Interactions needed first.");
-                });
+                if (this.audioUnlocked && this.notificationSound) {
+                    this.notificationSound.currentTime = 0;
+                    this.notificationSound.play().catch(e => console.log("Playback failed:", e));
+                } else {
+                    const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
+                    audio.play().catch(e => {
+                        console.log("Audio play blocked. Click anywhere on the page first to unlock sound.");
+                    });
+                }
             },
 
             async fetchChats() {
