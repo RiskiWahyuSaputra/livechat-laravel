@@ -83,13 +83,13 @@
         </div>
 
         <!-- Cannot Reply Notice (If Read Only or Closed) -->
-        <div x-show="!canReply" x-cloak class="bg-slate-100 text-slate-600 py-3 text-center text-sm font-medium">
+        <div x-show="!canReply && status !== 'pending' && status !== 'queued'" x-cloak class="bg-slate-100 text-slate-600 py-3 text-center text-sm font-medium">
             <span x-show="status === 'closed'">Sesi obrolan ini telah ditutup.</span>
-            <span x-show="status !== 'closed' && adminId !== sessionAdminId">Mode Membaca (Read-Only)</span>
+            <span x-show="status === 'active' && adminId !== sessionAdminId">Mode Membaca (Read-Only)</span>
         </div>
 
         <!-- Input Area (Form) -->
-        <form class="p-3 bg-white" @submit.prevent="sendMessage" x-show="canReply" x-cloak>
+        <form class="p-3 bg-white transition-opacity" :class="(!canReply) ? 'opacity-50' : ''" @submit.prevent="sendMessage" x-show="status === 'pending' || status === 'queued' || canReply" x-cloak>
             
             <!-- Type Toggle & Quick Replies -->
             <div class="flex flex-col gap-2 mb-3">
@@ -110,6 +110,29 @@
             
             <!-- Input Textarea & Submit Button -->
             <div class="flex items-end gap-2 relative">
+                
+                <!-- Slash Command Dropdown -->
+                <div x-show="showDropdown && filteredQuickReplies.length > 0" 
+                     x-ref="quickReplyDropdown"
+                     x-transition.opacity.duration.200ms
+                     @click.away="showDropdown = false"
+                     class="absolute bottom-full left-12 mb-2 w-80 max-h-48 overflow-y-auto bg-white border border-slate-200 shadow-xl rounded-xl z-50 py-1"
+                     style="display: none;">
+                    <div class="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 flex justify-between items-center">
+                        <span>Pilih Balasan Cepat</span>
+                        <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">↑↓ + Enter</span>
+                    </div>
+                    <template x-for="(reply, index) in filteredQuickReplies" :key="index">
+                        <button type="button" 
+                                @click="insertQuickReply(reply); showDropdown = false;"
+                                @mouseenter="selectedIndex = index"
+                                class="w-full text-left px-4 py-2 text-[13px] transition-colors block"
+                                :class="selectedIndex === index ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700 hover:bg-slate-50'">
+                            <span x-text="reply"></span>
+                        </button>
+                    </template>
+                </div>
+
                 <!-- Internal Note Toggle Button -->
                 <button type="button" 
                         @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
@@ -121,16 +144,16 @@
                 </button>
 
                 <textarea x-model="newMessage" x-ref="messageInput"
-                          :placeholder="messageType === 'whisper' ? 'Ketik catatan internal...' : 'Ketik balasan Anda ke pelanggan...'" 
-                          @input="sendTypingEvent"
-                          @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
-                          :disabled="isSending"
+                          :placeholder="(!canReply) ? 'Menunggu obrolan diklaim...' : (messageType === 'whisper' ? 'Ketik catatan internal...' : 'Ketik balasan Anda ke pelanggan...')" 
+                          @input="handleInput"
+                          @keydown="handleKeydown"
+                          :disabled="isSending || !canReply"
                           class="flex-1 pl-12 max-h-32 min-h-[44px] border-transparent focus:ring-2 rounded-xl px-4 py-2 text-[13px] transition-colors resize-none overflow-y-auto"
                           :class="messageType === 'whisper' ? 'bg-amber-50 focus:bg-white focus:border-amber-400 focus:ring-amber-200 text-amber-900 placeholder:text-amber-300' : 'bg-slate-100 focus:bg-white focus:border-blue-500 focus:ring-blue-200 text-slate-800 placeholder:text-slate-400'"
                           rows="1"></textarea>
                        
                 <button type="submit" 
-                        :disabled="!newMessage.trim() || isSending"
+                        :disabled="!newMessage.trim() || isSending || !canReply"
                         class="shrink-0 font-semibold px-4 h-11 rounded-xl text-white flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         :class="messageType === 'whisper' ? 'bg-amber-500 hover:bg-amber-600 shadow-md shadow-amber-500/20' : 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/20'">
                     Kirim
@@ -155,6 +178,60 @@
                 isSending: false,
                 isTyping: false,
                 typingTimeout: null,
+                showDropdown: false,
+                selectedIndex: 0,
+                
+                get filteredQuickReplies() {
+                    if (!this.newMessage.startsWith('/')) return [];
+                    const search = this.newMessage.slice(1).toLowerCase();
+                    return this.quickReplies.filter(qr => qr.toLowerCase().includes(search));
+                },
+
+                handleInput(e) {
+                    if (this.newMessage.startsWith('/')) {
+                        this.showDropdown = true;
+                        if (this.selectedIndex >= this.filteredQuickReplies.length) {
+                            this.selectedIndex = 0;
+                        }
+                    } else {
+                        this.showDropdown = false;
+                    }
+                    this.sendTypingEvent(true);
+                },
+
+                handleKeydown(e) {
+                    if (this.showDropdown && this.filteredQuickReplies.length > 0) {
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            this.selectedIndex = (this.selectedIndex + 1) % this.filteredQuickReplies.length;
+                            this.scrollToSelected();
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            this.selectedIndex = (this.selectedIndex - 1 + this.filteredQuickReplies.length) % this.filteredQuickReplies.length;
+                            this.scrollToSelected();
+                        } else if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            this.insertQuickReply(this.filteredQuickReplies[this.selectedIndex]);
+                            this.showDropdown = false;
+                        } else if (e.key === 'Escape') {
+                            this.showDropdown = false;
+                        }
+                    } else if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                },
+
+                scrollToSelected() {
+                    this.$nextTick(() => {
+                        if (this.$refs.quickReplyDropdown) {
+                            const buttons = this.$refs.quickReplyDropdown.querySelectorAll('button');
+                            if (buttons[this.selectedIndex]) {
+                                buttons[this.selectedIndex].scrollIntoView({ block: 'nearest' });
+                            }
+                        }
+                    });
+                },
 
                 init() {
                     this.scrollToBottom();

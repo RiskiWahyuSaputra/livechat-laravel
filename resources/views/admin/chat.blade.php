@@ -52,6 +52,15 @@
             height: 100% !important;
         }
     }
+
+    @keyframes pulse-danger {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    .pulse-animation {
+        animation: pulse-danger 2s infinite;
+    }
 </style>
 @endpush
 
@@ -59,7 +68,12 @@
 <div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }})">
     <div class="row chat-window">
         <!-- Chat User List -->
-        <div class="col-lg-5 col-xl-4 chat-cont-left d-flex" :class="selectedChat ? 'mobile-hide' : ''">
+        <div class="chat-cont-left d-flex transition-all" 
+             :class="{
+                 'col-lg-5 col-xl-4': !sidebarCollapsed,
+                 'd-none': sidebarCollapsed,
+                 'mobile-hide': selectedChat
+             }">
             <div class="card mb-0 contacts_card flex-fill">
                 <div class="chat-header">
                     <div>
@@ -96,7 +110,10 @@
                                 <div class="media-body flex-grow-1">
                                     <div>
                                         <div class="user-name" x-text="chat.customer.name"></div>
-                                        <div class="user-last-chat text-danger font-weight-bold" x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"></div>
+                                        <div class="user-last-chat font-weight-bold" 
+                                             :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
+                                             x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
+                                             :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
                                     </div>
                                     <div>
                                         <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
@@ -145,13 +162,21 @@
         </div>
         
         <!-- Chat Content -->
-        <div class="col-lg-7 col-xl-8 chat-cont-right d-flex" :class="selectedChat ? 'mobile-show' : ''">
+        <div class="chat-cont-right d-flex transition-all" 
+             :class="{
+                 'col-lg-7 col-xl-8': !sidebarCollapsed,
+                 'col-lg-12 col-xl-12': sidebarCollapsed,
+                 'mobile-show': selectedChat
+             }">
             <div class="card mb-0 w-100 h-100">
                 <div class="h-100 d-flex flex-column" x-show="selectedChat">
                     <div class="card-header msg_head">
                         <div class="d-flex bd-highlight align-items-center">
                             <a href="javascript:void(0)" class="back-user-list me-2 d-lg-none" @click="selectedChat = null">
                                 <i class="fas fa-chevron-left"></i>
+                            </a>
+                            <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary" @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
+                                <i class="fas fa-bars fa-lg"></i>
                             </a>
                             <div class="img_cont">
                                 <div class="avatar avatar-sm">
@@ -261,6 +286,8 @@
         Alpine.data('adminChat', (adminId, initPending, initActive) => ({
             adminId: adminId,
             chats: [...initPending, ...initActive],
+            currentTime: Date.now(),
+            sidebarCollapsed: false,
             selectedChat: null,
             searchQuery: '',
             isClaiming: false,
@@ -274,6 +301,9 @@
             notificationSound: null,
 
             init() {
+                // Update currentTime every minute for relative time reactivity
+                setInterval(() => { this.currentTime = Date.now(); }, 60000);
+                
                 // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
                 const unlockAudio = () => {
                     if (!this.notificationSound) {
@@ -345,6 +375,15 @@
                 if (!datetimeString) return '';
                 const date = new Date(datetimeString);
                 return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            },
+
+            isLongWaiting(datetimeString) {
+                if (!datetimeString) return false;
+                // Force reactivity by referencing this.currentTime
+                const now = this.currentTime;
+                // Safely parse ISO string
+                const diff = now - new Date(datetimeString.replace(/-/g, '/')).getTime();
+                return diff > 3 * 60 * 1000; // 3 minutes
             },
 
             selectChat(chat) {
