@@ -47,5 +47,6 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 // Hanya admin yang boleh JOIN (untuk notifikasi antrian masuk)
 // ─────────────────────────────────────────────────────────────────────────
 Broadcast::channel('admin.dashboard', function ($user) {
-    return $user instanceof \App\Models\Admin;
+    // Menggunakan auth('admin')->check() lebih robust untuk admin guard
+    return auth('admin')->check();
 });

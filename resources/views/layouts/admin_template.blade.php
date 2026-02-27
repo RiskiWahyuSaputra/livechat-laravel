@@ -3,10 +3,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
+    </script>
     <title>@yield('title', 'Admin Dashboard') | LiveChat BEST</title>
 
     <!-- Favicons -->
     <link rel="shortcut icon" href="{{ asset('images/best-logo-1.png') }}">
+    
+    <!-- Vite Assets (for Laravel Echo/Reverb) -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <!-- Select 2 -->
     <link rel="stylesheet" href="{{ asset('admin/assets/css/select2.min.css') }}">
