@@ -20,6 +20,33 @@
                 </div>
             </div>
             <div class="card-body">
+                <!-- Filter Form -->
+                <form action="{{ route('admin.history.index') }}" method="GET" class="mb-4 p-3 border rounded">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Cari Pelanggan</label>
+                            <input type="text" name="search" id="search" value="{{ request('search') }}" class="form-control" placeholder="Nama atau kontak...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="category" class="form-label">Kategori Masalah</label>
+                            <select name="category" id="category" class="form-select">
+                                <option value="">Semua Kategori</option>
+                                @foreach($problemCategories as $category)
+                                    <option value="{{ $category }}" {{ request('category') == $category ? 'selected' : '' }}>{{ $category }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_range" class="form-label">Rentang Tanggal</label>
+                            <input type="text" name="date_range" id="date_range" value="{{ request('date_range') }}" class="form-control" placeholder="Pilih tanggal...">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
+                            <a href="{{ route('admin.history.index') }}" class="btn btn-secondary w-100">Reset</a>
+                        </div>
+                    </div>
+                </form>
+
                 <div class="table-responsive">
                     <table class="table table-center table-hover datatable">
                         <thead class="thead-light">
@@ -60,8 +87,8 @@
                                     @endif
                                 </td>
                                 <td>
-                                    {{ $chat->deleted_at->format('d M Y') }}
-                                    <br><small class="text-muted">{{ $chat->deleted_at->format('H:i') }} WIB</small>
+                                    {{ $chat->deleted_at->timezone('Asia/Jakarta')->translatedFormat('d F Y') }}
+                                    <br><small class="text-muted">{{ $chat->deleted_at->timezone('Asia/Jakarta')->translatedFormat('H:i') }}</small>
                                 </td>
                                 <td class="text-end">
                                     <a href="{{ route('admin.history.show', $chat->id) }}" class="btn btn-sm btn-white text-primary">
@@ -85,3 +112,27 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    $(function() {
+        $('#date_range').daterangepicker({
+            opens: 'left',
+            autoUpdateInput: false,
+            locale: {
+                format: 'DD/MM/YYYY',
+                cancelLabel: 'Clear'
+            }
+        });
+
+        $('#date_range').on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+        });
+
+        $('#date_range').on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+        });
+    });
+</script>
+@endpush
+

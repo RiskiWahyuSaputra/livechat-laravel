@@ -137,6 +137,7 @@
                                              :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
                                              x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
                                              :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
+                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                     <div>
                                         <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
@@ -169,6 +170,7 @@
                                     <div>
                                         <div class="user-name" x-text="chat.customer.name"></div>
                                         <div class="user-last-chat" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
+                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                     <div>
                                         <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
@@ -210,6 +212,7 @@
                             </div>
                             <div class="user_info ms-2">
                                 <span x-text="selectedChat ? selectedChat.customer.name : ''"></span>
+                                <p class="mb-0 text-muted small" x-show="selectedChat">Mulai: <span x-text="formatFullDateTime(selectedChat.created_at)"></span></p>
                                 <p class="mb-0" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
                             </div>
                         </div>
@@ -413,7 +416,8 @@
             formatTime(datetimeString) {
                 if (!datetimeString) return '';
                 const date = new Date(datetimeString);
-                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                return date.toLocaleString('id-ID', options);
             },
 
             isLongWaiting(datetimeString) {
@@ -425,6 +429,20 @@
                 return diff > 3 * 60 * 1000; // 3 minutes
             },
 
+            formatShortDateTime(datetimeString) {
+                if (!datetimeString) return '';
+                const date = new Date(datetimeString);
+                const options = { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                return date.toLocaleString('id-ID', options);
+            },
+
+            formatFullDateTime(datetimeString) {
+                if (!datetimeString) return '';
+                const date = new Date(datetimeString);
+                const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                // Using 'id-ID' for Indonesian locale. Ensure the browser supports it.
+                return date.toLocaleString('id-ID', options);
+            },
             selectChat(chat) {
                 if (!this.selectedChat || this.selectedChat.id !== chat.id) {
                     this.iframeLoaded = false;
