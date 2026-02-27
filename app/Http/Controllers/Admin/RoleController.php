@@ -31,17 +31,20 @@ class RoleController extends Controller
             'username' => 'required|string|max:255|unique:admins',
             'email' => 'required|string|email|max:255|unique:admins',
             'password' => 'required|string|min:8',
+            'role' => 'required|in:super_admin,agent',
             'permissions' => 'nullable|array',
-            'is_superadmin' => 'nullable|boolean',
         ]);
+
+        $is_superadmin = $request->role === 'super_admin';
+        $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
 
         Admin::create([
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'admin', // default for backward compat
-            'is_superadmin' => $request->is_superadmin ?? false,
-            'permissions' => $request->permissions ?? [],
+            'role' => $request->role,
+            'is_superadmin' => $is_superadmin,
+            'permissions' => $permissions,
         ]);
 
         return redirect()->route('admin.roles.index')->with('success', 'Admin baru berhasil ditambahkan.');
@@ -54,15 +57,19 @@ class RoleController extends Controller
             'username' => 'required|string|max:255|unique:admins,username,' . $admin->id,
             'email' => 'required|string|email|max:255|unique:admins,email,' . $admin->id,
             'password' => 'nullable|string|min:8',
+            'role' => 'required|in:super_admin,agent',
             'permissions' => 'nullable|array',
-            'is_superadmin' => 'nullable|boolean',
         ]);
+
+        $is_superadmin = $request->role === 'super_admin';
+        $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
 
         $data = [
             'username' => $request->username,
             'email' => $request->email,
-            'is_superadmin' => $request->is_superadmin ?? false,
-            'permissions' => $request->permissions ?? [],
+            'role' => $request->role,
+            'is_superadmin' => $is_superadmin,
+            'permissions' => $permissions,
         ];
 
         if ($request->filled('password')) {
