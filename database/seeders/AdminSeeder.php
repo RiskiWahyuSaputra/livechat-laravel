@@ -11,11 +11,14 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         // Buat Super Admin
+        // Buat Super Admin
         Admin::create([
             'username'        => 'superadmin',
             'email'           => 'admin@livechat.com',
             'password'        => Hash::make('admin123'),
             'role'            => 'super_admin',
+            'is_superadmin'   => true,
+            'permissions'     => ['all'],
             'status'          => 'offline',
             'max_active_chats' => 10,
         ]);
@@ -26,6 +29,8 @@ class AdminSeeder extends Seeder
             'email'           => 'agent1@livechat.com',
             'password'        => Hash::make('agent123'),
             'role'            => 'agent',
+            'is_superadmin'   => false,
+            'permissions'     => ['view_chat'],
             'status'          => 'offline',
             'max_active_chats' => 5,
         ]);
