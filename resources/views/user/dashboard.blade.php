@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="shortcut icon" href="{{ asset('images/best-logo-1.png') }}">
     <script>
         window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
     </script>
@@ -34,10 +35,10 @@
             </div>
         </div>
         
-        <!-- User Profile/Logout -->
-        <div class="flex items-center gap-4 relative" x-data="{ showProfile: false }">
-            <button @click="showProfile = !showProfile" @click.away="showProfile = false" 
-                    class="flex items-center gap-2 md:gap-3 hover:bg-slate-50 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:border-slate-200">
+        <!-- Guest Profile (Only show if logged in) -->
+        @auth
+        <div class="flex items-center gap-4 relative">
+            <div class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent">
                 <div class="relative">
                     <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
                         {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
@@ -47,32 +48,9 @@
                     <p class="text-xs font-bold text-slate-900 leading-none mb-1">{{ Auth::user()->name }}</p>
                     <p class="text-[10px] text-slate-500 font-medium leading-none uppercase">Online</p>
                 </div>
-            </button>
-
-            <!-- Profile Dropdown -->
-            <div x-show="showProfile" x-cloak 
-                 x-transition:enter="transition ease-out duration-200"
-                 class="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 text-slate-800 z-50 overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white shrink-0">
-                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                    </div>
-                    <div class="overflow-hidden">
-                        <p class="font-bold text-slate-900 text-sm truncate">{{ Auth::user()->name }}</p>
-                        <p class="text-xs text-slate-500 font-medium truncate">{{ Auth::user()->email }}</p>
-                    </div>
-                </div>
-                <div class="px-2 pt-2 border-t border-slate-100 pb-2">
-                    <form method="POST" action="{{ route('user.logout') }}">
-                        @csrf
-                        <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-all font-bold text-sm">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                            Logout
-                        </button>
-                    </form>
-                </div>
             </div>
         </div>
+        @endauth
     </header>
 
     <main class="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -130,8 +108,8 @@
                 </div>
             </header>
 
-            <!-- Messages Area -->
-            <div id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
+            <!-- Messages Area (Show if authenticated) -->
+            <div x-show="isAuthenticated" id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
                 <div class="text-center mb-4">
                     <span class="text-slate-400 font-medium text-[10px] text-center w-full inline-block">Percakapan Dimulai</span>
                 </div>
@@ -167,8 +145,41 @@
                 <div id="widget-scroll-anchor" class="h-1"></div>
             </div>
 
+            <!-- Registration Form (Show if NOT authenticated) -->
+            <div x-show="!isAuthenticated" class="flex-1 overflow-y-auto p-6 bg-slate-50 flex flex-col justify-center">
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    </div>
+                    <h4 class="font-bold text-slate-900">Mulai Percakapan</h4>
+                    <p class="text-xs text-slate-500 mt-1">Silakan isi data diri Anda untuk terhubung dengan tim Support kami.</p>
+                </div>
+
+                <form @submit.prevent="submitRegistration" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="regForm.name" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Masukkan nama Anda">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email / No. HP <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="regForm.contact" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Email atau nomor telepon">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Asal / Instansi <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="regForm.origin" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Nama perusahaan atau asal Anda">
+                    </div>
+
+                    <button type="submit" :disabled="isLoading" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex justify-center items-center gap-2">
+                        <span x-show="!isLoading">Mulai Chat</span>
+                        <div x-show="isLoading" class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+                    </button>
+                    
+                    <div x-show="regError" x-text="regError" class="text-xs text-red-500 text-center font-medium"></div>
+                </form>
+            </div>
+
             <!-- Typing Indicator & Footer -->
-            <div class="shrink-0 bg-white">
+            <div x-show="isAuthenticated" class="shrink-0 bg-white">
                 <div x-show="isTyping" x-cloak class="px-4 py-1.5 flex items-center gap-2 bg-slate-50/80 border-t border-slate-100">
                     <span class="text-[10px] italic text-slate-400 font-medium" x-text="typingMessage"></span>
                     <div class="flex gap-1">
@@ -219,7 +230,17 @@
                 isOpen: false,
                 isLoading: false,
                 isInitialized: false,
+                isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
+                csrfToken: '{{ csrf_token() }}',
                 
+                // Form Data
+                regForm: {
+                    name: '',
+                    contact: '',
+                    origin: ''
+                },
+                regError: '',
+
                 conversationId: null,
                 userId: null,
                 status: 'pending',
@@ -246,11 +267,50 @@
                     this.isOpen = !this.isOpen;
                     if (this.isOpen) {
                         this.unreadCount = 0;
+                        if (!this.isAuthenticated) {
+                            // If not authenticated, do nothing, just show the form
+                            return;
+                        }
+
                         if (!this.isInitialized) {
                             await this.fetchChatData();
                         } else {
                             this.scrollToBottom();
                         }
+                    }
+                },
+
+                async submitRegistration() {
+                    this.isLoading = true;
+                    this.regError = '';
+                    
+                    try {
+                        const response = await fetch('{{ route('chat.register') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(this.regForm)
+                        });
+
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            if (data.csrf_token) this.csrfToken = data.csrf_token;
+                            this.isAuthenticated = true;
+                            // Reset form
+                            this.regForm = { name: '', contact: '', origin: '' };
+                            // Load chat data
+                            await this.fetchChatData();
+                        } else {
+                            this.regError = data.message || 'Terjadi kesalahan. Silakan coba lagi.';
+                        }
+                    } catch (error) {
+                        this.regError = 'Gagal terhubung ke server.';
+                    } finally {
+                        this.isLoading = false;
                     }
                 },
 
@@ -263,8 +323,18 @@
                                 'Accept': 'application/json'
                             }
                         });
+                        
+                        if (response.status === 401) {
+                            this.isAuthenticated = false;
+                            this.isInitialized = false;
+                            return;
+                        }
+
                         const data = await response.json();
                         
+                        if (!response.ok) throw new Error(data.error || 'Failed to init');
+
+                        if (data.csrf_token) this.csrfToken = data.csrf_token;
                         this.conversationId = data.conversation.id;
                         this.userId = data.user_id;
                         this.status = data.status;
@@ -295,6 +365,11 @@
 
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
+                            // If it's our own message (we've already added it locally with temp_id)
+                            // then we just update our existing message's ID or skip.
+                            const alreadyExists = this.messages.some(m => m.id === e.id);
+                            if (alreadyExists) return;
+
                             if (e.sender_id == this.userId && e.sender_type === 'user') return;
                             if (e.is_whisper) return;
 
@@ -334,11 +409,12 @@
                     this.isSending = true;
 
                     const tempId = Date.now();
+                    const now = new Date();
                     this.messages.push({
                         temp_id: tempId,
                         sender_type: 'user',
                         content: content,
-                        created_at: ''
+                        created_at: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     });
                     this.scrollToBottom();
 
@@ -347,7 +423,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-CSRF-TOKEN': this.csrfToken,
                                 'Accept': 'application/json'
                             },
                             body: JSON.stringify({
@@ -358,10 +434,14 @@
 
                         const data = await response.json();
                         
-                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
-                        if (msgIndex !== -1 && data.success) {
-                            this.messages[msgIndex].id = data.message.id;
-                            this.messages[msgIndex].created_at = data.message.created_at;
+                        if (response.ok && data.success) {
+                            const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                            if (msgIndex !== -1) {
+                                this.messages[msgIndex].id = data.message.id;
+                            }
+                        } else {
+                            this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                            alert('Gagal mengirim: ' + (data.error || data.message || 'Server Error ' + response.status));
                         }
 
                     } catch (error) {
@@ -379,7 +459,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-CSRF-TOKEN': this.csrfToken,
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({

@@ -8,30 +8,87 @@ use App\Events\TypingIndicator;
 use App\Models\Admin;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
+
+use App\Models\User;
 
 class ChatController extends Controller
 {
     /**
      * Tampilkan halaman chat user.
-     * Jika belum punya conversation aktif, buat baru otomatis.
+     * Tidak digunakan lagi secara langsung, di-handle via react/vue atau Blade initChat.
      */
     public function index()
     {
-        $user = Auth::user();
+        return redirect()->route('user.home');
+    }
 
-        // Ambil conversation aktif user (pending/active/queued)
-        $conversation = $user->activeConversation()->first();
+    /**
+     * Register guest user dari form landing page
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name'    => 'required|string|max:255',
+            'contact' => 'required|string|max:255',
+            'origin'  => 'required|string|max:255',
+        ]);
 
-        // Jika belum ada, buat conversation baru
-        if (!$conversation) {
-            $conversation = $this->createConversation($user);
+        $contact = $request->contact;
+        $token = $request->cookie('guest_chat_token');
+        
+        $user = null;
+        if ($token) {
+            // Kita simpan token di field email (sebagai ID unik) atau biarkan token di cookie saja
+            // Tapi User butuh email. Kita buat email dummy dari contact.
+            $email = $contact . '@livechat.best';
+            $user = User::where('email', $email)->first();
+        }
+        
+        if (!$user) {
+            $email = $contact . '@livechat.best';
+            $user = User::where('email', $email)->orWhere('contact', $contact)->first();
         }
 
-        $messages = $conversation->publicMessages()->get();
+        if (!$user) {
+            $token = Str::random(40);
+            $user = User::create([
+                'name'      => $request->name,
+                'email'     => $contact . '@livechat.best',
+                'contact'   => $contact,
+                'origin'    => $request->origin,
+                'password'  => bcrypt('guest123'),
+                'is_online' => true,
+            ]);
+        } else {
+            $user->update([
+                'name'      => $request->name,
+                'origin'    => $request->origin,
+                'is_online' => true,
+            ]);
+            $token = $user->email; // Gunakan email sebagai token pengenal di cookie
+        }
 
-        return view('chat.index', compact('conversation', 'messages'));
+        // Set Cookie berlaku 7 hari
+        Cookie::queue('guest_chat_token', $user->email, 60 * 24 * 7);
+
+        // Login user secara otomatis
+        Auth::guard('web')->login($user, true);
+
+        return response()->json([
+            'success' => true,
+            'csrf_token' => csrf_token(),
+            'user'    => [
+                'id'      => $user->id,
+                'name'    => $user->name,
+                'contact' => $user->contact,
+                'origin'  => $user->origin,
+            ]
+        ]);
     }
 
     /**
@@ -39,23 +96,46 @@ class ChatController extends Controller
      */
     public function initChat(Request $request)
     {
-        $user = Auth::user();
-
-        // Ambil conversation aktif user (pending/active/queued)
-        $conversation = $user->activeConversation()->first();
-
-        // Jika belum ada, buat conversation baru
-        if (!$conversation) {
-            $conversation = $this->createConversation($user);
+        $token = $request->cookie('guest_chat_token');
+        if (!$token) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        $messages = $conversation->publicMessages()->get();
+        $user = User::where('email', $token)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        if ($user->is_blocked) {
+            return response()->json(['error' => 'Akun Anda telah diblokir.'], 403);
+        }
+        
+        // Mark user online & ensure logged in
+        $user->update(['is_online' => true]);
+        Auth::guard('web')->login($user, true);
+
+        // Ambil conversation aktif user (pending/active/queued)
+        $activeConversation = $user->conversations()
+            ->whereIn('status', ['pending', 'active', 'queued'])
+            ->first();
+
+        if (!$activeConversation) {
+            $activeConversation = $this->createConversation($user);
+        }
+
+        // Ambil semua pesan dari semua percakapan Budi
+        $allConversations = $user->conversations()->withTrashed()->pluck('id');
+        $messages = Message::whereIn('conversation_id', $allConversations)
+            ->where('message_type', '!=', 'whisper')
+            ->orderBy('created_at', 'asc')
+            ->get();
 
         return response()->json([
-            'conversation' => $conversation,
+            'csrf_token'   => csrf_token(),
+            'conversation' => $activeConversation,
             'messages'     => $messages,
             'user_id'      => $user->id,
-            'status'       => $conversation->status,
+            'status'       => $activeConversation->status,
         ]);
     }
 
@@ -66,20 +146,35 @@ class ChatController extends Controller
     {
         $request->validate([
             'content'         => ['required', 'string', 'max:2000'],
-            'conversation_id' => ['required', 'exists:conversations,id'],
+            'conversation_id' => ['required'], // We handle existence and trash manually
         ]);
 
-        $user         = Auth::user();
-        $conversation = Conversation::findOrFail($request->conversation_id);
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+        
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
 
-        // Pastikan conversation milik user ini
-        if ($conversation->user_id !== $user->id) {
+        if ($user->is_blocked) {
+            return response()->json(['error' => 'Diblokir'], 403);
+        }
+
+        // Conversation mungkin sudah di soft delete (closed), jadi kita pakai withTrashed untuk mengeceknya
+        $conversation = Conversation::withTrashed()->find($request->conversation_id);
+
+        if (!$conversation) {
+            return response()->json(['error' => 'Chat tidak ditemukan.'], 404);
+        }
+
+        // Pastikan conversation milik user ini (Gunakan non-strict agar aman dengan type)
+        if ($conversation->user_id != $user->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // Pastikan conversation masih terbuka
-        if (!$conversation->isOpen()) {
-            return response()->json(['error' => 'Chat sudah ditutup.'], 422);
+        // Jika conversation ini sudah ditutup (closed / soft deleted), kita butuh buat tiket baru!
+        if (!$conversation->isOpen() || $conversation->trashed()) {
+            $conversation = $this->createConversation($user);
         }
 
         $message = Message::create([
@@ -90,11 +185,19 @@ class ChatController extends Controller
             'content'         => $request->content,
         ]);
 
+        \Log::info('Message created by user', ['id' => $message->id]);
+
         // Update waktu pesan terakhir
         $conversation->update(['last_message_at' => now()]);
 
-        // Broadcast pesan real-time ke semua peserta
-        broadcast(new MessageSent($message))->toOthers();
+        try {
+            // Broadcast pesan real-time ke semua peserta
+            broadcast(new MessageSent($message));
+            \Log::info('Broadcast MessageSent success');
+        } catch (\Exception $e) {
+            \Log::error('Broadcast MessageSent failed', ['error' => $e->getMessage()]);
+            // We still return success because it's saved in DB
+        }
 
         return response()->json([
             'success' => true,
@@ -112,11 +215,16 @@ class ChatController extends Controller
     public function typing(Request $request)
     {
         $request->validate([
-            'conversation_id' => ['required', 'exists:conversations,id'],
+            'conversation_id' => ['required'], // Bisa juga check exists withTrashed
             'is_typing'       => ['required', 'boolean'],
         ]);
 
-        $user = Auth::user();
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
 
         broadcast(new TypingIndicator(
             conversationId: $request->conversation_id,
@@ -132,11 +240,6 @@ class ChatController extends Controller
 
     /**
      * Buat conversation baru dan tentukan status awal.
-     *
-     * Logic:
-     * - Ada admin online yang bisa terima chat? → status: pending
-     * - Semua admin offline? → kirim pesan otomatis offline
-     * - Semua admin penuh (max_active_chats)? → status: queued + posisi antrian
      */
     private function createConversation($user): Conversation
     {
@@ -171,15 +274,37 @@ class ChatController extends Controller
             'last_message_at'=> now(),
         ]);
 
+        // Kirim pesan otomatis (User Intro)
+        $intro = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => $user->id,
+            'sender_type'     => 'user',
+            'message_type'    => 'text',
+            'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin terhubung dengan tim Support.",
+        ]);
+
+        // Broadcast intro message
+        broadcast(new MessageSent($intro))->toOthers();
+
         // Kirim pesan sistem otomatis jika diperlukan
         if ($autoMessage) {
-            Message::create([
+            $systemMsg = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'system',
                 'message_type'    => 'text',
                 'content'         => $autoMessage,
             ]);
+            broadcast(new MessageSent($systemMsg))->toOthers();
+        } else {
+            $systemMsg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'system',
+                'message_type'    => 'text',
+                'content'         => "Permintaan Anda telah diterima. Mohon tunggu sebentar sampai agen kami terhubung.",
+            ]);
+            broadcast(new MessageSent($systemMsg))->toOthers();
         }
 
         // Beritahu semua admin ada chat masuk

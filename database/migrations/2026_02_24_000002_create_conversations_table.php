@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('problem_category')->nullable(); // Diisi admin saat close
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -24,8 +24,23 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 // Siapa yang boleh: User pemilik conversation ATAU Admin yang menanganinya
 // ─────────────────────────────────────────────────────────────────────────
 Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
-    return true; // IZINKAN SEMUA UNTUK TESTING DEBUG 403
-});
+    // 1. Cek jika dia adalah Admin
+    if (auth('admin')->check()) {
+        return true;
+    }
+
+    // 2. Cek jika dia adalah User pemilik percakapan
+    $conversation = \App\Models\Conversation::find($conversationId);
+    if ($conversation && (int)$user->id === (int)$conversation->user_id) {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'type' => 'user'
+        ];
+    }
+
+    return false;
+}, ['guards' => ['web', 'admin']]);
 
 // ─────────────────────────────────────────────────────────────────────────
 // Channel: admin.dashboard
@@ -33,4 +48,4 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 // ─────────────────────────────────────────────────────────────────────────
 Broadcast::channel('admin.dashboard', function ($user) {
     return $user instanceof \App\Models\Admin;
-});
+}, ['guards' => ['admin']]);
