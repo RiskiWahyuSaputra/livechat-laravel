@@ -6,11 +6,24 @@
 <div x-data="{
     showModal: false,
     isEdit: false,
-    form: { id: '', username: '', email: '', password: '', is_superadmin: false, permissions: [] },
+    form: { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [] },
     availablePermissions: {{ Js::from($permissions) }},
+    init() {
+        this.$watch('form.role', (value) => {
+            if (value === 'super_admin') {
+                this.form.is_superadmin = true;
+                this.form.permissions = Object.keys(this.availablePermissions);
+            } else {
+                this.form.is_superadmin = false;
+                if (!this.isEdit) {
+                    this.form.permissions = [];
+                }
+            }
+        });
+    },
     openCreate() {
         this.isEdit = false;
-        this.form = { id: '', username: '', email: '', password: '', is_superadmin: false, permissions: [] };
+        this.form = { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [] };
         this.showModal = true;
     },
     openEdit(admin) {
@@ -20,6 +33,7 @@
             username: admin.username, 
             email: admin.email, 
             password: '', 
+            role: admin.role,
             is_superadmin: Boolean(admin.is_superadmin), 
             permissions: Array.isArray(admin.permissions) ? admin.permissions : (admin.permissions ? Object.values(admin.permissions) : []) 
         };
@@ -147,22 +161,27 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" name="is_superadmin" value="1" x-model="form.is_superadmin" id="isSuper">
-                                    <label class="form-check-label font-weight-bold" for="isSuper">Superadmin Global</label>
-                                    <input type="hidden" name="is_superadmin" value="0" x-show="!form.is_superadmin">
+                                <div class="form-group mb-3">
+                                    <label class="form-label font-weight-bold">Role Administrator</label>
+                                    <select name="role" x-model="form.role" class="form-select" required>
+                                        <option value="agent">Agent</option>
+                                        <option value="super_admin">Superadmin</option>
+                                    </select>
                                 </div>
-                                <div x-show="!form.is_superadmin">
+                                <div>
                                     <label class="form-label d-block">Hak Akses</label>
                                     <div class="row">
                                         <template x-for="(label, key) in availablePermissions" :key="key">
                                             <div class="col-6 mb-2">
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="permissions[]" :value="key" x-model="form.permissions" :id="'perm_'+key">
+                                                    <input class="form-check-input" type="checkbox" name="permissions[]" :value="key" x-model="form.permissions" :id="'perm_'+key" :disabled="form.role === 'super_admin'">
                                                     <label class="form-check-label small" :for="'perm_'+key" x-text="label"></label>
                                                 </div>
                                             </div>
                                         </template>
+                                    </div>
+                                    <div class="mt-2 text-muted small" x-show="form.role === 'super_admin'">
+                                        <i class="fe fe-info"></i> Superadmin memiliki semua hak akses sistem secara default.
                                     </div>
                                 </div>
                             </div>
