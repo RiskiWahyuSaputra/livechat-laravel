@@ -2,15 +2,73 @@
 
 @section('title', 'Dashboard')
 
+@push('styles')
+<style>
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        background: #fcfcfc;
+    }
+    .empty-state img {
+        max-width: 150px;
+        margin-bottom: 20px;
+        opacity: 0.8;
+    }
+    .search-input-group {
+        position: relative;
+        width: 300px;
+    }
+    .search-input-group i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #adb5bd;
+    }
+    .search-input-group input {
+        padding-left: 35px;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        background-color: #f8f9fa;
+        transition: all 0.2s;
+    }
+    .search-input-group input:focus {
+        background-color: #fff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.1);
+        border-color: #007bff;
+    }
+    .homegraph {
+        margin-top: 10px;
+        min-height: 50px;
+    }
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #28a745;
+        border-radius: 50%;
+        display: inline-block;
+        margin-left: 5px;
+        box-shadow: 0 0 0 rgba(40, 167, 69, 0.4);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="row">
+    <!-- Total Pelanggan -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <div class="card w-100">
+        <div class="card w-100 shadow-sm border-0">
             <div class="card-body">
                 <div class="home-user">
                     <div class="home-userhead">
                         <div class="home-usercount">
-                            <span><img src="{{ asset('admin/assets/img/icons/user.svg') }}" alt="img"></span>
+                            <span class="bg-primary-light"><img src="{{ asset('admin/assets/img/icons/user.svg') }}" alt="img"></span>
                             <h6>Total Pelanggan</h6>
                         </div>
                     </div>
@@ -18,41 +76,47 @@
                         <div class="home-usercontents">
                             <h3>{{ $stats['total_users'] }}</h3>
                         </div>
-                        <div class="homegraph">
+                        <div class="homegraph w-100">
+                            <div id="chart-total"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Pelanggan Online -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <div class="card w-100">
+        <div class="card w-100 shadow-sm border-0">
             <div class="card-body">
                 <div class="home-user home-provider">
                     <div class="home-userhead">
                         <div class="home-usercount">
-                            <span><img src="{{ asset('admin/assets/img/icons/user-circle.svg') }}" alt="img"></span>
-                            <h6>Online Sekarang</h6>
+                            <span class="bg-success-light"><img src="{{ asset('admin/assets/img/icons/user-circle.svg') }}" alt="img"></span>
+                            <h6>Pelanggan Online <span class="pulse-dot"></span></h6>
                         </div>
                     </div>
                     <div class="home-usercontent">
                         <div class="home-usercontents">
                             <h3 class="text-success">{{ $stats['online_users'] }}</h3>
                         </div>
-                        <div class="homegraph">
+                        <div class="homegraph w-100">
+                            <div id="chart-online"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Pelanggan Hari Ini -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <div class="card w-100">
+        <div class="card w-100 shadow-sm border-0">
             <div class="card-body">
                 <div class="home-user home-service">
                     <div class="home-userhead">
                         <div class="home-usercount">
-                            <span><img src="{{ asset('admin/assets/img/icons/service.svg') }}" alt="img"></span>
+                            <span class="bg-warning-light"><img src="{{ asset('admin/assets/img/icons/service.svg') }}" alt="img"></span>
                             <h6>Pelanggan Hari Ini</h6>
                         </div>
                     </div>
@@ -60,20 +124,23 @@
                         <div class="home-usercontents">
                             <h3>{{ $stats['today_users'] }}</h3>
                         </div>
-                        <div class="homegraph">
+                        <div class="homegraph w-100">
+                            <div id="chart-today"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Pelanggan Kemarin -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <div class="card w-100">
+        <div class="card w-100 shadow-sm border-0">
             <div class="card-body">
                 <div class="home-user home-subscription">
                     <div class="home-userhead">
                         <div class="home-usercount">
-                            <span><img src="{{ asset('admin/assets/img/icons/money.svg') }}" alt="img"></span>
+                            <span class="bg-info-light"><img src="{{ asset('admin/assets/img/icons/money.svg') }}" alt="img"></span>
                             <h6>Pelanggan Kemarin</h6>
                         </div>
                     </div>
@@ -81,7 +148,8 @@
                         <div class="home-usercontents">
                             <h3>{{ $stats['yesterday_users'] }}</h3>
                         </div>
-                        <div class="homegraph">
+                        <div class="homegraph w-100">
+                            <div id="chart-yesterday"></div>
                         </div>
                     </div>
                 </div>
@@ -90,80 +158,113 @@
     </div>
 </div>
 
-<div class="row">
+<div class="row" x-data="{ 
+    search: '',
+    items: [
+        @foreach($customers as $customer)
+        {
+            id: {{ $customer->id }},
+            name: '{{ addslashes($customer->name) }}',
+            contact: '{{ addslashes($customer->contact) }}',
+            origin: '{{ addslashes($customer->origin) }}',
+            date: '{{ $customer->created_at->format('d M Y') }}',
+            dateHuman: '{{ $customer->created_at->diffForHumans() }}',
+            initial: '{{ strtoupper(substr($customer->name, 0, 1)) }}',
+            deleteUrl: '{{ route('admin.user.destroy', $customer->id) }}'
+        },
+        @endforeach
+    ],
+    get filteredItems() {
+        if (this.search === '') return this.items;
+        return this.items.filter(i => 
+            i.name.toLowerCase().includes(this.search.toLowerCase()) || 
+            i.contact.toLowerCase().includes(this.search.toLowerCase()) ||
+            i.origin.toLowerCase().includes(this.search.toLowerCase())
+        );
+    }
+}">
     <div class="col-sm-12">
-        <div class="card">
-            <div class="card-header">
+        <div class="card shadow-sm border-0">
+            <div class="card-header border-bottom-0 pt-4 px-4">
                 <div class="row align-items-center">
                     <div class="col">
                         <h4 class="card-title">Daftar Pelanggan</h4>
                     </div>
                     <div class="col-auto">
-                        <div class="flex-center">
-                            <a href="{{ route('admin.dashboard') }}" class="btn btn-sm {{ !request('filter') ? 'btn-primary' : 'btn-outline-primary' }} me-2">Semua</a>
-                            <a href="{{ route('admin.dashboard', ['filter' => 'online']) }}" class="btn btn-sm {{ request('filter') == 'online' ? 'btn-primary' : 'btn-outline-primary' }} me-2">Online</a>
-                            <a href="{{ route('admin.dashboard', ['filter' => 'today']) }}" class="btn btn-sm {{ request('filter') == 'today' ? 'btn-primary' : 'btn-outline-primary' }} me-2">Hari Ini</a>
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- Real-time Search -->
+                            <div class="search-input-group">
+                                <i class="fe fe-search"></i>
+                                <input type="text" x-model="search" placeholder="Cari nama, kontak atau instansi..." class="form-control">
+                            </div>
+                            
+                            <div class="btn-group shadow-sm">
+                                <a href="{{ route('admin.dashboard') }}" class="btn btn-sm {{ !request('filter') ? 'btn-primary' : 'btn-white' }}">Semua</a>
+                                <a href="{{ route('admin.dashboard', ['filter' => 'online']) }}" class="btn btn-sm {{ request('filter') == 'online' ? 'btn-primary' : 'btn-white' }}">Online</a>
+                                <a href="{{ route('admin.dashboard', ['filter' => 'today']) }}" class="btn btn-sm {{ request('filter') == 'today' ? 'btn-primary' : 'btn-white' }}">Hari Ini</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-center table-hover datatable">
+                    <table class="table table-center table-hover mb-0">
                         <thead class="thead-light">
                             <tr>
-                                <th>Pelanggan</th>
+                                <th class="ps-4">Pelanggan</th>
                                 <th>Kontak & Instansi</th>
-                                <th>Status</th>
                                 <th>Bergabung Pada</th>
-                                <th class="text-end">Aksi</th>
+                                <th class="text-end pe-4">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($customers as $customer)
-                            <tr>
-                                <td>
-                                    <div class="table-profileimage">
-                                        <div class="avatar avatar-sm me-2">
-                                            <div class="avatar-title rounded-circle bg-primary text-white">
-                                                {{ strtoupper(substr($customer->name, 0, 1)) }}
+                            <template x-for="item in filteredItems" :key="item.id">
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="table-profileimage d-flex align-items-center">
+                                            <div class="avatar avatar-sm me-2">
+                                                <div class="avatar-title rounded-circle bg-primary text-white" x-text="item.initial"></div>
                                             </div>
+                                            <span class="fw-semibold text-dark" x-text="item.name"></span>
                                         </div>
-                                        <span>{{ $customer->name }}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>{{ $customer->contact }}</div>
-                                    <small class="text-muted">{{ $customer->origin }}</small>
-                                </td>
-                                <td>
-                                    @if($customer->conversations()->where('status', 'active')->exists())
-                                        <span class="badge bg-success-light">Sedang Chat</span>
-                                    @else
-                                        <span class="badge bg-light text-dark">Idle</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div>{{ $customer->created_at->format('d M Y') }}</div>
-                                    <small class="text-muted">{{ $customer->created_at->diffForHumans() }}</small>
-                                </td>
-                                <td class="text-end">
-                                    <form action="{{ route('admin.user.destroy', $customer->id) }}" method="POST" onsubmit="return confirm('Hapus pelanggan ini?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-white text-danger"><i class="fe fe-trash-2"></i></button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5" class="text-center">Tidak ada data pelanggan.</td>
-                            </tr>
-                            @endforelse
+                                    </td>
+                                    <td>
+                                        <div class="fw-medium" x-text="item.contact"></div>
+                                        <small class="text-muted" x-text="item.origin"></small>
+                                    </td>
+                                    <td>
+                                        <div x-text="item.date"></div>
+                                        <small class="text-muted" x-text="item.dateHuman"></small>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <form :action="item.deleteUrl" method="POST" onsubmit="return confirm('Hapus pelanggan ini?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-white text-danger border-0 shadow-none"><i class="fe fe-trash-2"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <!-- Empty State -->
+                            <template x-if="filteredItems.length === 0">
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty-state">
+                                            <img src="https://illustrations.popsy.co/amber/no-data.svg" alt="No data found" class="img-fluid">
+                                            <h5 class="text-muted fw-bold">Tidak ada data pelanggan</h5>
+                                            <p class="text-muted small">Kata kunci "<span x-text="search" class="fw-bold"></span>" tidak cocok dengan data apapun.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-4">
+                
+                <!-- Pagination (Only show when not searching) -->
+                <div class="px-4 py-3" x-show="search === ''">
                     {{ $customers->links() }}
                 </div>
             </div>
@@ -171,3 +272,80 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chartData = @json($stats['chart_data']);
+        const chartLabels = @json($stats['chart_labels']);
+
+        const commonOptions = {
+            chart: {
+                type: 'area',
+                height: 50,
+                sparkline: {
+                    enabled: true
+                },
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 800
+                }
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 2
+            },
+            fill: {
+                opacity: 0.3,
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.7,
+                    opacityTo: 0.3,
+                    stops: [0, 90, 100]
+                }
+            },
+            series: [{
+                name: 'Pelanggan Baru',
+                data: chartData
+            }],
+            xaxis: {
+                categories: chartLabels
+            },
+            tooltip: {
+                fixed: { enabled: false },
+                x: { show: true },
+                y: {
+                    title: {
+                        formatter: function(seriesName) { return '' }
+                    }
+                },
+                marker: { show: false }
+            }
+        };
+
+        // Render Charts
+        new ApexCharts(document.querySelector("#chart-total"), {
+            ...commonOptions,
+            colors: ['#007bff']
+        }).render();
+
+        new ApexCharts(document.querySelector("#chart-online"), {
+            ...commonOptions,
+            colors: ['#28a745']
+        }).render();
+
+        new ApexCharts(document.querySelector("#chart-today"), {
+            ...commonOptions,
+            colors: ['#ffc107']
+        }).render();
+
+        new ApexCharts(document.querySelector("#chart-yesterday"), {
+            ...commonOptions,
+            colors: ['#17a2b8']
+        }).render();
+    });
+</script>
+@endpush

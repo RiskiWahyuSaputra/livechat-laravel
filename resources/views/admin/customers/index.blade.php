@@ -3,7 +3,7 @@
 @section('title', 'Data Pelanggan')
 
 @section('content')
-<div class="row">
+<div class="row" x-data="customerManagement()">
     <div class="col-sm-12">
         <div class="card">
             <div class="card-header">
@@ -32,13 +32,6 @@
                         </form>
                     </div>
                 </div>
-
-                @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                @endif
 
                 <div class="table-responsive">
                     <table class="table table-center table-hover datatable">
@@ -79,7 +72,7 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex justify-content-end">
-                                        <form action="{{ route('admin.customers.update', $customer->id) }}" method="POST" class="me-2" onsubmit="return confirm('{{ $customer->is_blocked ? 'Aktifkan' : 'Blokir' }} pelanggan ini?');">
+                                        <form :id="'form-status-'+{{ $customer->id }}" action="{{ route('admin.customers.update', $customer->id) }}" method="POST" class="me-2" @submit.prevent="confirmStatus(event, {{ $customer->id }}, '{{ $customer->is_blocked ? 'Aktifkan' : 'Blokir' }}')">
                                             @csrf
                                             @method('PUT')
                                             <input type="hidden" name="is_blocked" value="{{ $customer->is_blocked ? 0 : 1 }}">
@@ -88,7 +81,7 @@
                                             </button>
                                         </form>
 
-                                        <form action="{{ route('admin.customers.destroy', $customer->id) }}" method="POST" onsubmit="return confirm('Hapus permanen pelanggan ini?');">
+                                        <form :id="'form-delete-'+{{ $customer->id }}" action="{{ route('admin.customers.destroy', $customer->id) }}" method="POST" @submit.prevent="confirmDelete(event, {{ $customer->id }})">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-white text-danger" title="Hapus">
@@ -107,10 +100,51 @@
                     </table>
                 </div>
                 <div class="mt-4">
-                    {{ $customers->links() }}
                 </div>
             </div>
         </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('customerManagement', () => ({
+            confirmStatus(event, customerId, actionName) {
+                Swal.fire({
+                    title: actionName + ' pelanggan ini?',
+                    text: 'Anda dapat merubahnya kembali nanti.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, ' + actionName,
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('form-status-' + customerId).submit();
+                    }
+                });
+            },
+            
+            confirmDelete(event, customerId) {
+                Swal.fire({
+                    title: 'Hapus permanen pelanggan ini?',
+                    text: 'Data yang dihapus tidak dapat dikembalikan!',
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('form-delete-' + customerId).submit();
+                    }
+                });
+            }
+        }));
+    });
+</script>
+@endpush

@@ -35,17 +35,157 @@
     <!-- Main CSS -->
     <link rel="stylesheet" href="{{ asset('admin/assets/css/admin.css') }}">
     
+    <!-- Daterangepicker CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <style>
         [x-cloak] { display: none !important; }
+        
+        /* 
+         * Sidebar UI Overrides 
+         */
+        @media (min-width: 992px) {
+            body:not(.mini-sidebar) .sidebar {
+                width: 230px !important;
+            }
+            body:not(.mini-sidebar) .page-wrapper {
+                margin-left: 230px !important;
+            }
+            body:not(.mini-sidebar) .header-left {
+                width: 230px !important;
+            }
+
+            /* Fix for mini-sidebar width glitch */
+            .mini-sidebar .sidebar {
+                width: 60px !important;
+            }
+            .mini-sidebar .page-wrapper {
+                margin-left: 60px !important;
+            }
+            .mini-sidebar .header-left {
+                width: 60px !important;
+            }
+        }
+
+        /* Mobile Responsive Toggle */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                margin-left: -250px;
+                transition: all 0.4s ease;
+            }
+            .slide-nav .sidebar {
+                margin-left: 0;
+            }
+        }
+        
+        .sidebar-logo {
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0 !important;
+            width: 100%;
+        }
+        .sidebar-logo img.logo {
+            max-height: 60px;
+            width: auto;
+        }
+
+        .sidebar-menu ul li a {
+            display: flex;
+            align-items: center;
+        }
+        .sidebar-menu ul li a i {
+            font-size: 18px;
+            margin-right: 12px;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* 
+         * Dark Mode Overrides
+         */
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        body.dark-mode .main-wrapper,
+        body.dark-mode .page-wrapper,
+        body.dark-mode .content {
+            background-color: #121212;
+        }
+        body.dark-mode .header {
+            background-color: #1e1e1e;
+            border-bottom-color: #333;
+        }
+        body.dark-mode .sidebar {
+            background-color: #1e1e1e;
+            border-right-color: #333;
+        }
+        body.dark-mode .card {
+            background-color: #1e1e1e;
+            border-color: #333;
+        }
+        body.dark-mode .card-header {
+            background-color: #252525;
+            border-bottom-color: #333;
+        }
+        body.dark-mode .table,
+        body.dark-mode .table td,
+        body.dark-mode .table th {
+            color: #e0e0e0;
+            border-color: #333;
+        }
+        body.dark-mode .table-hover tbody tr:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        body.dark-mode .form-control,
+        body.dark-mode .select2-container--default .select2-selection--single {
+            background-color: #252525;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+        body.dark-mode .form-control:focus {
+            background-color: #2a2a2a;
+            color: #fff;
+        }
+        body.dark-mode .sidebar-menu ul li a {
+            color: #a0a0a0;
+        }
+        body.dark-mode .sidebar-menu ul li a:hover,
+        body.dark-mode .sidebar-menu ul li.active a {
+            color: #fff;
+            background-color: rgba(255,255,255,0.1);
+        }
+        body.dark-mode .page-title,
+        body.dark-mode .card-title {
+            color: #fff;
+        }
+        body.dark-mode .text-muted {
+            color: #888 !important;
+        }
+        body.dark-mode .modal-content {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border-color: #333;
+        }
+        body.dark-mode .modal-header,
+        body.dark-mode .modal-footer {
+            border-color: #333;
+        }
+        body.dark-mode .close-btn,
+        body.dark-mode .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
     </style>
     
     @stack('styles')
 </head>
 
-<body>
+<body x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" :class="{ 'dark-mode': darkMode }" x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))">
     <div class="main-wrapper">
     
         <!-- Header -->
@@ -70,6 +210,12 @@
                 </div>
                 <ul class="nav user-menu">
                     
+                    <!-- Dark Mode Toggle -->
+                    <li class="nav-item d-flex align-items-center me-3">
+                        <button class="btn btn-sm btn-light border" @click="darkMode = !darkMode" title="Toggle Dark Mode">
+                            <i class="fe" :class="darkMode ? 'fe-sun text-warning' : 'fe-moon text-dark'"></i>
+                        </button>
+                    </li>
                     
                     <!-- User Menu -->
                     <li class="nav-item dropdown">
@@ -116,13 +262,12 @@
             <div class="sidebar-header">
                 <div class="sidebar-logo">
                     <a href="{{ route('admin.dashboard') }}">
-                        <img src="{{ asset('images/best-logo-1.png') }}" class="img-fluid logo" alt="">
+                        <img src="{{ asset('images/best-logo-1.png') }}" class="img-fluid logo" alt="Logo BEST">
                     </a>
                     <a href="{{ route('admin.dashboard') }}">
-                        <img src="{{ asset('images/best-logo-1.png') }}" class="img-fluid logo-small" alt="">
+                        <img src="{{ asset('images/best-logo-1.png') }}" class="img-fluid logo-small" alt="Logo BEST">
                     </a>
                 </div>
-               
             </div>
             
             <div class="sidebar-inner slimscroll">
@@ -132,7 +277,7 @@
                             <h6>Home</h6>
                         </li>
                         <li class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                            <a href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
+                            <a href="{{ route('admin.dashboard') }}"><i class="fe fe-home"></i> <span>Dashboard</span></a>
                         </li>
                         
                         <li class="menu-title">
@@ -140,19 +285,19 @@
                         </li>
                         @if(auth('admin')->user()->hasPermission('view_chat'))
                         <li class="{{ request()->routeIs('admin.chat') ? 'active' : '' }}">
-                            <a href="{{ route('admin.chat') }}"><span>Chat</span></a>
+                            <a href="{{ route('admin.chat') }}"><i class="fe fe-message-square"></i> <span>Chat</span></a>
                         </li>
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('view_history'))
                         <li class="{{ request()->routeIs('admin.history.*') ? 'active' : '' }}">
-                            <a href="{{ route('admin.history.index') }}"><span>Riwayat Arsip</span></a>
+                            <a href="{{ route('admin.history.index') }}"><i class="fe fe-clock"></i> <span>Riwayat Arsip</span></a>
                         </li>
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('manage_quick_replies'))
                         <li class="{{ request()->routeIs('admin.quick-replies.*') ? 'active' : '' }}">
-                            <a href="{{ route('admin.quick-replies.index') }}"><span>Balasan Cepat</span></a>
+                            <a href="{{ route('admin.quick-replies.index') }}"><i class="fe fe-zap"></i> <span>Balasan Cepat</span></a>
                         </li>
                         @endif
 
@@ -161,13 +306,13 @@
                         </li>
                         @if(auth('admin')->user()->hasPermission('manage_customers'))
                         <li class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-                            <a href="{{ route('admin.customers.index') }}"><span>Data Pelanggan</span></a>
+                            <a href="{{ route('admin.customers.index') }}"><i class="fe fe-users"></i> <span>Data Pelanggan</span></a>
                         </li>
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('manage_roles'))
                         <li class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                            <a href="{{ route('admin.roles.index') }}"><span>Hak Akses</span></a>
+                            <a href="{{ route('admin.roles.index') }}"><i class="fe fe-shield"></i> <span>Hak Akses</span></a>
                         </li>
                         @endif
 
@@ -177,7 +322,7 @@
                         <li>
                             <form method="POST" action="{{ route('admin.logout') }}" id="logout-form-sidebar">
                                 @csrf
-                                <a href="javascript:void(0);" onclick="document.getElementById('logout-form-sidebar').submit();"><span>Logout</span></a>
+                                <a href="javascript:void(0);" onclick="document.getElementById('logout-form-sidebar').submit();"><i class="fe fe-log-out text-danger"></i> <span class="text-danger">Logout</span></a>
                             </form>
                         </li>
                     </ul>
@@ -218,7 +363,55 @@
 
     <!-- Custom JS -->
     <script src="{{ asset('admin/assets/js/admin.js') }}"></script>
+
+    <!-- Daterangepicker JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment/min/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     
+    <script>
+        // Global Toast Notification Setup
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Trigger Toast for session flash messages
+        @if(Session::has('success'))
+            Toast.fire({
+                icon: 'success',
+                title: '{{ Session::get("success") }}'
+            });
+        @endif
+
+        @if(Session::has('error'))
+            Toast.fire({
+                icon: 'error',
+                title: '{{ Session::get("error") }}'
+            });
+        @endif
+
+        @if(Session::has('warning'))
+            Toast.fire({
+                icon: 'warning',
+                title: '{{ Session::get("warning") }}'
+            });
+        @endif
+
+        @if(Session::has('info'))
+            Toast.fire({
+                icon: 'info',
+                title: '{{ Session::get("info") }}'
+            });
+        @endif
+    </script>
+
     @stack('scripts')
 </body>
 </html>

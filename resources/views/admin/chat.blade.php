@@ -52,6 +52,38 @@
             height: 100% !important;
         }
     }
+
+    /* Skeleton Loading CSS */
+    @keyframes skeleton-pulse {
+        0% { background-color: #e2e5e7; }
+        50% { background-color: #f1f3f5; }
+        100% { background-color: #e2e5e7; }
+    }
+    .skeleton-avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        animation: skeleton-pulse 1.5s infinite ease-in-out;
+    }
+    .skeleton-text {
+        height: 60px; border-radius: 15px;
+        animation: skeleton-pulse 1.5s infinite ease-in-out;
+    }
+    body.dark-mode .skeleton-loader-container { background-color: #121212 !important; }
+    body.dark-mode .skeleton-avatar, body.dark-mode .skeleton-text {
+        animation: skeleton-pulse-dark 1.5s infinite ease-in-out;
+    }
+    @keyframes skeleton-pulse-dark {
+        0% { background-color: #2a2a2a; }
+        50% { background-color: #3a3a3a; }
+        100% { background-color: #2a2a2a; }
+    }
+    @keyframes pulse-danger {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    .pulse-animation {
+        animation: pulse-danger 2s infinite;
+    }
 </style>
 @endpush
 
@@ -59,7 +91,12 @@
 <div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }})">
     <div class="row chat-window">
         <!-- Chat User List -->
-        <div class="col-lg-5 col-xl-4 chat-cont-left d-flex" :class="selectedChat ? 'mobile-hide' : ''">
+        <div class="chat-cont-left d-flex transition-all" 
+             :class="{
+                 'col-lg-5 col-xl-4': !sidebarCollapsed,
+                 'd-none': sidebarCollapsed,
+                 'mobile-hide': selectedChat
+             }">
             <div class="card mb-0 contacts_card flex-fill">
                 <div class="chat-header">
                     <div>
@@ -96,7 +133,11 @@
                                 <div class="media-body flex-grow-1">
                                     <div>
                                         <div class="user-name" x-text="chat.customer.name"></div>
-                                        <div class="user-last-chat text-danger font-weight-bold" x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"></div>
+                                        <div class="user-last-chat font-weight-bold" 
+                                             :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
+                                             x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
+                                             :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
+                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                     <div>
                                         <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
@@ -129,6 +170,7 @@
                                     <div>
                                         <div class="user-name" x-text="chat.customer.name"></div>
                                         <div class="user-last-chat" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
+                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                     <div>
                                         <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
@@ -145,13 +187,21 @@
         </div>
         
         <!-- Chat Content -->
-        <div class="col-lg-7 col-xl-8 chat-cont-right d-flex" :class="selectedChat ? 'mobile-show' : ''">
+        <div class="chat-cont-right d-flex transition-all" 
+             :class="{
+                 'col-lg-7 col-xl-8': !sidebarCollapsed,
+                 'col-lg-12 col-xl-12': sidebarCollapsed,
+                 'mobile-show': selectedChat
+             }">
             <div class="card mb-0 w-100 h-100">
                 <div class="h-100 d-flex flex-column" x-show="selectedChat">
                     <div class="card-header msg_head">
                         <div class="d-flex bd-highlight align-items-center">
                             <a href="javascript:void(0)" class="back-user-list me-2 d-lg-none" @click="selectedChat = null">
                                 <i class="fas fa-chevron-left"></i>
+                            </a>
+                            <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary" @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
+                                <i class="fas fa-bars fa-lg"></i>
                             </a>
                             <div class="img_cont">
                                 <div class="avatar avatar-sm">
@@ -162,6 +212,7 @@
                             </div>
                             <div class="user_info ms-2">
                                 <span x-text="selectedChat ? selectedChat.customer.name : ''"></span>
+                                <p class="mb-0 text-muted small" x-show="selectedChat">Mulai: <span x-text="formatFullDateTime(selectedChat.created_at)"></span></p>
                                 <p class="mb-0" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
                             </div>
                         </div>
@@ -185,8 +236,23 @@
                         </div>
                     </div>
 
-                    <div class="card-body p-0 flex-grow-1">
-                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'"></iframe>
+                    <div class="card-body p-0 flex-grow-1 position-relative">
+                        <!-- Skeleton Loader overlay -->
+                        <div x-show="!iframeLoaded && selectedChat" class="skeleton-loader-container position-absolute w-100 h-100 bg-white" style="z-index: 10; padding: 20px;">
+                            <div class="d-flex mb-4">
+                                <div class="skeleton-avatar me-3"></div>
+                                <div class="skeleton-text w-50"></div>
+                            </div>
+                            <div class="d-flex mb-4 justify-content-end">
+                                <div class="skeleton-text w-50 me-3"></div>
+                                <div class="skeleton-avatar"></div>
+                            </div>
+                            <div class="d-flex mb-4">
+                                <div class="skeleton-avatar me-3"></div>
+                                <div class="skeleton-text w-75"></div>
+                            </div>
+                        </div>
+                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'" @load="iframeLoaded = true"></iframe>
                     </div>
                 </div>
                 
@@ -261,6 +327,8 @@
         Alpine.data('adminChat', (adminId, initPending, initActive) => ({
             adminId: adminId,
             chats: [...initPending, ...initActive],
+            currentTime: Date.now(),
+            sidebarCollapsed: false,
             selectedChat: null,
             searchQuery: '',
             isClaiming: false,
@@ -272,8 +340,12 @@
             handoverNote: '',
             audioUnlocked: false,
             notificationSound: null,
+            iframeLoaded: false,
 
             init() {
+                // Update currentTime every minute for relative time reactivity
+                setInterval(() => { this.currentTime = Date.now(); }, 60000);
+                
                 // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
                 const unlockAudio = () => {
                     if (!this.notificationSound) {
@@ -350,10 +422,37 @@
             formatTime(datetimeString) {
                 if (!datetimeString) return '';
                 const date = new Date(datetimeString);
-                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                return date.toLocaleString('id-ID', options);
             },
 
+            isLongWaiting(datetimeString) {
+                if (!datetimeString) return false;
+                // Force reactivity by referencing this.currentTime
+                const now = this.currentTime;
+                // Safely parse ISO string
+                const diff = now - new Date(datetimeString.replace(/-/g, '/')).getTime();
+                return diff > 3 * 60 * 1000; // 3 minutes
+            },
+
+            formatShortDateTime(datetimeString) {
+                if (!datetimeString) return '';
+                const date = new Date(datetimeString);
+                const options = { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                return date.toLocaleString('id-ID', options);
+            },
+
+            formatFullDateTime(datetimeString) {
+                if (!datetimeString) return '';
+                const date = new Date(datetimeString);
+                const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                // Using 'id-ID' for Indonesian locale. Ensure the browser supports it.
+                return date.toLocaleString('id-ID', options);
+            },
             selectChat(chat) {
+                if (!this.selectedChat || this.selectedChat.id !== chat.id) {
+                    this.iframeLoaded = false;
+                }
                 this.selectedChat = chat;
             },
 
@@ -374,7 +473,9 @@
                     if (claimed) {
                         this.selectChat(claimed);
                     }
-                } catch (error) { alert(error.message); }
+                } catch (error) { 
+                    Toast.fire({ icon: 'error', title: error.message }); 
+                }
                 finally { this.isClaiming = false; }
             },
 
@@ -388,7 +489,9 @@
                     });
                     if (!res.ok) throw new Error('Gagal menyelesaikan chat');
                     window.location.reload();
-                } catch (e) { alert(e.message); }
+                } catch (e) { 
+                    Toast.fire({ icon: 'error', title: e.message }); 
+                }
                 finally { this.isSubmitting = false; }
             },
 
@@ -403,22 +506,38 @@
                             internal_note: this.handoverNote 
                         })
                     });
-                    if (!res.ok) throw new Error('Gagal oper chat');
+                    if (!res.ok) throw new Error('Gagal mengoper chat');
                     window.location.reload();
-                } catch (e) { alert(e.message); }
+                } catch (e) { 
+                    Toast.fire({ icon: 'error', title: e.message }); 
+                }
                 finally { this.isSubmitting = false; }
             },
 
             async blockUser(conversationId) {
-                if (!confirm('Blokir pelanggan ini?')) return;
-                try {
-                    const res = await fetch(`/admin/conversation/${conversationId}/block`, {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                    });
-                    if (!res.ok) throw new Error('Gagal blokir');
-                    window.location.reload();
-                } catch (e) { alert(e.message); }
+                Swal.fire({
+                    title: 'Blokir pelanggan?',
+                    text: 'Anda yakin ingin memblokir pelanggan ini?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Blokir!',
+                    cancelButtonText: 'Batal'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch(`/admin/conversation/${conversationId}/block`, {
+                                method: 'POST',
+                                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                            });
+                            if (!res.ok) throw new Error('Gagal blokir pelanggan');
+                            window.location.reload();
+                        } catch (e) { 
+                            Toast.fire({ icon: 'error', title: e.message }); 
+                        }
+                    }
+                });
             }
         }));
     });
