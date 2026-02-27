@@ -148,7 +148,7 @@
                                     <small class="text-muted">{{ $customer->created_at->diffForHumans() }}</small>
                                 </td>
                                 <td class="text-end">
-                                    <form action="{{ route('admin.user.destroy', $customer->id) }}" method="POST" onsubmit="return confirm('Hapus pelanggan ini?');">
+                                    <form action="{{ route('admin.user.destroy', $customer->id) }}" method="POST" onsubmit="event.preventDefault(); Swal.fire({ title: 'Hapus pelanggan ini?', text: 'Data tidak dapat dikembalikan!', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal' }).then((result) => { if (result.isConfirmed) this.submit(); });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-white text-danger"><i class="fe fe-trash-2"></i></button>

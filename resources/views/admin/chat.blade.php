@@ -52,6 +52,30 @@
             height: 100% !important;
         }
     }
+
+    /* Skeleton Loading CSS */
+    @keyframes skeleton-pulse {
+        0% { background-color: #e2e5e7; }
+        50% { background-color: #f1f3f5; }
+        100% { background-color: #e2e5e7; }
+    }
+    .skeleton-avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        animation: skeleton-pulse 1.5s infinite ease-in-out;
+    }
+    .skeleton-text {
+        height: 60px; border-radius: 15px;
+        animation: skeleton-pulse 1.5s infinite ease-in-out;
+    }
+    body.dark-mode .skeleton-loader-container { background-color: #121212 !important; }
+    body.dark-mode .skeleton-avatar, body.dark-mode .skeleton-text {
+        animation: skeleton-pulse-dark 1.5s infinite ease-in-out;
+    }
+    @keyframes skeleton-pulse-dark {
+        0% { background-color: #2a2a2a; }
+        50% { background-color: #3a3a3a; }
+        100% { background-color: #2a2a2a; }
+    }
 </style>
 @endpush
 
@@ -185,8 +209,23 @@
                         </div>
                     </div>
 
-                    <div class="card-body p-0 flex-grow-1">
-                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'"></iframe>
+                    <div class="card-body p-0 flex-grow-1 position-relative">
+                        <!-- Skeleton Loader overlay -->
+                        <div x-show="!iframeLoaded && selectedChat" class="skeleton-loader-container position-absolute w-100 h-100 bg-white" style="z-index: 10; padding: 20px;">
+                            <div class="d-flex mb-4">
+                                <div class="skeleton-avatar me-3"></div>
+                                <div class="skeleton-text w-50"></div>
+                            </div>
+                            <div class="d-flex mb-4 justify-content-end">
+                                <div class="skeleton-text w-50 me-3"></div>
+                                <div class="skeleton-avatar"></div>
+                            </div>
+                            <div class="d-flex mb-4">
+                                <div class="skeleton-avatar me-3"></div>
+                                <div class="skeleton-text w-75"></div>
+                            </div>
+                        </div>
+                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'" @load="iframeLoaded = true"></iframe>
                     </div>
                 </div>
                 
@@ -272,6 +311,7 @@
             handoverNote: '',
             audioUnlocked: false,
             notificationSound: null,
+            iframeLoaded: false,
 
             init() {
                 // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
@@ -348,6 +388,9 @@
             },
 
             selectChat(chat) {
+                if (!this.selectedChat || this.selectedChat.id !== chat.id) {
+                    this.iframeLoaded = false;
+                }
                 this.selectedChat = chat;
             },
 
@@ -368,7 +411,9 @@
                     if (claimed) {
                         this.selectChat(claimed);
                     }
-                } catch (error) { alert(error.message); }
+                } catch (error) { 
+                    Toast.fire({ icon: 'error', title: error.message }); 
+                }
                 finally { this.isClaiming = false; }
             },
 
@@ -382,7 +427,9 @@
                     });
                     if (!res.ok) throw new Error('Gagal menyelesaikan chat');
                     window.location.reload();
-                } catch (e) { alert(e.message); }
+                } catch (e) { 
+                    Toast.fire({ icon: 'error', title: e.message }); 
+                }
                 finally { this.isSubmitting = false; }
             },
 
@@ -397,22 +444,38 @@
                             internal_note: this.handoverNote 
                         })
                     });
-                    if (!res.ok) throw new Error('Gagal oper chat');
+                    if (!res.ok) throw new Error('Gagal mengoper chat');
                     window.location.reload();
-                } catch (e) { alert(e.message); }
+                } catch (e) { 
+                    Toast.fire({ icon: 'error', title: e.message }); 
+                }
                 finally { this.isSubmitting = false; }
             },
 
             async blockUser(conversationId) {
-                if (!confirm('Blokir pelanggan ini?')) return;
-                try {
-                    const res = await fetch(`/admin/conversation/${conversationId}/block`, {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                    });
-                    if (!res.ok) throw new Error('Gagal blokir');
-                    window.location.reload();
-                } catch (e) { alert(e.message); }
+                Swal.fire({
+                    title: 'Blokir pelanggan?',
+                    text: 'Anda yakin ingin memblokir pelanggan ini?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Blokir!',
+                    cancelButtonText: 'Batal'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch(`/admin/conversation/${conversationId}/block`, {
+                                method: 'POST',
+                                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                            });
+                            if (!res.ok) throw new Error('Gagal blokir pelanggan');
+                            window.location.reload();
+                        } catch (e) { 
+                            Toast.fire({ icon: 'error', title: e.message }); 
+                        }
+                    }
+                });
             }
         }));
     });

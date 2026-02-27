@@ -3,11 +3,18 @@
 @section('title', 'Hak Akses')
 
 @section('content')
-<div x-data="{
+@push('scripts')
+<script>
+const adminRolesData = {
     showModal: false,
     isEdit: false,
     form: { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [] },
     availablePermissions: {{ Js::from($permissions) }},
+    permissionGroups: {
+        'Modul Percakapan & Pelayanan': ['view_chat', 'view_history', 'manage_quick_replies'],
+        'Modul Pelanggan': ['manage_customers'],
+        'Modul Sistem & Keamanan': ['manage_roles']
+    },
     init() {
         this.$watch('form.role', (value) => {
             if (value === 'super_admin') {
@@ -38,8 +45,57 @@
             permissions: Array.isArray(admin.permissions) ? admin.permissions : (admin.permissions ? Object.values(admin.permissions) : []) 
         };
         this.showModal = true;
+    },
+    confirmSubmit(e) {
+        // Prevent accidental downgrading of own role
+        const currentAdminId = {{ auth('admin')->id() }};
+        if (this.isEdit && this.form.id === currentAdminId && this.form.role === 'agent') {
+            e.preventDefault();
+            Swal.fire({
+                title: 'PERINGATAN!',
+                text: 'Anda akan mengubah peran Anda sendiri menjadi Agent. Anda akan kehilangan akses ke menu manajemen hak akses setelah ini. Lanjutkan?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Lanjutkan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    e.target.submit();
+                }
+            });
+            return false;
+        }
+        return true;
     }
-}">
+}
+
+function confirmDelete(e, isSuperadmin) {
+    e.preventDefault();
+    let title = isSuperadmin ? 'PERINGATAN KRITIS!' : 'Hapus admin?';
+    let msg = isSuperadmin 
+        ? 'Anda akan menghapus pengguna dengan level Superadmin Global. Tindakan ini berdampak besar pada sistem dan tidak dapat dibatalkan. Apakah Anda benar-benar yakin?'
+        : 'Hapus admin ini tidak dapat dikembalikan.';
+        
+    Swal.fire({
+        title: title,
+        text: msg,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            e.target.submit();
+        }
+    });
+    return false;
+}
+</script>
+<div x-data="adminRolesData">
     <div class="row">
         <div class="col-sm-12">
             <div class="card">
@@ -54,18 +110,6 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    @endif
-                    @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    @endif
 
                     <div class="table-responsive">
                         <table class="table table-center table-hover datatable">
@@ -110,7 +154,7 @@
                                     <td class="text-end">
                                         <button @click="openEdit({{ collect($adm)->merge(['permissions' => $adm->permissions])->toJson() }})" class="btn btn-sm btn-white text-primary me-2"><i class="fe fe-edit"></i></button>
                                         @if(auth('admin')->id() !== $adm->id)
-                                        <form action="{{ route('admin.roles.destroy', $adm->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus admin ini?');">
+                                        <form action="{{ route('admin.roles.destroy', $adm->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete(event, {{ $adm->is_superadmin ? 'true' : 'false' }});">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-white text-danger"><i class="fe fe-trash-2"></i></button>
@@ -135,7 +179,7 @@
     <div class="modal fade" :class="showModal ? 'show d-block' : ''" tabindex="-1" x-show="showModal" x-cloak>
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form :action="isEdit ? '/admin/roles/' + form.id : '/admin/roles'" method="POST">
+                <form :action="isEdit ? '/admin/roles/' + form.id : '/admin/roles'" method="POST" @submit="confirmSubmit">
                     @csrf
                     <template x-if="isEdit">
                         <input type="hidden" name="_method" value="PUT">
@@ -169,19 +213,29 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="form-label d-block">Hak Akses</label>
-                                    <div class="row">
-                                        <template x-for="(label, key) in availablePermissions" :key="key">
-                                            <div class="col-6 mb-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="permissions[]" :value="key" x-model="form.permissions" :id="'perm_'+key" :disabled="form.role === 'super_admin'">
-                                                    <label class="form-check-label small" :for="'perm_'+key" x-text="label"></label>
+                                    <label class="form-label d-block text-primary mb-3"><i class="fe fe-shield"></i> Penetapan Hak Akses</label>
+                                    
+                                    <template x-for="(keys, groupName) in permissionGroups" :key="groupName">
+                                        <div class="card bg-light bg-opacity-50 mb-3 border-0 shadow-none">
+                                            <div class="card-body p-3">
+                                                <h6 class="card-title text-muted text-uppercase small font-weight-bold mb-2" x-text="groupName"></h6>
+                                                <div class="row">
+                                                    <template x-for="key in keys" :key="key">
+                                                        <div class="col-12 mb-2" x-show="availablePermissions[key]">
+                                                            <div class="form-check custom-checkbox">
+                                                                <input class="form-check-input" type="checkbox" name="permissions[]" :value="key" x-model="form.permissions" :id="'perm_'+key" :disabled="form.role === 'super_admin'">
+                                                                <label class="form-check-label small" :for="'perm_'+key" x-text="availablePermissions[key]"></label>
+                                                            </div>
+                                                        </div>
+                                                    </template>
                                                 </div>
                                             </div>
-                                        </template>
-                                    </div>
-                                    <div class="mt-2 text-muted small" x-show="form.role === 'super_admin'">
-                                        <i class="fe fe-info"></i> Superadmin memiliki semua hak akses sistem secara default.
+                                        </div>
+                                    </template>
+                                    
+                                    <div class="alert alert-info py-2 small mt-2 d-flex align-items-center" x-show="form.role === 'super_admin'">
+                                        <i class="fe fe-info me-2 fs-5"></i> 
+                                        <span>Superadmin global secara otomatis diberikan akses penuh ke seluruh modul sistem.</span>
                                     </div>
                                 </div>
                             </div>

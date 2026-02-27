@@ -32,12 +32,6 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    @endif
 
                     <div class="table-responsive">
                         <table class="table table-center table-hover datatable">
@@ -55,7 +49,7 @@
                                     <td><div class="text-wrap" style="max-width: 400px;">{{ $reply->content }}</div></td>
                                     <td class="text-end">
                                         <button @click="openEdit({{ $reply->toJson() }})" class="btn btn-sm btn-white text-primary me-2"><i class="fe fe-edit"></i></button>
-                                        <form action="{{ route('admin.quick-replies.destroy', $reply->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus balasan cepat ini?');">
+                                        <form action="{{ route('admin.quick-replies.destroy', $reply->id) }}" method="POST" class="d-inline" onsubmit="event.preventDefault(); Swal.fire({ title: 'Hapus balasan cepat?', text: 'Balasan cepat tidak bisa dikembalikan!', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal' }).then((result) => { if (result.isConfirmed) this.submit(); });">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-white text-danger"><i class="fe fe-trash-2"></i></button>
