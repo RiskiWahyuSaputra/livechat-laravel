@@ -19,7 +19,6 @@
                             <h3>{{ $stats['total_users'] }}</h3>
                         </div>
                         <div class="homegraph">
-                            <img src="{{ asset('admin/assets/img/graph/graph1.png') }}" alt="img">
                         </div>
                     </div>
                 </div>
@@ -41,7 +40,6 @@
                             <h3 class="text-success">{{ $stats['online_users'] }}</h3>
                         </div>
                         <div class="homegraph">
-                            <img src="{{ asset('admin/assets/img/graph/graph2.png') }}" alt="img">
                         </div>
                     </div>
                 </div>
@@ -63,7 +61,6 @@
                             <h3>{{ $stats['today_users'] }}</h3>
                         </div>
                         <div class="homegraph">
-                            <img src="{{ asset('admin/assets/img/graph/graph3.png') }}" alt="img">
                         </div>
                     </div>
                 </div>
@@ -85,7 +82,6 @@
                             <h3>{{ $stats['yesterday_users'] }}</h3>
                         </div>
                         <div class="homegraph">
-                            <img src="{{ asset('admin/assets/img/graph/graph4.png') }}" alt="img">
                         </div>
                     </div>
                 </div>
