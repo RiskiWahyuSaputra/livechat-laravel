@@ -272,12 +272,31 @@
             handoverNote: '',
 
             init() {
-                if (window.Echo) {
-                    window.Echo.private('admin.dashboard')
-                        .listen('.conversation.status.changed', (e) => {
-                            this.fetchChats();
-                        });
-                }
+                // Gunakan setTimeout agar Echo sudah terinisialisasi dari app.js (Vite)
+                setTimeout(() => {
+                    if (window.Echo) {
+                        console.log('✅ Connecting to admin.dashboard channel...');
+                        window.Echo.private('admin.dashboard')
+                            .listen('.conversation.status.changed', (e) => {
+                                console.log('🔔 New Request Received:', e);
+                                this.fetchChats();
+                                
+                                // Play sound if it's a new or queued request
+                                if (['pending', 'queued'].includes(e.status)) {
+                                    this.playNotification();
+                                }
+                            });
+                    } else {
+                        console.error('❌ Laravel Echo not found. Check app.js compilation.');
+                    }
+                }, 1000);
+            },
+
+            playNotification() {
+                const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
+                audio.play().catch(e => {
+                    console.log("Audio play blocked. Interactions needed first.");
+                });
             },
 
             async fetchChats() {
