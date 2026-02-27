@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['web', 'auth:web,admin']]
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: [
+            'chat/*',
+        ]);
+
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\AdminAuthenticated::class,
             'admin.permission' => \App\Http\Middleware\CheckAdminPermission::class,
