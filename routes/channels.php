@@ -40,7 +40,7 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
     }
 
     return false;
-});
+}, ['guards' => ['web', 'admin']]);
 
 // ─────────────────────────────────────────────────────────────────────────
 // Channel: admin.dashboard
@@ -48,4 +48,4 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 // ─────────────────────────────────────────────────────────────────────────
 Broadcast::channel('admin.dashboard', function ($user) {
     return $user instanceof \App\Models\Admin;
-});
+}, ['guards' => ['admin']]);
