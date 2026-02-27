@@ -23,8 +23,15 @@
 
     <!-- Messages List -->
     <main id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-4">
-        <template x-for="msg in messages" :key="msg.id || msg.temp_id">
-            <div class="flex flex-col w-full" :class="msg.message_type === 'whisper' ? 'items-center' : (msg.sender_type === 'admin' ? 'items-end' : 'items-start')">
+        <template x-for="(msg, index) in messages" :key="msg.id || msg.temp_id">
+            <div class="flex flex-col w-full">
+                <!-- Date Separator -->
+                <template x-if="shouldShowDateSeparator(msg.created_at, index)">
+                    <div class="w-full flex justify-center my-2">
+                        <span class="bg-slate-200 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium" x-text="formatDateSeparator(msg.created_at)"></span>
+                    </div>
+                </template>
+                <div class="flex flex-col w-full" :class="msg.message_type === 'whisper' ? 'items-center' : (msg.sender_type === 'admin' ? 'items-end' : 'items-start')">
                 
                 <!-- System Message -->
                 <template x-if="msg.sender_type === 'system'">
@@ -60,7 +67,7 @@
                         </div>
                         
                         <!-- Timestamp -->
-                        <span class="text-[10px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
+                        <span class="text-[10px] text-slate-400 mt-1 mx-1" x-text="timeAgo(msg.created_at)" :title="new Date(msg.created_at).toLocaleString('id-ID', {day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta'})"></span>
                     </div>
                 </template>
             </div>
@@ -180,6 +187,7 @@
                 typingTimeout: null,
                 showDropdown: false,
                 selectedIndex: 0,
+                prevDate: null, // To track date for separators
                 
                 get filteredQuickReplies() {
                     if (!this.newMessage.startsWith('/')) return [];
@@ -236,6 +244,12 @@
                 init() {
                     this.scrollToBottom();
                     this.listenForEvents();
+                    // Update relative timestamps every minute
+                    setInterval(() => {
+                        this.$nextTick(() => { 
+                            // Re-evaluating x-text="timeAgo(...)" will automatically update timestamps
+                        });
+                    }, 60 * 1000); // Every minute
                 },
 
                 get canReply() {
@@ -245,6 +259,65 @@
                 formatMessage(text) {
                     let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                     return safeText.replace(/\n/g, '<br>');
+                },
+
+                // New function for date separators
+                shouldShowDateSeparator(messageDateString, index) {
+                    if (index === 0) {
+                        this.prevDate = null; // Reset for first message
+                        return true;
+                    }
+                    const messageDate = new Date(messageDateString);
+                    const prevMessageDate = new Date(this.messages[index - 1].created_at);
+                    
+                    // Compare dates (ignoring time)
+                    const showSeparator = messageDate.toDateString() !== prevMessageDate.toDateString();
+                    return showSeparator;
+                },
+
+                formatDateSeparator(dateString) {
+                    const date = new Date(dateString);
+                    const now = new Date();
+                    const options = { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' };
+
+                    if (date.toDateString() === now.toDateString()) {
+                        return 'Hari ini';
+                    }
+                    const yesterday = new Date(now);
+                    yesterday.setDate(now.getDate() - 1);
+                    if (date.toDateString() === yesterday.toDateString()) {
+                        return 'Kemarin';
+                    }
+                    return date.toLocaleString('id-ID', options);
+                },
+
+
+                timeAgo(datetimeString) {
+                    if (!datetimeString) return '';
+                    const date = new Date(datetimeString);
+                    const now = new Date();
+                    const seconds = Math.floor((now - date) / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const hours = Math.floor(minutes / 60);
+                    const days = Math.floor(hours / 24);
+
+                    const optionsTime = { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                    const optionsDateTime = { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+
+                    if (seconds < 60) {
+                        return 'Baru saja';
+                    } else if (minutes < 60) {
+                        return `${minutes} menit lalu`;
+                    } else if (hours < 24) {
+                        return `${hours} jam lalu`;
+                    } else if (days < 2) {
+                        return `Kemarin, ${date.toLocaleString('id-ID', optionsTime)}`;
+                    } else if (days < 7) {
+                        return `${days} hari lalu`;
+                    } else if (now.getFullYear() === date.getFullYear()) {
+                        return date.toLocaleString('id-ID', {day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta'});
+                    }
+                    return date.toLocaleString('id-ID', optionsDateTime);
                 },
 
                 listenForEvents() {
@@ -262,7 +335,7 @@
                                 sender_type: e.sender_type,
                                 message_type: e.message_type,
                                 content: e.content,
-                                created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                created_at: e.created_at // Store raw ISO string
                             });
                             this.scrollToBottom();
                         })
@@ -295,7 +368,7 @@
                         sender_type: 'admin',
                         message_type: type,
                         content: content,
-                        created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        created_at: new Date().toISOString() // Store raw ISO string
                     });
                     this.scrollToBottom();
 

@@ -35,6 +35,9 @@
     <!-- Main CSS -->
     <link rel="stylesheet" href="{{ asset('admin/assets/css/admin.css') }}">
     
+    <!-- Daterangepicker CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
@@ -360,6 +363,10 @@
 
     <!-- Custom JS -->
     <script src="{{ asset('admin/assets/js/admin.js') }}"></script>
+
+    <!-- Daterangepicker JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment/min/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     
     <script>
         // Global Toast Notification Setup
