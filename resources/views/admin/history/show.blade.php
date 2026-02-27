@@ -10,7 +10,7 @@
                 <div class="row align-items-center">
                     <div class="col">
                         <h4 class="card-title">Detail Percakapan Arsip</h4>
-                        <p class="text-muted mb-0">Selesai pada: {{ $conversation->deleted_at->format('d M Y H:i') }} WIB</p>
+                        <p class="text-muted mb-0">Selesai pada: {{ $conversation->deleted_at->timezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') }}</p>
                     </div>
                     <div class="col-auto">
                         <a href="{{ route('admin.history.index') }}" class="btn btn-primary btn-sm">
@@ -59,7 +59,7 @@
                                     {!! nl2br(e($msg->content)) !!}
                                 </div>
                                 <div class="mt-1">
-                                    <small class="text-muted" style="font-size: 10px;">{{ $msg->created_at->format('H:i') }}</small>
+                                    <small class="text-muted" style="font-size: 10px;">{{ $msg->created_at->timezone('Asia/Jakarta')->translatedFormat('H:i') }}</small>
                                 </div>
                             @endif
                         </div>

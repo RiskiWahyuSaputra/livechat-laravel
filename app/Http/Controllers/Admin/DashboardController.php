@@ -25,10 +25,21 @@ class DashboardController extends Controller
         // Statistik Ringkas
         $stats = [
             'total_users' => User::count(),
-            'online_users' => Conversation::where('status', 'active')->count(), // Perkiraan berdasarkan chat aktif
+            'online_users' => User::where('is_online', true)->count(),
             'today_users' => User::whereDate('created_at', now()->today())->count(),
             'yesterday_users' => User::whereDate('created_at', now()->yesterday())->count(),
         ];
+
+        // Data Grafik (7 hari terakhir)
+        $chartData = [];
+        $chartLabels = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $chartLabels[] = $date->format('d M');
+            $chartData[] = User::whereDate('created_at', $date->format('Y-m-d'))->count();
+        }
+        $stats['chart_data'] = $chartData;
+        $stats['chart_labels'] = $chartLabels;
 
         // Filter Pelanggan
         $query = User::query();
