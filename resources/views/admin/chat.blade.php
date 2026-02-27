@@ -292,8 +292,12 @@
                 };
                 document.addEventListener('click', unlockAudio);
                 document.addEventListener('keydown', unlockAudio);
-                // Gunakan setTimeout agar Echo sudah terinisialisasi dari app.js (Vite)
-                setTimeout(() => {
+
+                // Menunggu window.Echo siap (Vite memuat secara asinkron)
+                let echoCheckRetry = 0;
+                const maxRetries = 10;
+                const echoCheckInterval = setInterval(() => {
+                    echoCheckRetry++;
                     if (window.Echo) {
                         console.log('✅ Connecting to admin.dashboard channel...');
                         window.Echo.private('admin.dashboard')
@@ -306,10 +310,12 @@
                                     this.playNotification();
                                 }
                             });
-                    } else {
-                        console.error('❌ Laravel Echo not found. Check app.js compilation.');
+                        clearInterval(echoCheckInterval);
+                    } else if (echoCheckRetry >= maxRetries) {
+                        console.error('❌ Laravel Echo not found after max retries.');
+                        clearInterval(echoCheckInterval);
                     }
-                }, 1000);
+                }, 500);
             },
 
             playNotification() {
