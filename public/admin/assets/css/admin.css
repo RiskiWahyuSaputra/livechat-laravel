@@ -589,7 +589,7 @@ button.bg-danger:hover {
 .btn-primary:active,
 .open > .dropdown-toggle.btn-primary {
 	background-color:  #2c1fe5;
-	border: 2px solid  #2c1fe5;
+	border: 1px solid  #2c1fe5;
 }
 .btn-primary:hover{
     box-shadow: 0 50px 0 0 #fff inset;
