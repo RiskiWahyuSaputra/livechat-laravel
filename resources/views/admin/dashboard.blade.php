@@ -42,10 +42,10 @@
         min-height: 50px;
     }
     .pulse-dot {
-        width: 8px;
-        height: 8px;
+        width: 20px !important;
+        height: 20px !important;
         background-color: #28a745;
-        border-radius: 50%;
+        border-radius: 50% !important;
         display: inline-block;
         margin-left: 5px;
         box-shadow: 0 0 0 rgba(40, 167, 69, 0.4);
@@ -93,7 +93,7 @@
                     <div class="home-userhead">
                         <div class="home-usercount">
                             <span class="bg-success-light"><img src="{{ asset('admin/assets/img/icons/user-circle.svg') }}" alt="img"></span>
-                            <h6>Pelanggan Online <span class="pulse-dot"></span></h6>
+                            <h6>Pelanggan Online <span class="pulse-dot bg-success"></span></h6>
                         </div>
                     </div>
                     <div class="home-usercontent">
