@@ -26,11 +26,13 @@
     /* Mobile Responsive Logic */
     @media (max-width: 991.98px) {
         .chat-cont-left, .chat-cont-right {
-            display: none !important; /* Hide both by default on mobile */
+            display: none !important;
         }
         .chat-window {
-            height: calc(100vh - 120px);
+            height: calc(100vh - 100px); /* Adjust to give room */
             position: relative;
+            margin: 0;
+            padding: 0;
         }
         .chat-cont-left:not(.mobile-hide) {
             display: flex !important;
@@ -39,17 +41,36 @@
         }
         .chat-cont-right.mobile-show {
             display: flex !important;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            background: white;
+            position: fixed !important;
+            top: 60px !important; 
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: calc(100vh - 60px) !important;
+            z-index: 1050 !important; /* Di bawah sidebar overlay (10900) */
+            background: #ffffff !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: none !important;
+        }
+        body.dark-mode .chat-cont-right.mobile-show {
+            background: #1e1e1e !important;
         }
         .chat-cont-right .card {
-            border-radius: 0;
+            border-radius: 0 !important;
             height: 100% !important;
+            width: 100% !important;
+            border: none !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        .card-body {
+            height: 100%;
+            overflow: hidden;
         }
     }
 
@@ -187,76 +208,70 @@
         </div>
         
         <!-- Chat Content -->
-        <div class="chat-cont-right d-flex transition-all" 
+        <div class="chat-cont-right transition-all" 
              :class="{
                  'col-lg-7 col-xl-8': !sidebarCollapsed,
                  'col-lg-12 col-xl-12': sidebarCollapsed,
                  'mobile-show': selectedChat
              }">
-            <div class="card mb-0 w-100 h-100">
-                <div class="h-100 d-flex flex-column" x-show="selectedChat">
-                    <div class="card-header msg_head">
-                        <div class="d-flex bd-highlight align-items-center">
-                            <a href="javascript:void(0)" class="back-user-list me-2 d-lg-none" @click="selectedChat = null">
-                                <i class="fas fa-chevron-left"></i>
+            <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
+                <div class="h-100 d-flex flex-column">
+                    <div class="card-header msg_head px-3 py-2">
+                        <div class="d-flex bd-highlight align-items-center w-100">
+                            <a href="javascript:void(0)" class="back-user-list me-3 d-lg-none" 
+                               :class="darkMode ? 'text-white' : 'text-dark'" 
+                               @click="selectedChat = null">
+                                <i class="fas fa-arrow-left fa-lg"></i>
                             </a>
                             <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary" @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
                                 <i class="fas fa-bars fa-lg"></i>
                             </a>
-                            <div class="img_cont">
+                            <div class="img_cont flex-shrink-0">
                                 <div class="avatar avatar-sm">
                                     <div class="avatar-title rounded-circle bg-primary text-white">
                                         <span x-text="selectedChat ? selectedChat.customer.name.charAt(0).toUpperCase() : ''"></span>
                                     </div>
                                 </div>
                             </div>
-                            <div class="user_info ms-2">
-                                <span x-text="selectedChat ? selectedChat.customer.name : ''"></span>
-                                <p class="mb-0 text-muted small" x-show="selectedChat">Mulai: <span x-text="formatFullDateTime(selectedChat.created_at)"></span></p>
-                                <p class="mb-0" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
+                            <div class="user_info ms-2 flex-grow-1 overflow-hidden">
+                                <span class="text-truncate d-block" x-text="selectedChat ? selectedChat.customer.name : ''"></span>
+                                <p class="mb-0 small" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
                             </div>
-                        </div>
-                        <div class="chat-options">
-                            <ul class="d-flex align-items-center list-unstyled mb-0">
-                                <template x-if="selectedChat && ['pending', 'queued'].includes(selectedChat.status)">
-                                    <li class="me-2">
-                                        <button class="btn btn-sm btn-primary" @click="claimChat(selectedChat.id)" :disabled="isClaiming">
-                                            <span x-text="isClaiming ? 'Claiming...' : 'Claim Chat'"></span>
-                                        </button>
-                                    </li>
-                                </template>
-                                <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
-                                    <li class="d-flex">
-                                        <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
-                                        <button class="btn btn-sm btn-outline-success me-1" @click="showCloseModal = true" title="Selesaikan"><i class="fe fe-check"></i></button>
-                                        <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
-                                    </li>
-                                </template>
-                            </ul>
+                            <div class="chat-options ms-auto flex-shrink-0">
+                                <ul class="d-flex align-items-center list-unstyled mb-0">
+                                    <template x-if="selectedChat && ['pending', 'queued'].includes(selectedChat.status)">
+                                        <li class="ms-2">
+                                            <button class="btn btn-sm btn-primary px-3" @click="claimChat(selectedChat.id)" :disabled="isClaiming">
+                                                <span x-text="isClaiming ? 'Claiming...' : 'Claim Chat'"></span>
+                                            </button>
+                                        </li>
+                                    </template>
+                                    <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
+                                        <li class="d-flex ms-2">
+                                            <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
+                                            <button class="btn btn-sm btn-outline-success me-1" @click="showCloseModal = true" title="Selesaikan"><i class="fe fe-check"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="card-body p-0 flex-grow-1 position-relative">
+                    <div class="card-body p-0 flex-grow-1 position-relative" style="min-height: 0;">
                         <!-- Skeleton Loader overlay -->
-                        <div x-show="!iframeLoaded && selectedChat" class="skeleton-loader-container position-absolute w-100 h-100 bg-white" style="z-index: 10; padding: 20px;">
-                            <div class="d-flex mb-4">
-                                <div class="skeleton-avatar me-3"></div>
-                                <div class="skeleton-text w-50"></div>
-                            </div>
-                            <div class="d-flex mb-4 justify-content-end">
-                                <div class="skeleton-text w-50 me-3"></div>
-                                <div class="skeleton-avatar"></div>
-                            </div>
-                            <div class="d-flex mb-4">
-                                <div class="skeleton-avatar me-3"></div>
-                                <div class="skeleton-text w-75"></div>
-                            </div>
+                        <div x-show="!iframeLoaded && selectedChat" 
+                             class="skeleton-loader-container position-absolute w-100 h-100 bg-white" 
+                             style="z-index: 10; padding: 20px; pointer-events: none;">
+                             <div class="skeleton-text w-75 mb-3"></div>
+                             <div class="skeleton-text w-50"></div>
                         </div>
-                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'" @load="iframeLoaded = true"></iframe>
+                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'" 
+                                class="w-100 h-100" 
+                                style="border: none; display: block;"
+                                @load="iframeLoaded = true"></iframe>
                     </div>
                 </div>
-                
-              
             </div>
         </div>
     </div>
