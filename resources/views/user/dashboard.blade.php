@@ -318,7 +318,7 @@
                     // Tetap hapus cookie secara manual sebagai fallback (jika memungkinkan)
                     document.cookie = "guest_chat_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                     
-                    alert("Sesi Anda telah berakhir karena tidak ada aktivitas selama 2 menit. Silakan isi data diri kembali.");
+                    alert("Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit. Silakan isi data diri kembali.");
                     window.location.reload();
                 },
 
@@ -424,8 +424,12 @@
 
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
-                            // If it's our own message (we've already added it locally with temp_id)
-                            // then we just update our existing message's ID or skip.
+                            // Reset timer aktivitas karena ada interaksi/pesan masuk
+                            this.lastActivity = Date.now();
+                            console.log("📩 Pesan diterima, timer sesi direset.");
+
+                            // Jika itu pesan kita sendiri (sudah ditambah secara lokal dengan temp_id)
+                            // maka kita cukup update ID atau skip.
                             const alreadyExists = this.messages.some(m => m.id === e.id);
                             if (alreadyExists) return;
 

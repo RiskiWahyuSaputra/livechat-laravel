@@ -73,8 +73,9 @@ class ChatController extends Controller
             $token = $user->email; // Gunakan email sebagai token pengenal di cookie
         }
 
-        // Set Cookie berlaku 3 jam (180 menit)
-        Cookie::queue('guest_chat_token', $user->email, 180);
+        // Set Cookie di server lebih lama (60 menit) agar tidak 401 saat user sedang aktif
+        // Tapi Alpine tetap akan logout otomatis dalam 30 menit jika user diam.
+        Cookie::queue('guest_chat_token', $user->email, 60);
 
         // Login user secara otomatis
         Auth::guard('web')->login($user, true);
