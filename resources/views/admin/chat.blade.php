@@ -389,8 +389,41 @@
                         console.log('✅ Connecting to admin.dashboard channel...');
                         window.Echo.private('admin.dashboard')
                             .listen('.conversation.status.changed', (e) => {
-                                console.log('🔔 New Request Received:', e);
-                                this.fetchChats();
+                                console.log('🔔 Status Changed Received:', e);
+                                
+                                // Update status offline secara reaktif dari data broadcast
+                                if (e.customer) {
+                                    // 1. Update di chat yang terpilih (Header)
+                                    if (this.selectedChat && this.selectedChat.customer && this.selectedChat.customer.id === e.customer.id) {
+                                        this.selectedChat.customer.is_online = e.customer.is_online;
+                                        // Paksa refresh teks status jika Alpine tidak mendeteksi perubahan properti dalam
+                                        this.$nextTick(() => { this.selectedChat = {...this.selectedChat}; });
+                                    }
+                                    
+                                    // 2. Update di daftar chat di kiri
+                                    this.chats.forEach(c => {
+                                        if (c.customer && c.customer.id === e.customer.id) {
+                                            c.customer.is_online = e.customer.is_online;
+                                        }
+                                    });
+                                }
+
+                                if (this.selectedChat && this.selectedChat.id === e.conversation_id && e.status === 'closed') {
+                                    this.selectedChat.status = 'closed';
+
+                                    Swal.fire({
+                                        title: 'Sesi Berakhir',
+                                        text: 'Pelanggan telah tidak aktif. Sesi ditutup otomatis.',
+                                        icon: 'info',
+                                        timer: 4000,
+                                        showConfirmButton: false
+                                    });
+
+                                    // Refresh list setelah jeda agar chat pindah ke history
+                                    setTimeout(() => { this.fetchChats(); }, 3000);
+                                } else {
+                                    this.fetchChats();
+                                }
                                 
                                 // Play sound if it's a new or queued request
                                 if (['pending', 'queued'].includes(e.status)) {

@@ -73,8 +73,8 @@ class ChatController extends Controller
             $token = $user->email; // Gunakan email sebagai token pengenal di cookie
         }
 
-        // Set Cookie berlaku 7 hari
-        Cookie::queue('guest_chat_token', $user->email, 60 * 24 * 7);
+        // Set Cookie berlaku 3 jam (180 menit)
+        Cookie::queue('guest_chat_token', $user->email, 180);
 
         // Login user secara otomatis
         Auth::guard('web')->login($user, true);
@@ -89,6 +89,67 @@ class ChatController extends Controller
                 'origin'  => $user->origin,
             ]
         ]);
+    }
+
+    /**
+     * Logout guest user secara bersih.
+     */
+    public function logout(Request $request)
+    {
+        // Ambil token dari cookie atau user_id dari request body
+        $token = $request->cookie('guest_chat_token');
+        $userId = $request->input('user_id');
+        
+        $user = null;
+        if ($token) {
+            $user = User::where('email', $token)->first();
+        }
+        
+        if (!$user && $userId) {
+            $user = User::find($userId);
+        }
+
+        if ($user) {
+            // 1. Mark user offline di DB
+            $user->is_online = false;
+            $user->save();
+
+            // 2. Cari percakapan yang masih terbuka
+            $conversation = $user->conversations()
+                ->whereIn('status', ['pending', 'active', 'queued'])
+                ->first();
+
+            if ($conversation) {
+                // 3. Update status ke closed
+                $conversation->update(['status' => 'closed']);
+                
+                // 4. Kirim pesan sistem penutup DULU agar tersimpan di DB
+                $sysMessage = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'system',
+                    'message_type'    => 'text',
+                    'content'         => 'Sesi berakhir karena pelanggan tidak aktif.',
+                ]);
+
+                // Muat ulang relasi customer agar status is_online terbaru terbawa
+                $conversation->load('customer');
+
+                // 5. Broadcast pesan ke iframe (MessageSent) dan status ke parent (ConversationStatusChanged)
+                broadcast(new MessageSent($sysMessage));
+                broadcast(new ConversationStatusChanged($conversation, 'system'));
+
+                // 6. Soft delete dilakukan terakhir
+                $conversation->delete();
+            }
+        }
+
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        return response()->json(['success' => true])
+            ->withoutCookie('guest_chat_token');
     }
 
     /**

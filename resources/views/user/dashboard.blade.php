@@ -252,6 +252,11 @@
                 typingTimeout: null,
                 unreadCount: 0,
 
+                // Inactivity Timer (30 Menit)
+                lastActivity: Date.now(),
+                inactivityTimeout: 30 * 60 * 1000, 
+                checkInterval: 60 * 1000, 
+
                 get statusText() {
                     if (this.status === 'pending') return 'Menunggu Agen';
                     if (this.status === 'queued') return 'Dalam Antrean';
@@ -260,7 +265,61 @@
                 },
 
                 initWidget() {
-                    // Start init in background (optional feature, we can do it later if needed)
+                    console.log("🕒 Inactivity Timer diaktifkan. Batas waktu: 2 Menit.");
+                    
+                    // Pantau aktivitas user (gerakan mouse, klik, ketik)
+                    ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+                        window.addEventListener(event, () => {
+                            if (this.isAuthenticated) {
+                                this.lastActivity = Date.now();
+                            }
+                        }, { passive: true });
+                    });
+
+                    // Interval untuk mengecek ketidakaktifan
+                    setInterval(() => {
+                        if (this.isAuthenticated) {
+                            const now = Date.now();
+                            const diff = now - this.lastActivity;
+                            const timeLeft = Math.max(0, this.inactivityTimeout - diff);
+                            
+                            console.log(`⏱️ Cek Sesi: Terakhir aktif ${Math.round(diff/1000)} detik lalu. Sisa waktu: ${Math.round(timeLeft/1000)} detik.`);
+                            
+                            if (diff > this.inactivityTimeout) {
+                                this.handleTimeout();
+                            }
+                        }
+                    }, this.checkInterval);
+                },
+
+                async handleTimeout() {
+                    console.log("⚠️ Sesi berakhir karena tidak aktif. Menghubungi server untuk logout...");
+                    
+                    try {
+                        // Panggil route logout di server agar cookie benar-benar dihapus
+                        const response = await fetch('{{ route('chat.logout') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ user_id: this.userId }), // Kirim ID sebagai cadangan cookie
+                            credentials: 'include'
+                        });
+
+                        if (response.ok) {
+                            console.log("✅ Logout server berhasil.");
+                        }
+                    } catch (e) {
+                        console.error("❌ Gagal menghubungi server untuk logout:", e);
+                    }
+
+                    // Tetap hapus cookie secara manual sebagai fallback (jika memungkinkan)
+                    document.cookie = "guest_chat_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    
+                    alert("Sesi Anda telah berakhir karena tidak ada aktivitas selama 2 menit. Silakan isi data diri kembali.");
+                    window.location.reload();
                 },
 
                 async toggleChat() {
