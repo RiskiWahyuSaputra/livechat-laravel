@@ -358,7 +358,7 @@
                     // Tetap hapus cookie secara manual sebagai fallback (jika memungkinkan)
                     document.cookie = "guest_chat_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                     
-                    alert("Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit. Silakan isi data diri kembali.");
+                    // Langsung reload tanpa alert agar tidak mengganggu user
                     window.location.reload();
                 },
 

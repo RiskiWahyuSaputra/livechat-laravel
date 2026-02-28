@@ -411,16 +411,8 @@
                                 if (this.selectedChat && this.selectedChat.id === e.conversation_id && e.status === 'closed') {
                                     this.selectedChat.status = 'closed';
 
-                                    Swal.fire({
-                                        title: 'Sesi Berakhir',
-                                        text: 'Pelanggan telah tidak aktif. Sesi ditutup otomatis.',
-                                        icon: 'info',
-                                        timer: 4000,
-                                        showConfirmButton: false
-                                    });
-
                                     // Refresh list setelah jeda agar chat pindah ke history
-                                    setTimeout(() => { this.fetchChats(); }, 3000);
+                                    setTimeout(() => { this.fetchChats(); }, 1000);
                                 } else {
                                     this.fetchChats();
                                 }
