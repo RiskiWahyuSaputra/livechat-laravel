@@ -125,8 +125,9 @@ class DashboardController extends Controller
     /**
      * Tampilkan isi conversation tertentu (panel kanan dashboard).
      */
-    public function showConversation(Conversation $conversation)
+    public function showConversation($id)
     {
+        $conversation = Conversation::withTrashed()->findOrFail($id);
         $admin    = Auth::guard('admin')->user();
         $messages = $conversation->messages()->get();
         $quickReplies = \App\Models\QuickReply::pluck('content')->toArray();
