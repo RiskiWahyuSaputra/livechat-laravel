@@ -128,18 +128,49 @@
 
                         <!-- Normal Text Bubble -->
                         <template x-if="msg.sender_type !== 'system'">
-                            <div class="max-w-[85%] flex flex-col" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
+                            <div class="max-w-[88%] flex flex-col min-w-0" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                                 <span x-show="msg.sender_type !== 'user'" class="text-[10px] text-slate-400 font-medium mb-0.5 ml-1">Live Support</span>
-                                
-                                <div class="px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed break-words shadow-sm relative overflow-hidden"
+
+                                <div class="px-3 py-2 md:px-3.5 md:py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm relative overflow-hidden min-w-0 max-w-full"
                                     :class="msg.sender_type === 'user' 
                                         ? 'bg-red-600 text-white rounded-br-sm' 
                                         : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'">
-                                    <span x-text="msg.content"></span>
+
+                                    <!-- Pesan Teks -->
+                                    <div x-show="!msg.message_type || msg.message_type === 'text'" class="break-words">
+                                        <span x-text="msg.content"></span>
+                                    </div>
+
+                                    <!-- Pesan Gambar -->
+                                    <div x-show="msg.message_type === 'image'" class="max-w-full">
+                                        <div class="space-y-2">
+                                            <img :src="msg.content" 
+                                                 class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
+                                                 @click="window.open(msg.content, '_blank')"
+                                                 x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                        </div>
+                                    </div>
+
+                                    <!-- Pesan File -->
+                                    <div x-show="msg.message_type === 'file'" class="w-full min-w-0">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-white/10">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-[11px] font-bold truncate leading-tight mb-1" x-text="msg.content.split('/').pop()"></p>
+                                                <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:opacity-80" :class="msg.sender_type === 'user' ? 'text-white underline' : 'text-blue-600 underline'">
+                                                    <span>Unduh</span>
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
                             </div>
                         </template>
+
                     </div>
                 </template>
                 <div id="widget-scroll-anchor" class="h-1"></div>
@@ -193,7 +224,15 @@
                     Sesi pertanyaan ini telah ditutup oleh agen.
                 </div>
 
-                <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="border-t border-slate-200 p-2.5 bg-white flex items-end gap-2">
+                <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="border-t border-slate-200 p-2.5 bg-white flex items-end gap-2 relative">
+                    <button type="button" 
+                            @click="$refs.fileInput.click()"
+                            class="shrink-0 w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 focus:outline-none transition-all"
+                            title="Unggah Gambar atau File">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                    <input type="file" x-ref="fileInput" class="hidden" @change="uploadFile">
+
                     <textarea x-model="newMessage" 
                             x-ref="messageInput"
                             @input="sendTypingEvent"
@@ -403,6 +442,7 @@
                         this.messages = data.messages.map(m => ({
                             id: m.id,
                             sender_type: m.sender_type,
+                            message_type: m.message_type,
                             content: m.content,
                             created_at: m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''
                         }));
@@ -440,6 +480,7 @@
                             this.messages.push({
                                 id: e.id,
                                 sender_type: e.sender_type,
+                                message_type: e.message_type,
                                 content: e.content,
                                 created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                             });
@@ -477,23 +518,24 @@
                     this.messages.push({
                         temp_id: tempId,
                         sender_type: 'user',
+                        message_type: 'text',
                         content: content,
                         created_at: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     });
                     this.scrollToBottom();
 
                     try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('content', content);
+
                         const response = await fetch('{{ route('chat.send') }}', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': this.csrfToken,
                                 'Accept': 'application/json'
                             },
-                            body: JSON.stringify({
-                                conversation_id: this.conversationId,
-                                content: content
-                            })
+                            body: formData
                         });
 
                         const data = await response.json();
@@ -502,6 +544,8 @@
                             const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
                             if (msgIndex !== -1) {
                                 this.messages[msgIndex].id = data.message.id;
+                                this.messages[msgIndex].message_type = data.message.message_type;
+                                this.messages[msgIndex].content = data.message.content;
                             }
                         } else {
                             this.messages = this.messages.filter(m => m.temp_id !== tempId);
@@ -519,6 +563,63 @@
                                 this.$refs.messageInput.focus();
                             }
                         });
+                    }
+                },
+
+                async uploadFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    this.isSending = true;
+                    const tempId = Date.now();
+                    const now = new Date();
+                    
+                    // Preview (if image)
+                    let previewUrl = '';
+                    let tempType = 'file';
+                    if (file.type.startsWith('image/')) {
+                        previewUrl = URL.createObjectURL(file);
+                        tempType = 'image';
+                    }
+
+                    this.messages.push({
+                        temp_id: tempId,
+                        sender_type: 'user',
+                        message_type: tempType,
+                        content: previewUrl || file.name,
+                        created_at: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+                    this.scrollToBottom();
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('file', file);
+
+                        const response = await fetch('{{ route('chat.send') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': this.csrfToken,
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || data.message || 'Server Error ' + response.status);
+
+                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                        if (msgIndex !== -1 && data.success) {
+                            this.messages[msgIndex].id = data.message.id;
+                            this.messages[msgIndex].message_type = data.message.message_type;
+                            this.messages[msgIndex].content = data.message.content;
+                        }
+                    } catch (error) {
+                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        alert(error.message);
+                    } finally {
+                        this.isSending = false;
+                        e.target.value = ''; // Reset input
                     }
                 },
 

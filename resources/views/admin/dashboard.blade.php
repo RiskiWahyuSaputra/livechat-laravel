@@ -167,6 +167,8 @@
             name: '{{ addslashes($customer->name) }}',
             contact: '{{ addslashes($customer->contact) }}',
             origin: '{{ addslashes($customer->origin) }}',
+            isOnline: {{ $customer->is_online ? 'true' : 'false' }},
+            status: '{{ $customer->current_status }}',
             date: '{{ $customer->created_at->format('d M Y') }}',
             dateHuman: '{{ $customer->created_at->diffForHumans() }}',
             initial: '{{ strtoupper(substr($customer->name, 0, 1)) }}',
@@ -214,6 +216,7 @@
                             <tr>
                                 <th class="ps-4">Pelanggan</th>
                                 <th>Kontak & Instansi</th>
+                                <th>Status Akses</th>
                                 <th>Bergabung Pada</th>
                                 <th class="text-end pe-4">Aksi</th>
                             </tr>
@@ -234,8 +237,20 @@
                                         <small class="text-muted" x-text="item.origin"></small>
                                     </td>
                                     <td>
-                                        <div x-text="item.date"></div>
-                                        <small class="text-muted" x-text="item.dateHuman"></small>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="d-inline-block rounded-circle" 
+                                                  :class="item.isOnline ? 'bg-success' : 'bg-secondary'"
+                                                  style="width: 8px; height: 8px;"></span>
+                                            <span class="badge rounded-pill fw-bold text-[10px] py-1 px-2 uppercase tracking-wider"
+                                                  :class="{
+                                                      'bg-success-light text-success': item.status === 'active',
+                                                      'bg-warning-light text-warning': item.status === 'pending' || item.status === 'queued',
+                                                      'bg-light text-muted': item.status === 'no_session' || item.status === 'closed'
+                                                  }"
+                                                  x-text="item.status === 'active' ? 'Percakapan Aktif' : 
+                                                         (item.status === 'pending' || item.status === 'queued' ? 'Menunggu' : 'Selesai')"></span>
+                                        </div>
+                                        <small class="text-[10px] font-medium text-muted mt-1 d-block" x-text="item.isOnline ? 'Online' : 'Offline'"></small>
                                     </td>
                                     <td class="text-end pe-4">
                                         <form :action="item.deleteUrl" method="POST" onsubmit="return confirm('Hapus pelanggan ini?');">
