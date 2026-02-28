@@ -66,7 +66,16 @@ class DashboardController extends Controller
             });
         }
 
-        $customers = $query->latest()->paginate(10)->withQueryString();
+        $customers = $query->with(['conversations' => function($q) {
+            $q->withTrashed()->latest();
+        }])->latest()->paginate(10)->withQueryString();
+
+        // Map customers to include their current active status
+        $customers->getCollection()->transform(function($user) {
+            $activeConv = $user->conversations->whereIn('status', ['pending', 'queued', 'active'])->first();
+            $user->current_status = $activeConv ? $activeConv->status : 'no_session';
+            return $user;
+        });
 
         return view('admin.dashboard', compact('admin', 'stats', 'customers'));
     }
@@ -192,8 +201,9 @@ class DashboardController extends Controller
     {
         $request->validate([
             'conversation_id' => ['required'], // existence checked manually
-            'content'         => ['required', 'string', 'max:2000'],
-            'message_type'    => ['required', 'in:text,whisper'],
+            'content'         => ['required_without:file', 'nullable', 'string', 'max:2000'],
+            'file'            => ['nullable', 'file', 'max:10240'], // Max 10MB
+            'message_type'    => ['required', 'in:text,whisper,image,file'],
         ]);
 
         $admin        = Auth::guard('admin')->user();
@@ -205,12 +215,25 @@ class DashboardController extends Controller
             return response()->json(['error' => 'Anda tidak memiliki akses tulis ke chat ini.'], 403);
         }
 
+        $messageType = $request->message_type;
+        $content = $request->content;
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $mime = $file->getMimeType();
+            $messageType = str_starts_with($mime, 'image/') ? 'image' : 'file';
+            
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/chat', $fileName, 'public');
+            $content = asset('storage/' . $path);
+        }
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => $admin->id,
             'sender_type'     => 'admin',
-            'message_type'    => $request->message_type,
-            'content'         => $request->content,
+            'message_type'    => $messageType,
+            'content'         => $content ?? '',
         ]);
 
         \Log::info('Message created by admin', ['id' => $message->id]);
@@ -227,9 +250,10 @@ class DashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => [
-                'id'         => $message->id,
-                'content'    => $message->content,
-                'created_at' => $message->created_at->format('H:i'),
+                'id'           => $message->id,
+                'content'      => $message->content,
+                'message_type' => $message->message_type,
+                'created_at'   => $message->created_at->format('H:i'),
             ],
         ]);
     }

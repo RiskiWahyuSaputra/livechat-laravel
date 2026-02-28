@@ -207,7 +207,8 @@ class ChatController extends Controller
     public function sendMessage(Request $request)
     {
         $request->validate([
-            'content'         => ['required', 'string', 'max:2000'],
+            'content'         => ['required_without:file', 'nullable', 'string', 'max:2000'],
+            'file'            => ['nullable', 'file', 'max:10240'], // Max 10MB
             'conversation_id' => ['required'], // We handle existence and trash manually
         ]);
 
@@ -239,12 +240,25 @@ class ChatController extends Controller
             $conversation = $this->createConversation($user);
         }
 
+        $messageType = 'text';
+        $content = $request->content;
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $mime = $file->getMimeType();
+            $messageType = str_starts_with($mime, 'image/') ? 'image' : 'file';
+            
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/chat', $fileName, 'public');
+            $content = asset('storage/' . $path);
+        }
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => $user->id,
             'sender_type'     => 'user',
-            'message_type'    => 'text',
-            'content'         => $request->content,
+            'message_type'    => $messageType,
+            'content'         => $content ?? '',
         ]);
 
         \Log::info('Message created by user', ['id' => $message->id]);
@@ -264,9 +278,10 @@ class ChatController extends Controller
         return response()->json([
             'success' => true,
             'message' => [
-                'id'         => $message->id,
-                'content'    => $message->content,
-                'created_at' => $message->created_at->format('H:i'),
+                'id'           => $message->id,
+                'content'      => $message->content,
+                'message_type' => $message->message_type,
+                'created_at'   => $message->created_at->format('H:i'),
             ],
         ]);
     }
