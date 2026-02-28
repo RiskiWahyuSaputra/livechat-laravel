@@ -18,6 +18,8 @@ use App\Models\User;
 
 class ChatController extends Controller
 {
+    const BOT_CATEGORIES = ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'];
+
     /**
      * Tampilkan halaman chat user.
      * Tidak digunakan lagi secara langsung, di-handle via react/vue atau Blade initChat.
@@ -275,6 +277,12 @@ class ChatController extends Controller
             // We still return success because it's saved in DB
         }
 
+        // --- BOT LOGIC START ---
+        if ($conversation->bot_phase && $conversation->bot_phase !== 'off') {
+            $this->handleBotResponse($conversation, $message->content);
+        }
+        // --- BOT LOGIC END ---
+
         return response()->json([
             'success' => true,
             'message' => [
@@ -316,6 +324,55 @@ class ChatController extends Controller
     }
 
     /**
+     * Tangani respon bot berdasarkan fase percakapan.
+     */
+    private function handleBotResponse($conversation, $userMessage)
+    {
+        if ($conversation->bot_phase === 'awaiting_category') {
+            // Cek apakah pesan user adalah salah satu kategori
+            if (in_array($userMessage, self::BOT_CATEGORIES)) {
+                $conversation->update([
+                    'problem_category' => $userMessage,
+                    'bot_phase' => 'awaiting_explanation'
+                ]);
+
+                $botMsg = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Baik, Anda memilih kategori **{$userMessage}**. Silakan jelaskan permasalahan atau pertanyaan Anda secara singkat agar kami dapat membantu lebih cepat.",
+                ]);
+                broadcast(new MessageSent($botMsg));
+            } else {
+                // Jika tidak valid, minta pilih lagi
+                $botMsg = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Mohon pilih salah satu kategori yang tersedia di atas (klik pada pilihan kategori).",
+                ]);
+                broadcast(new MessageSent($botMsg));
+            }
+        } elseif ($conversation->bot_phase === 'awaiting_explanation') {
+            $conversation->update(['bot_phase' => 'off']);
+
+            $botMsg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "Oke, pesan kamu diterima. Mohon tunggu antrian, agen kami akan segera membalas pesan Anda.",
+            ]);
+            broadcast(new MessageSent($botMsg));
+
+            // Jika admin online, beri tahu ada chat masuk
+            broadcast(new ConversationStatusChanged($conversation, 'system'));
+        }
+    }
+
+    /**
      * Buat conversation baru dan tentukan status awal.
      */
     private function createConversation($user): Conversation
@@ -347,6 +404,7 @@ class ChatController extends Controller
             'user_id'        => $user->id,
             'admin_id'       => null,
             'status'         => $status,
+            'bot_phase'      => 'awaiting_category',
             'queue_position' => $queuePosition,
             'last_message_at'=> now(),
         ]);
@@ -357,35 +415,21 @@ class ChatController extends Controller
             'sender_id'       => $user->id,
             'sender_type'     => 'user',
             'message_type'    => 'text',
-            'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin terhubung dengan tim Support.",
+            'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin bantuan tim Support.",
         ]);
 
         // Broadcast intro message
         broadcast(new MessageSent($intro))->toOthers();
 
-        // Kirim pesan sistem otomatis jika diperlukan
-        if ($autoMessage) {
-            $systemMsg = Message::create([
-                'conversation_id' => $conversation->id,
-                'sender_id'       => 0,
-                'sender_type'     => 'system',
-                'message_type'    => 'text',
-                'content'         => $autoMessage,
-            ]);
-            broadcast(new MessageSent($systemMsg))->toOthers();
-        } else {
-            $systemMsg = Message::create([
-                'conversation_id' => $conversation->id,
-                'sender_id'       => 0,
-                'sender_type'     => 'system',
-                'message_type'    => 'text',
-                'content'         => "Permintaan Anda telah diterima. Mohon tunggu sebentar sampai agen kami terhubung.",
-            ]);
-            broadcast(new MessageSent($systemMsg))->toOthers();
-        }
-
-        // Beritahu semua admin ada chat masuk
-        broadcast(new ConversationStatusChanged($conversation, 'system'));
+        // Bot Welcome Message with Categories
+        $botMsg = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => 0,
+            'sender_type'     => 'admin',
+            'message_type'    => 'text',
+            'content'         => "👋 Selamat datang di layanan bantuan **BEST CORP**. Silakan pilih kategori kendala yang ingin Anda tanyakan:",
+        ]);
+        broadcast(new MessageSent($botMsg));
 
         return $conversation;
     }

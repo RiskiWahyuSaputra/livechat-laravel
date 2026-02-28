@@ -37,6 +37,7 @@ class ConversationStatusChanged implements ShouldBroadcastNow
         return [
             'conversation_id' => $this->conversation->id,
             'status'          => $this->conversation->status,
+            'bot_phase'       => $this->conversation->bot_phase,
             'admin_id'        => $this->conversation->admin_id,
             'queue_position'  => $this->conversation->queue_position,
             'changed_by'      => $this->changed_by ?? 'system',
