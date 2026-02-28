@@ -316,9 +316,12 @@ class DashboardController extends Controller
 
         $admin = Auth::guard('admin')->user();
 
+        // Gunakan kategori dari request jika ada, jika tidak, pertahankan kategori yang sudah ada (dari bot)
+        $category = $request->problem_category ?: $conversation->problem_category;
+
         $conversation->update([
             'status'           => 'closed',
-            'problem_category' => $request->problem_category,
+            'problem_category' => $category,
         ]);
 
         $conversation->delete(); // Soft delete memindahkannya ke arsip

@@ -54,7 +54,9 @@
 
                         <!-- Label Sender -->
                         <span x-show="msg.sender_type === 'user'" class="text-[11px] text-slate-400 font-medium mb-1 ml-1 text-left">Pelanggan</span>
-                        <span x-show="msg.sender_type === 'admin' && msg.message_type !== 'whisper'" class="text-[11px] text-slate-400 font-medium mb-1 mr-1 text-right">Anda</span>
+                        <span x-show="msg.sender_type === 'admin' && msg.message_type !== 'whisper'" 
+                              class="text-[11px] text-slate-400 font-medium mb-1 mr-1 text-right"
+                              x-text="msg.sender_id == 0 ? 'Bot Assistant' : 'Anda'"></span>
 
                         <!-- Bubble Box -->
                         <div class="px-4 py-2.5 md:px-5 md:py-3 text-[15px] leading-relaxed relative max-w-full md:max-w-[450px] mx-auto shadow-sm break-words overflow-hidden min-w-0"

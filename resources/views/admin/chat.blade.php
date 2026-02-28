@@ -249,7 +249,7 @@
                                     <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
                                         <li class="d-flex ms-2">
                                             <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
-                                            <button class="btn btn-sm btn-outline-success me-1" @click="showCloseModal = true" title="Selesaikan"><i class="fe fe-check"></i></button>
+                                            <button class="btn btn-sm btn-outline-success me-1" @click="confirmCloseChat()" :disabled="isSubmitting" title="Selesaikan"><i class="fe fe-check"></i></button>
                                             <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
                                         </li>
                                     </template>
@@ -277,33 +277,6 @@
     </div>
 
     <!-- Modals -->
-    <div class="modal fade" :class="showCloseModal ? 'show d-block' : ''" tabindex="-1" x-show="showCloseModal" x-cloak>
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Selesaikan Percakapan</h5>
-                    <button type="button" class="btn-close" @click="showCloseModal = false"></button>
-                </div>
-                <div class="modal-body">
-                    <label class="form-label">Kategori Masalah</label>
-                    <select x-model="closeCategory" class="form-select">
-                        <option value="">-- Pilih Kategori --</option>
-                        <option value="Info Produk">Info Produk</option>
-                        <option value="Dukungan Teknis">Dukungan Teknis</option>
-                        <option value="Pembayaran">Pembayaran</option>
-                        <option value="Komplain">Komplain</option>
-                        <option value="Lainnya">Lainnya</option>
-                    </select>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="showCloseModal = false">Batal</button>
-                    <button type="button" class="btn btn-primary" @click="closeChat()" :disabled="!closeCategory || isSubmitting">Selesaikan</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal-backdrop fade" :class="showCloseModal || showHandoverModal ? 'show d-block' : ''" x-show="showCloseModal || showHandoverModal" x-cloak></div>
-
     <div class="modal fade" :class="showHandoverModal ? 'show d-block' : ''" tabindex="-1" x-show="showHandoverModal" x-cloak>
         <div class="modal-dialog">
             <div class="modal-content">
@@ -348,9 +321,7 @@
             searchQuery: '',
             isClaiming: false,
             isSubmitting: false,
-            showCloseModal: false,
             showHandoverModal: false,
-            closeCategory: '',
             handoverToAdminId: '',
             handoverNote: '',
             audioUnlocked: false,
@@ -519,16 +490,41 @@
                 finally { this.isClaiming = false; }
             },
 
+            async confirmCloseChat() {
+                Swal.fire({
+                    title: 'Selesaikan Percakapan?',
+                    text: 'Percakapan ini akan ditutup dan dipindahkan ke riwayat.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Selesaikan',
+                    cancelButtonText: 'Batal'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await this.closeChat();
+                    }
+                });
+            },
+
             async closeChat() {
                 this.isSubmitting = true;
                 try {
                     const res = await fetch(`/admin/conversation/${this.selectedChat.id}/close`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                        body: JSON.stringify({ problem_category: this.closeCategory })
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
                     });
                     if (!res.ok) throw new Error('Gagal menyelesaikan chat');
-                    window.location.reload();
+                    
+                    Toast.fire({ icon: 'success', title: 'Percakapan diselesaikan' });
+                    
+                    // Reset selection and refresh list
+                    this.selectedChat = null;
+                    await this.fetchChats();
                 } catch (e) { 
                     Toast.fire({ icon: 'error', title: e.message }); 
                 }

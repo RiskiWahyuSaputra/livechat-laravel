@@ -114,7 +114,7 @@
                     <span class="text-slate-400 font-medium text-[10px] text-center w-full inline-block">Percakapan Dimulai</span>
                 </div>
 
-                <template x-for="msg in messages" :key="msg.id || msg.temp_id">
+                <template x-for="(msg, index) in messages" :key="msg.id || msg.temp_id">
                     <div class="flex flex-col w-full" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                         
                         <!-- System Message -->
@@ -168,6 +168,18 @@
                                     </div>
                                 </div>
                                 <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
+
+                                <!-- Bot Categories Inline (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah awaiting_category) -->
+                                <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_category' && index === messages.length - 1">
+                                    <div class="mt-2 flex flex-wrap gap-1.5 w-full">
+                                        <template x-for="cat in botCategories" :key="cat">
+                                            <button @click="selectCategory(cat)" 
+                                                    class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
+                                                <span x-text="cat"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </template>
 
@@ -284,6 +296,7 @@
                 conversationId: null,
                 userId: null,
                 status: 'pending',
+                botPhase: 'off',
                 messages: [],
                 newMessage: '',
                 isSending: false,
@@ -291,6 +304,7 @@
                 typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
                 unreadCount: 0,
+                botCategories: ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'],
 
                 // Inactivity Timer (30 Menit)
                 lastActivity: Date.now(),
@@ -437,10 +451,12 @@
                         this.conversationId = data.conversation.id;
                         this.userId = data.user_id;
                         this.status = data.status;
+                        this.botPhase = data.conversation.bot_phase || 'off';
                         
                         // Format messages
                         this.messages = data.messages.map(m => ({
                             id: m.id,
+                            sender_id: m.sender_id,
                             sender_type: m.sender_type,
                             message_type: m.message_type,
                             content: m.content,
@@ -479,6 +495,7 @@
 
                             this.messages.push({
                                 id: e.id,
+                                sender_id: e.sender_id,
                                 sender_type: e.sender_type,
                                 message_type: e.message_type,
                                 content: e.content,
@@ -493,6 +510,7 @@
                         })
                         .listen('.conversation.status.changed', (e) => {
                             this.status = e.status;
+                            if (e.bot_phase) this.botPhase = e.bot_phase;
                         })
                         .listen('.typing', (e) => {
                             if (e.sender_type === 'admin') {
@@ -546,6 +564,10 @@
                                 this.messages[msgIndex].id = data.message.id;
                                 this.messages[msgIndex].message_type = data.message.message_type;
                                 this.messages[msgIndex].content = data.message.content;
+                                
+                                if (this.botPhase === 'awaiting_explanation') {
+                                    this.botPhase = 'off';
+                                }
                             }
                         } else {
                             this.messages = this.messages.filter(m => m.temp_id !== tempId);
@@ -621,6 +643,13 @@
                         this.isSending = false;
                         e.target.value = ''; // Reset input
                     }
+                },
+
+                async selectCategory(category) {
+                    if (this.isSending || this.botPhase !== 'awaiting_category') return;
+                    this.newMessage = category;
+                    await this.sendMessage();
+                    this.botPhase = 'awaiting_explanation';
                 },
 
                 sendTypingEvent(isTyping = true) {

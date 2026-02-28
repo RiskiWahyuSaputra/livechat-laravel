@@ -21,8 +21,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
-      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() }}, '{{ $conversation->status }}', {{ Js::from($messages) }})">
+    <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
+      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}')">
 
     <!-- Header Navbar Minimalist -->
     <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
@@ -77,7 +77,7 @@
                 </span>
             </div>
 
-            <template x-for="msg in messages" :key="msg.id || msg.temp_id">
+            <template x-for="(msg, index) in messages" :key="msg.id || msg.temp_id">
                 <div class="flex flex-col w-full" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                     
                     <!-- Pesan Sistem -->
@@ -135,6 +135,18 @@
                             
                             <!-- Timestamp -->
                             <span class="text-[9px] md:text-[10px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
+
+                            <!-- Bot Categories Inline (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah awaiting_category) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_category' && index === messages.length - 1">
+                                <div class="mt-3 flex flex-wrap gap-2 w-full">
+                                    <template x-for="cat in botCategories" :key="cat">
+                                        <button @click="selectCategory(cat)" 
+                                                class="px-3 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 min-w-[140px] text-center">
+                                            <span x-text="cat"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
@@ -191,16 +203,18 @@
     <!-- Logic Alpine JS Tetap Sama, Tidak Diubah -->
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages) => ({
+            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase) => ({
                 conversationId: conversationId,
                 userId: userId,
                 status: initialStatus,
                 messages: initialMessages,
+                botPhase: initialBotPhase || 'off',
                 newMessage: '',
                 isSending: false,
                 isTyping: false,
                 typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
+                botCategories: ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'],
 
                 init() {
                     this.scrollToBottom();
@@ -230,6 +244,7 @@
 
                             this.messages.push({
                                 id: e.id,
+                                sender_id: e.sender_id,
                                 sender_type: e.sender_type,
                                 message_type: e.message_type,
                                 content: e.content,
@@ -239,6 +254,7 @@
                         })
                         .listen('.conversation.status.changed', (e) => {
                             this.status = e.status;
+                            if (e.bot_phase) this.botPhase = e.bot_phase;
                         })
                         .listen('.typing', (e) => {
                             if (e.sender_type === 'admin') {
@@ -291,6 +307,12 @@
                             this.messages[msgIndex].message_type = data.message.message_type;
                             this.messages[msgIndex].content = data.message.content;
                             this.messages[msgIndex].created_at = data.message.created_at;
+                            
+                            // Re-fetch chat data to update botPhase if needed, or we can wait for broadcast
+                            // But usually server response is faster for current user
+                            if (this.botPhase === 'awaiting_explanation') {
+                                this.botPhase = 'off';
+                            }
                         }
 
                     } catch (error) {
@@ -356,6 +378,13 @@
                         this.isSending = false;
                         e.target.value = ''; // Reset input
                     }
+                },
+
+                async selectCategory(category) {
+                    if (this.isSending || this.botPhase !== 'awaiting_category') return;
+                    this.newMessage = category;
+                    await this.sendMessage();
+                    this.botPhase = 'awaiting_explanation';
                 },
 
                 sendTypingEvent(isTyping = true) {
