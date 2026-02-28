@@ -400,6 +400,12 @@
                     } finally {
                         this.isSending = false;
                         this.sendTypingEvent(false); 
+                        // Fokuskan kembali ke input agar admin bisa langsung mengetik lagi
+                        this.$nextTick(() => {
+                            if (this.$refs && this.$refs.messageInput) {
+                                this.$refs.messageInput.focus();
+                            }
+                        });
                     }
                 },
 
