@@ -44,9 +44,12 @@
                         {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                     </div>
                 </div>
-                <div class="text-left hidden md:block">
+                <div class="text-left">
                     <p class="text-xs font-bold text-slate-900 leading-none mb-1">{{ Auth::user()->name }}</p>
-                    <p class="text-[10px] text-slate-500 font-medium leading-none uppercase">Online</p>
+                    <div class="flex items-center gap-1">
+                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                        <p class="text-[9px] md:text-[10px] text-slate-500 font-bold leading-none uppercase tracking-tighter">Online</p>
+                    </div>
                 </div>
             </div>
         </div>
