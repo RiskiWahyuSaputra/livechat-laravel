@@ -252,6 +252,10 @@
                                         </div>
                                         <small class="text-[10px] font-medium text-muted mt-1 d-block" x-text="item.isOnline ? 'Online' : 'Offline'"></small>
                                     </td>
+                                    <td>
+                                        <div x-text="item.date"></div>
+                                        <small class="text-muted" x-text="item.dateHuman"></small>
+                                    </td>
                                     <td class="text-end pe-4">
                                         <form :action="item.deleteUrl" method="POST" onsubmit="return confirm('Hapus pelanggan ini?');">
                                             @csrf
