@@ -195,6 +195,7 @@
 
                 <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="border-t border-slate-200 p-2.5 bg-white flex items-end gap-2">
                     <textarea x-model="newMessage" 
+                            x-ref="messageInput"
                             @input="sendTypingEvent"
                             @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
                             :disabled="isSending || isLoading"
@@ -512,6 +513,12 @@
                     } finally {
                         this.isSending = false;
                         this.sendTypingEvent(false);
+                        // Fokuskan kembali ke input secara aman
+                        this.$nextTick(() => {
+                            if (this.$refs && this.$refs.messageInput) {
+                                this.$refs.messageInput.focus();
+                            }
+                        });
                     }
                 },
 
