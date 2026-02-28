@@ -170,7 +170,7 @@
                                     <div>
                                         <div class="user-name" x-text="chat.customer.name"></div>
                                         <div class="user-last-chat" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
-                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
+                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)" ></span></div>
                                     </div>
                                     <div>
                                         <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>

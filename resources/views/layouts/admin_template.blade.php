@@ -44,9 +44,189 @@
     <style>
         [x-cloak] { display: none !important; }
         
-        /* 
-         * Sidebar UI Overrides 
-         */
+        /* Fix Global Header Mobile */
+        @media (max-width: 991.98px) {
+            .header {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding: 0 15px !important;
+                height: 60px !important;
+                background-color: #fff !important;
+            }
+            body.dark-mode .header {
+                background-color: #1e1e1e !important;
+            }
+            .header-left {
+                position: static !important;
+                width: auto !important;
+                flex: 0 0 auto !important;
+                display: flex !important;
+                align-items: center !important;
+                padding: 0 !important;
+                float: none !important;
+            }
+            .header-left .logo.logo-small {
+                display: block !important;
+            }
+            .header-left .logo img {
+                max-height: 35px !important;
+                width: auto !important;
+            }
+            .header-split {
+                display: flex !important;
+                flex: 1 !important;
+                justify-content: flex-end !important;
+                align-items: center !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                float: none !important;
+            }
+            .user-menu {
+                display: flex !important;
+                align-items: center !important;
+                list-style: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                float: none !important;
+            }
+            .user-menu > li {
+                margin-left: 12px !important;
+                display: flex !important;
+                align-items: center !important;
+                float: none !important;
+            }
+            .mobile_btn {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 36px !important;
+                height: 36px !important;
+                background: transparent !important;
+                border-radius: 8px !important;
+                color: #333 !important;
+                order: 10 !important; /* Move to right */
+                margin-left: 10px !important;
+                z-index: 1060 !important;
+                position: static !important;
+                padding: 0 !important;
+                float: none !important;
+            }
+            body.dark-mode .mobile_btn {
+                color: #fff !important;
+            }
+            
+            /* Custom Burger Icon Stylings */
+            .burger-icon {
+                width: 22px;
+                height: 16px;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                cursor: pointer;
+            }
+            .burger-icon span {
+                display: block;
+                height: 2px;
+                width: 100%;
+                background-color: currentColor;
+                border-radius: 2px;
+                transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+            }
+            /* Animation */
+            .slide-nav .burger-icon span:nth-child(1) {
+                transform: translateY(7px) rotate(45deg);
+            }
+            .slide-nav .burger-icon span:nth-child(2) {
+                opacity: 0;
+                transform: translateX(10px);
+            }
+            .slide-nav .burger-icon span:nth-child(3) {
+                transform: translateY(-7px) rotate(-45deg);
+            }
+
+            .sidebar {
+                margin-left: -260px;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                position: fixed;
+                visibility: hidden;
+                z-index: 1100 !important;
+                width: 260px !important;
+                top: 0 !important;
+                bottom: 0 !important;
+            }
+            .slide-nav .sidebar {
+                margin-left: 0;
+                visibility: visible;
+            }
+            .sidebar-overlay {
+                display: none;
+                background-color: rgba(0, 0, 0, 0.6);
+                height: 100%;
+                left: 0;
+                position: fixed;
+                top: 0;
+                width: 100%;
+                z-index: 1090;
+                opacity: 0;
+                transition: opacity 0.4s ease;
+            }
+            .sidebar-overlay.opened {
+                display: block;
+                opacity: 1;
+            }
+            
+            /* Hide unnecessary elements on mobile */
+            .search-bar {
+                display: none !important;
+            }
+            .user-content {
+                display: none !important;
+            }
+            .nav-item .btn-light {
+                background: #f8f9fa !important;
+                border-radius: 8px !important;
+                width: 36px !important;
+                height: 36px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 !important;
+                border: 1px solid #eee !important;
+            }
+            body.dark-mode .nav-item .btn-light {
+                background: #252525 !important;
+                border-color: #444 !important;
+                color: #fff !important;
+            }
+
+            .user-img {
+                width: 36px !important;
+                height: 36px !important;
+                margin-right: 0 !important;
+                background: transparent !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            .user-img .w-10.h-10 {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 14px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            .animate-circle {
+                display: none !important;
+            }
+            .user-menu > li.me-3 {
+                margin-right: 0 !important;
+            }
+        }
+
+        /* Sidebar UI Overrides for Desktop */
         @media (min-width: 992px) {
             body:not(.mini-sidebar) .sidebar {
                 width: 230px !important;
@@ -57,8 +237,6 @@
             body:not(.mini-sidebar) .header-left {
                 width: 230px !important;
             }
-
-            /* Fix for mini-sidebar width glitch */
             .mini-sidebar .sidebar {
                 width: 60px !important;
             }
@@ -67,17 +245,6 @@
             }
             .mini-sidebar .header-left {
                 width: 60px !important;
-            }
-        }
-
-        /* Mobile Responsive Toggle */
-        @media (max-width: 991.98px) {
-            .sidebar {
-                margin-left: -250px;
-                transition: all 0.4s ease;
-            }
-            .slide-nav .sidebar {
-                margin-left: 0;
             }
         }
         
@@ -104,9 +271,7 @@
             text-align: center;
         }
 
-        /* 
-         * Dark Mode Overrides
-         */
+        /* Dark Mode Overrides */
         body.dark-mode {
             background-color: #121212;
             color: #e0e0e0;
@@ -199,7 +364,11 @@
                 </a>
             </div>
             <a class="mobile_btn" id="mobile_btn" href="javascript:void(0);">
-                <i class="fas fa-align-left"></i>
+                <div class="burger-icon">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </a>
             <div class="header-split">
                 <div class="page-headers">
@@ -369,6 +538,53 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     
     <script>
+        // GLOBAL FIX UNTUK SIDEBAR DI MOBILE
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileBtn = document.getElementById('mobile_btn');
+            const mainWrapper = document.querySelector('.main-wrapper');
+            
+            // Tambahkan overlay jika belum ada
+            let overlay = document.querySelector('.sidebar-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                document.body.appendChild(overlay);
+            }
+
+            const closeSidebar = () => {
+                mainWrapper.classList.remove('slide-nav');
+                overlay.classList.remove('opened');
+                document.documentElement.classList.remove('menu-opened');
+            };
+
+            if (mobileBtn) {
+                mobileBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isOpen = mainWrapper.classList.contains('slide-nav');
+                    
+                    if (isOpen) {
+                        closeSidebar();
+                    } else {
+                        mainWrapper.classList.add('slide-nav');
+                        overlay.classList.add('opened');
+                        document.documentElement.classList.add('menu-opened');
+                    }
+                });
+            }
+
+            // Klik overlay untuk menutup sidebar
+            overlay.addEventListener('click', closeSidebar);
+            
+            // Tutup sidebar saat menu diklik
+            const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 992) closeSidebar();
+                });
+            });
+        });
+
         // Global Toast Notification Setup
         const Toast = Swal.mixin({
             toast: true,
@@ -394,20 +610,6 @@
             Toast.fire({
                 icon: 'error',
                 title: '{{ Session::get("error") }}'
-            });
-        @endif
-
-        @if(Session::has('warning'))
-            Toast.fire({
-                icon: 'warning',
-                title: '{{ Session::get("warning") }}'
-            });
-        @endif
-
-        @if(Session::has('info'))
-            Toast.fire({
-                icon: 'info',
-                title: '{{ Session::get("info") }}'
             });
         @endif
     </script>
