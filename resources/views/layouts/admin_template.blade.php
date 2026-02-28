@@ -151,7 +151,7 @@
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 position: fixed;
                 visibility: hidden;
-                z-index: 1100 !important;
+                z-index: 11000 !important; /* Sangat tinggi agar di atas ruang chat */
                 width: 260px !important;
                 top: 0 !important;
                 bottom: 0 !important;
@@ -168,7 +168,7 @@
                 position: fixed;
                 top: 0;
                 width: 100%;
-                z-index: 1090;
+                z-index: 10900; /* Di bawah sidebar tapi di atas chat */
                 opacity: 0;
                 transition: opacity 0.4s ease;
             }
