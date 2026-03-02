@@ -83,6 +83,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('admin.permission:manage_roles')->group(function () {
                 Route::resource('/roles', App\Http\Controllers\Admin\RoleController::class)->except(['show']);
             });
+
+            // --- Menu 7: Analytics & Analysis ---
+            Route::get('/analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
+            Route::get('/analytics/filter', [App\Http\Controllers\Admin\AnalyticsController::class, 'filter'])->name('analytics.filter');
+            Route::get('/analytics/realtime', [App\Http\Controllers\Admin\AnalyticsController::class, 'realtime'])->name('analytics.realtime');
+            Route::get('/analytics/export', [App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
         }
         );
     });

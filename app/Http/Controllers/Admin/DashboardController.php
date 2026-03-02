@@ -10,17 +10,43 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\AnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    protected $analyticsService;
+
+    public function __construct(AnalyticsService $analyticsService)
+    {
+        $this->analyticsService = $analyticsService;
+    }
+
     /**
      * Dashboard Utama — Statistik dan daftar pelanggan.
      */
     public function index(Request $request)
     {
         $admin = Auth::guard('admin')->user();
+        
+        // Date range for analytics
+        $startDate = $request->get('start_date', Carbon::now()->subDays(30)->startOfDay());
+        $endDate = $request->get('end_date', Carbon::now()->endOfDay());
+
+        // Get analytics data
+        $overview = $this->analyticsService->getOverviewStats();
+        $trends = $this->analyticsService->getConversationTrends();
+        $peakHours = $this->analyticsService->getPeakHours();
+        $topPerformers = $this->analyticsService->getTopPerformers();
+        $complaintCategories = $this->analyticsService->getComplaintCategories();
+        $customerSatisfaction = $this->analyticsService->getCustomerSatisfaction();
+        $agentWorkload = $this->analyticsService->getAgentWorkload();
+        $customerInsights = $this->analyticsService->getCustomerInsights();
+        $metrics = $this->analyticsService->getConversationMetrics();
+        $agentPerformance = $this->analyticsService->getAgentPerformance();
+        $statusDistribution = $this->analyticsService->getStatusDistribution();
         
         // Statistik Ringkas
         $stats = [
@@ -78,7 +104,24 @@ class DashboardController extends Controller
             return $user;
         });
 
-        return view('admin.dashboard', compact('admin', 'stats', 'customers'));
+        return view('admin.dashboard', compact(
+            'admin', 
+            'stats', 
+            'customers',
+            'overview',
+            'trends',
+            'peakHours',
+            'topPerformers',
+            'complaintCategories',
+            'customerSatisfaction',
+            'agentWorkload',
+            'customerInsights',
+            'metrics',
+            'agentPerformance',
+            'statusDistribution',
+            'startDate',
+            'endDate'
+        ));
     }
 
     /**
