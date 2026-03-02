@@ -270,7 +270,7 @@
 <!-- ==================== ANALYTICS SECTION ==================== -->
 <div class="row mb-4">
     <div class="col-12">
-        <h4 class="page-title mb-3">Analytics Overview</h4>
+        <h4 class="page-title mb-3">Ringkasan Analisis</h4>
         
         <!-- Stats Overview -->
         <div class="stats-grid">
@@ -279,42 +279,42 @@
                     <i class="fe fe-message-square"></i>
                 </div>
                 <div class="stat-value">{{ $overview['total_conversations'] }}</div>
-                <div class="stat-label">Total Chats</div>
+                <div class="stat-label">Jumlah Percakapan</div>
             </div>
             <div class="stat-box">
                 <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
                     <i class="fe fe-message-circle"></i>
                 </div>
                 <div class="stat-value">{{ $overview['active_conversations'] }}</div>
-                <div class="stat-label">Active</div>
+                <div class="stat-label">Aktif</div>
             </div>
             <div class="stat-box">
                 <div class="stat-icon" style="background: rgba(6, 182, 212, 0.1); color: var(--info);">
                     <i class="fe fe-users"></i>
                 </div>
                 <div class="stat-value">{{ $overview['total_customers'] }}</div>
-                <div class="stat-label">Customers</div>
+                <div class="stat-label">Pelanggan</div>
             </div>
             <div class="stat-box">
                 <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
                     <i class="fe fe-headphones"></i>
                 </div>
                 <div class="stat-value">{{ $overview['online_agents'] }}</div>
-                <div class="stat-label">Online Agents</div>
+                <div class="stat-label">Agen Online</div>
             </div>
             <div class="stat-box">
                 <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
                     <i class="fe fe-check-circle"></i>
                 </div>
                 <div class="stat-value">{{ $metrics['completion_rate'] }}%</div>
-                <div class="stat-label">Completion</div>
+                <div class="stat-label">Penyelesaian</div>
             </div>
             <div class="stat-box">
                 <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">
                     <i class="fe fe-clock"></i>
                 </div>
                 <div class="stat-value">{{ $metrics['avg_duration_minutes'] }}m</div>
-                <div class="stat-label">Avg Duration</div>
+                <div class="stat-label">Rata-rata Durasi</div>
             </div>
         </div>
     </div>
@@ -324,7 +324,7 @@
 <div class="charts-grid">
     <div class="dashboard-card">
         <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-trending-up me-2"></i>Conversation Trends (Last 7 Days)</h5>
+            <h5 class="card-title-custom"><i class="fe fe-trending-up me-2"></i>Tren Percakapan (7 Hari Terakhir)</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
             <div class="chart-wrapper">
@@ -335,7 +335,7 @@
     
     <div class="dashboard-card">
         <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-clock me-2"></i>Peak Hours</h5>
+            <h5 class="card-title-custom"><i class="fe fe-clock me-2"></i>Jam Sibuk</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
             <div class="chart-wrapper">
@@ -346,7 +346,7 @@
     
     <div class="dashboard-card">
         <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-pie-chart me-2"></i>Status Distribution</h5>
+            <h5 class="card-title-custom"><i class="fe fe-pie-chart me-2"></i>Distribusi Status</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
             <div class="chart-wrapper" style="height: 200px; display: flex; justify-content: center;">
@@ -359,18 +359,18 @@
 <!-- Agent Performance -->
 <div class="dashboard-card">
     <div class="card-header-custom">
-        <h5 class="card-title-custom">Agent Performance</h5>
+        <h5 class="card-title-custom">Performa Agen</h5>
     </div>
     <div class="card-body-custom" style="padding: 0; overflow-x: auto;">
         <table class="performance-table" style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                    <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Rank</th>
-                    <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Agent</th>
+                    <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Peringkat</th>
+                    <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Agen</th>
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
-                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Chats Closed</th>
-                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Avg Response</th>
-                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Score</th>
+                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Obrolan ditutup</th>
+                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Rata-rata respon</th>
+                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Skor</th>
                 </tr>
             </thead>
             <tbody>
@@ -425,7 +425,7 @@
     <!-- Complaint Categories -->
     <div class="dashboard-card">
         <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-alert-circle me-2"></i>Complaint Categories</h5>
+            <h5 class="card-title-custom"><i class="fe fe-alert-circle me-2"></i>Kategori Komplen</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
             @if($complaintCategories['categories']->count() > 0)
@@ -452,7 +452,7 @@
     <!-- Customer Satisfaction -->
     <div class="dashboard-card">
         <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-heart me-2"></i>Satisfaction</h5>
+            <h5 class="card-title-custom"><i class="fe fe-heart me-2"></i>Rating kepuasan</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px; text-align: center;">
             @if($customerSatisfaction['has_data'] ?? false)
@@ -476,7 +476,7 @@
     <!-- Top Origins -->
     <div class="dashboard-card">
         <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-map-pin me-2"></i>Top Origins</h5>
+            <h5 class="card-title-custom"><i class="fe fe-map-pin me-2"></i>Daerah teratas</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
             @if($customerInsights['origins']->count() > 0)

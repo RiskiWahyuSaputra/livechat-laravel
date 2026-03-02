@@ -27,6 +27,7 @@ class ChatController extends Controller
     public function index()
     {
         return redirect()->route('user.home');
+        
     }
 
     /**
@@ -356,14 +357,24 @@ class ChatController extends Controller
                 broadcast(new MessageSent($botMsg));
             }
         } elseif ($conversation->bot_phase === 'awaiting_explanation') {
-            $conversation->update(['bot_phase' => 'off']);
+            // Hitung posisi antrian: jumlah percakapan yang belum di-claim admin 
+            // dan dibuat sebelum atau pada saat yang sama dengan percakapan ini.
+            $queueCount = Conversation::whereIn('status', ['pending', 'queued'])
+                ->whereNull('admin_id')
+                ->where('id', '<=', $conversation->id)
+                ->count();
+
+            $conversation->update([
+                'bot_phase' => 'off',
+                'queue_position' => $queueCount
+            ]);
 
             $botMsg = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'text',
-                'content'         => "Oke, pesan kamu diterima. Mohon tunggu antrian, agen kami akan segera membalas pesan Anda.",
+                'content'         => "Oke, pesan kamu diterima. Mohon tunggu antrian, saat ini Anda berada di antrian ke-{$queueCount}. Agen kami akan segera membalas pesan Anda.",
             ]);
             broadcast(new MessageSent($botMsg));
 
