@@ -341,7 +341,7 @@ class ChatController extends Controller
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => "Baik, Anda memilih kategori **{$userMessage}**. Silakan jelaskan permasalahan atau pertanyaan Anda secara singkat agar kami dapat membantu lebih cepat.",
+                    'content'         => "Baik, Anda memilih kategori {$userMessage}. Silakan jelaskan permasalahan atau pertanyaan Anda secara singkat agar kami dapat membantu lebih cepat.",
                 ]);
                 broadcast(new MessageSent($botMsg));
             } else {
@@ -422,14 +422,23 @@ class ChatController extends Controller
         broadcast(new MessageSent($intro))->toOthers();
 
         // Bot Welcome Message with Categories
+        $categories = self::BOT_CATEGORIES;
+        $categoryButtons = "";
+        foreach ($categories as $cat) {
+            $categoryButtons .= "- {$cat}\n";
+        }
+        
         $botMsg = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => 0,
             'sender_type'     => 'admin',
             'message_type'    => 'text',
-            'content'         => "👋 Selamat datang di layanan bantuan **BEST CORP**. Silakan pilih kategori kendala yang ingin Anda tanyakan:",
+            'content'         => "👋 Selamat datang di layanan bantuan BEST CORP. Silakan pilih kategori kendala yang ingin Anda tanyakan:\n\n" . $categoryButtons,
         ]);
         broadcast(new MessageSent($botMsg));
+
+        // Broadcast status change untuk admin dashboard
+        broadcast(new ConversationStatusChanged($conversation, 'system'));
 
         return $conversation;
     }

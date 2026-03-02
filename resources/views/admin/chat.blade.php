@@ -123,6 +123,13 @@
                     <div>
                         <h6>Percakapan</h6>
                         <p x-text="filteredChats.length + ' Aktif & Antrean'"></p>
+                        <!-- Debug info -->
+                        <p class="text-xs text-muted" x-show="chats.length > 0" x-text="'Total: ' + chats.length + ' chats'"></p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button @click="fetchChats()" class="btn btn-sm btn-outline-secondary" title="Refresh">
+                            <i class="fe fe-refresh-cw"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="chat-search">
@@ -332,6 +339,12 @@
                 // Update currentTime every minute for relative time reactivity
                 setInterval(() => { this.currentTime = Date.now(); }, 60000);
                 
+                // Auto-refresh chat list every 5 seconds
+                setInterval(() => { 
+                    console.log('🔄 Auto-refresh chat list...');
+                    this.fetchChats(); 
+                }, 5000);
+                
                 // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
                 const unlockAudio = () => {
                     if (!this.notificationSound) {
@@ -361,6 +374,7 @@
                         window.Echo.private('admin.dashboard')
                             .listen('.conversation.status.changed', (e) => {
                                 console.log('🔔 Status Changed Received:', e);
+                                console.log('📝 Conversation ID:', e.conversation_id, 'Status:', e.status);
                                 
                                 // Update status offline secara reaktif dari data broadcast
                                 if (e.customer) {
@@ -414,10 +428,13 @@
             },
 
             async fetchChats() {
+                console.log('🔄 Fetching chats...');
                 try {
                     const res = await fetch('/admin/chat?ajax=1');
                     const data = await res.json();
+                    console.log('📋 Chats received:', data);
                     this.chats = [...data.pending, ...data.active];
+                    console.log('✅ Total chats loaded:', this.chats.length);
                 } catch (e) { console.error('Failed to fetch chats', e); }
             },
 
