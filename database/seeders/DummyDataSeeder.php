@@ -140,8 +140,6 @@ class DummyDataSeeder extends Seeder
             'General Inquiry', 'Technical Support', 'Billing', 'Sales', 
             'Complaint', 'Feedback', 'Account', 'Product', 'Service', 'Other'
         ];
-        
-        $botPhases = ['init', 'category_selection', 'contact_info', 'waiting', 'completed', 'cancelled'];
 
         $conversations = [];
         $conversationCount = 60;
@@ -169,13 +167,25 @@ class DummyDataSeeder extends Seeder
                 $admin = $agents->random();
             }
 
+            // For closed conversations, bot should be disabled
+            // For active/pending/queued, bot should start fresh
+            $botPhase = null;
+            if ($status === 'closed') {
+                $botPhase = 'off'; // Disable bot for closed conversations
+            } elseif ($status === 'active') {
+                // If active and has admin, bot might be off or awaiting_category
+                $botPhase = $admin ? 'off' : 'awaiting_category';
+            } elseif ($status === 'pending' || $status === 'queued') {
+                $botPhase = 'awaiting_category'; // Bot waiting for category
+            }
+
             $conversation = Conversation::create([
                 'user_id' => $customers[array_rand($customers)]->id,
                 'admin_id' => $admin ? $admin->id : null,
                 'status' => $status,
                 'queue_position' => $status === 'queued' ? rand(1, 5) : null,
                 'problem_category' => $status === 'closed' ? $categories[array_rand($categories)] : null,
-                'bot_phase' => $botPhases[array_rand($botPhases)],
+                'bot_phase' => $botPhase,
                 'created_at' => $createdAt,
                 'updated_at' => $status === 'closed' 
                     ? $createdAt->copy()->addMinutes(rand(5, 120)) 
