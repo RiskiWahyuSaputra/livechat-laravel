@@ -64,8 +64,8 @@ class WhatsappWebhookController extends Controller
     {
         $apiKey = env('GEMINI_API_KEY');
         
-        // Menggunakan alias gemini-flash-latest (seringkali memiliki kuota lebih stabil di free tier)
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" . $apiKey;
+        // Menggunakan gemini-1.5-flash (v1) - Model ini cepat, hemat, dan didukung penuh di endpoint v1
+        $url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
 
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
@@ -78,15 +78,17 @@ class WhatsappWebhookController extends Controller
         if ($response->failed()) {
             Log::error("Gemini API Gagal (" . $response->status() . "): " . $response->body());
             
-            // Jika flash-latest masih gagal, coba pro-latest sebagai upaya terakhir
-            if ($response->status() == 429) {
-                $urlPro = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=" . $apiKey;
-                $responsePro = Http::post($urlPro, [
-                    'contents' => [['parts' => [['text' => "Jawablah singkat: " . $prompt]]]]
+            // Jika flash gagal (misal: kuota), coba gemini-1.5-pro sebagai cadangan
+            if ($response->status() == 429 || $response->status() == 404) {
+                $urlBackup = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=" . $apiKey;
+                $responseBackup = Http::post($urlBackup, [
+                    'contents' => [
+                        ['parts' => [['text' => "Anda adalah admin helpdesk Best Corporation. Jawablah secara singkat: " . $prompt]]]
+                    ]
                 ]);
                 
-                if ($responsePro->successful()) {
-                    return $responsePro->json('candidates.0.content.parts.0.text');
+                if ($responseBackup->successful()) {
+                    return $responseBackup->json('candidates.0.content.parts.0.text');
                 }
             }
 
