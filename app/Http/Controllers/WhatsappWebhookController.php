@@ -64,42 +64,45 @@ class WhatsappWebhookController extends Controller
     {
         $apiKey = env('GEMINI_API_KEY');
         
-        // Menggunakan v1beta karena gemini-1.5-flash terkadang belum tersedia di v1 di beberapa region
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
+        // Ternyata API Key Anda mendukung model terbaru: gemini-2.0-flash
+        $url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=" . $apiKey;
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ])->post($url, [
-            'contents' => [
-                ['parts' => [['text' => "Anda adalah admin helpdesk Best Corporation. Jawablah secara singkat: " . $prompt]]]
-            ]
-        ]);
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post($url, [
+                'contents' => [
+                    ['parts' => [['text' => "Anda adalah admin helpdesk Best Corporation. Jawablah secara singkat: " . $prompt]]]
+                ]
+            ]);
 
-        if ($response->failed()) {
-            Log::error("Gemini API Gagal (" . $response->status() . "): " . $response->body());
-            
-            // Jika flash gagal (misal: kuota), coba gemini-1.5-pro sebagai cadangan (juga via v1beta)
-            if ($response->status() == 429 || $response->status() == 404) {
-                $urlBackup = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" . $apiKey;
-                $responseBackup = Http::withHeaders([
-                    'Content-Type' => 'application/json',
-                ])->post($urlBackup, [
-                    'contents' => [
-                        ['parts' => [['text' => "Anda adalah admin helpdesk Best Corporation. Jawablah secara singkat: " . $prompt]]]
-                    ]
-                ]);
-                
-                if ($responseBackup->successful()) {
-                    $backupText = $responseBackup->json('candidates.0.content.parts.0.text');
-                    return $backupText ?: "Maaf, admin sedang tidak di tempat. Pesan Anda sudah kami catat di Riwayat Arsip.";
-                }
+            if ($response->successful()) {
+                $aiText = $response->json('candidates.0.content.parts.0.text');
+                return $aiText ?: "Maaf, saya tidak dapat memproses permintaan Anda saat ini.";
             }
 
-            return "Maaf, admin sedang tidak di tempat. Pesan Anda sudah kami catat di Riwayat Arsip.";
+            Log::error("Gemini API Gagal (" . $response->status() . "): " . $response->body());
+
+            // Backup menggunakan gemini-2.5-flash jika tersedia (opsional)
+            $urlBackup = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" . $apiKey;
+            $responseBackup = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post($urlBackup, [
+                'contents' => [
+                    ['parts' => [['text' => "Anda adalah admin helpdesk Best Corporation. Jawablah secara singkat: " . $prompt]]]
+                ]
+            ]);
+
+            if ($responseBackup->successful()) {
+                $backupText = $responseBackup->json('candidates.0.content.parts.0.text');
+                return $backupText ?: "Maaf, admin sedang tidak di tempat.";
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Exception Gemini: " . $e->getMessage());
         }
 
-        $aiText = $response->json('candidates.0.content.parts.0.text');
-        return $aiText ?: "Maaf, saya tidak dapat memproses permintaan Anda saat ini.";
+        return "Maaf, admin sedang tidak di tempat. Pesan Anda sudah kami catat di Riwayat Arsip.";
     }
 
     /**
