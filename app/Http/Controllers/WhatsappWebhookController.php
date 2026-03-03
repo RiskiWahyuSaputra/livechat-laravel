@@ -64,8 +64,8 @@ class WhatsappWebhookController extends Controller
     {
         $apiKey = env('GEMINI_API_KEY');
         
-        // Menggunakan gemini-1.5-flash (v1) - Model ini cepat, hemat, dan didukung penuh di endpoint v1
-        $url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
+        // Menggunakan v1beta karena gemini-1.5-flash terkadang belum tersedia di v1 di beberapa region
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
 
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
@@ -78,24 +78,28 @@ class WhatsappWebhookController extends Controller
         if ($response->failed()) {
             Log::error("Gemini API Gagal (" . $response->status() . "): " . $response->body());
             
-            // Jika flash gagal (misal: kuota), coba gemini-1.5-pro sebagai cadangan
+            // Jika flash gagal (misal: kuota), coba gemini-1.5-pro sebagai cadangan (juga via v1beta)
             if ($response->status() == 429 || $response->status() == 404) {
-                $urlBackup = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=" . $apiKey;
-                $responseBackup = Http::post($urlBackup, [
+                $urlBackup = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" . $apiKey;
+                $responseBackup = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                ])->post($urlBackup, [
                     'contents' => [
                         ['parts' => [['text' => "Anda adalah admin helpdesk Best Corporation. Jawablah secara singkat: " . $prompt]]]
                     ]
                 ]);
                 
                 if ($responseBackup->successful()) {
-                    return $responseBackup->json('candidates.0.content.parts.0.text');
+                    $backupText = $responseBackup->json('candidates.0.content.parts.0.text');
+                    return $backupText ?: "Maaf, admin sedang tidak di tempat. Pesan Anda sudah kami catat di Riwayat Arsip.";
                 }
             }
 
             return "Maaf, admin sedang tidak di tempat. Pesan Anda sudah kami catat di Riwayat Arsip.";
         }
 
-        return $response->json('candidates.0.content.parts.0.text');
+        $aiText = $response->json('candidates.0.content.parts.0.text');
+        return $aiText ?: "Maaf, saya tidak dapat memproses permintaan Anda saat ini.";
     }
 
     /**
