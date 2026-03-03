@@ -11,6 +11,7 @@ use App\Models\Message;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\WhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -18,10 +19,12 @@ use Carbon\Carbon;
 class DashboardController extends Controller
 {
     protected $analyticsService;
+    protected $whatsappService;
 
-    public function __construct(AnalyticsService $analyticsService)
+    public function __construct(AnalyticsService $analyticsService, WhatsappService $whatsappService)
     {
         $this->analyticsService = $analyticsService;
+        $this->whatsappService = $whatsappService;
     }
 
     /**
@@ -287,8 +290,21 @@ class DashboardController extends Controller
         try {
             broadcast(new MessageSent($message));
             \Log::info('Admin Broadcast MessageSent success');
+
+            // --- WHAPI NOTIFICATION START ---
+            // Kirim ke WhatsApp user jika bukan pesan internal (whisper)
+            if ($messageType !== 'whisper' && $conversation->customer) {
+                $to = $conversation->customer->contact;
+                if ($messageType === 'text') {
+                    $this->whatsappService->sendMessage($to, "👩‍💼 *Admin:* " . $content);
+                } else {
+                    $this->whatsappService->sendMedia($to, $content, "👩‍💼 *Admin:* [Kirim Media]", $messageType);
+                }
+            }
+            // --- WHAPI NOTIFICATION END ---
+
         } catch (\Exception $e) {
-            \Log::error('Admin Broadcast MessageSent failed', ['error' => $e->getMessage()]);
+            \Log::error('Admin Broadcast/Whapi MessageSent failed', ['error' => $e->getMessage()]);
         }
 
         return response()->json([

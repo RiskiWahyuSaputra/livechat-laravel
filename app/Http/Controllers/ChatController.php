@@ -15,10 +15,18 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
 use App\Models\User;
+use App\Services\WhatsappService;
 
 class ChatController extends Controller
 {
     const BOT_CATEGORIES = ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'];
+
+    protected $whatsappService;
+
+    public function __construct(WhatsappService $whatsappService)
+    {
+        $this->whatsappService = $whatsappService;
+    }
 
     /**
      * Tampilkan halaman chat user.
@@ -273,8 +281,21 @@ class ChatController extends Controller
             // Broadcast pesan real-time ke semua peserta
             broadcast(new MessageSent($message));
             \Log::info('Broadcast MessageSent success');
+
+            // --- WHAPI NOTIFICATION START ---
+            // Beri tahu admin via WhatsApp jika bot sedang off (berarti ini chat ke manusia)
+            if (!$conversation->bot_phase || $conversation->bot_phase === 'off') {
+                $adminText = "💬 Pesan baru dari web!\nDari: {$user->name} ({$user->origin})\nIsi: " . ($messageType === 'text' ? $message->content : "[Media]");
+                $this->whatsappService->notifyAdmin($adminText);
+                
+                if ($messageType !== 'text') {
+                    $this->whatsappService->sendMedia(env('WHAPI_ADMIN_NUMBER'), $message->content, "Media dari {$user->name}", $messageType);
+                }
+            }
+            // --- WHAPI NOTIFICATION END ---
+
         } catch (\Exception $e) {
-            \Log::error('Broadcast MessageSent failed', ['error' => $e->getMessage()]);
+            \Log::error('Broadcast/Whapi MessageSent failed', ['error' => $e->getMessage()]);
             // We still return success because it's saved in DB
         }
 
