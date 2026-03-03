@@ -16,16 +16,19 @@ use Illuminate\Support\Str;
 
 use App\Models\User;
 use App\Services\WhatsappService;
+use App\Services\GeminiService;
 
 class ChatController extends Controller
 {
     const BOT_CATEGORIES = ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'];
 
     protected $whatsappService;
+    protected $geminiService;
 
-    public function __construct(WhatsappService $whatsappService)
+    public function __construct(WhatsappService $whatsappService, GeminiService $geminiService)
     {
         $this->whatsappService = $whatsappService;
+        $this->geminiService = $geminiService;
     }
 
     /**
@@ -291,6 +294,20 @@ class ChatController extends Controller
                 if ($messageType !== 'text') {
                     $this->whatsappService->sendMedia(env('WHAPI_ADMIN_NUMBER'), $message->content, "Media dari {$user->name}", $messageType);
                 }
+
+                // --- AUTO AI REPLY IF NO ADMIN CLAIMED ---
+                if (!$conversation->admin_id && $messageType === 'text') {
+                    $aiAutoResponse = $this->geminiService->askGemini($message->content, "Berikan jawaban singkat atas pertanyaan berikut dari pelanggan web:");
+                    
+                    $aiMessage = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => "🤖 **BEST AI Auto-Reply:** " . $aiAutoResponse,
+                    ]);
+                    broadcast(new MessageSent($aiMessage));
+                }
             }
             // --- WHAPI NOTIFICATION END ---
 
@@ -378,8 +395,10 @@ class ChatController extends Controller
                 broadcast(new MessageSent($botMsg));
             }
         } elseif ($conversation->bot_phase === 'awaiting_explanation') {
-            // Hitung posisi antrian: jumlah percakapan yang belum di-claim admin 
-            // dan dibuat sebelum atau pada saat yang sama dengan percakapan ini.
+            // Dapatkan jawaban AI untuk membantu user sementara
+            $aiResponse = $this->geminiService->askGemini($userMessage, "Pelanggan bertanya tentang {$conversation->problem_category}: ");
+
+            // Hitung posisi antrian
             $queueCount = Conversation::whereIn('status', ['pending', 'queued'])
                 ->whereNull('admin_id')
                 ->where('id', '<=', $conversation->id)
@@ -390,14 +409,26 @@ class ChatController extends Controller
                 'queue_position' => $queueCount
             ]);
 
+            // Kirim jawaban AI
+            $logoUrl = asset('images/best-logo-1.png');
             $botMsg = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'text',
-                'content'         => "Oke, pesan kamu diterima. Mohon tunggu antrian, saat ini Anda berada di antrian ke-{$queueCount}. Agen kami akan segera membalas pesan Anda.",
+                'content'         => "🤖 **BEST AI Helpdesk:** " . $aiResponse,
             ]);
             broadcast(new MessageSent($botMsg));
+
+            // Pesan info antrian
+            $queueMsg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "Pesan Anda sudah kami terima. Sambil menunggu agen kami (Antrean ke-{$queueCount}), silakan baca jawaban AI di atas.",
+            ]);
+            broadcast(new MessageSent($queueMsg));
 
             // Jika admin online, beri tahu ada chat masuk
             broadcast(new ConversationStatusChanged($conversation, 'system'));
