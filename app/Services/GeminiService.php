@@ -26,11 +26,12 @@ class GeminiService
             return "Maaf, sistem AI sedang tidak tersedia.";
         }
 
-        // Instruksi dasar yang membatasi topik
         $baseInstruction = "Anda adalah asisten AI resmi PT BEST CORPORATION SYARIAH. " .
                            "HANYA jawab pertanyaan yang berkaitan dengan PT BEST CORPORATION SYARIAH (produk, pendaftaran, sistem bisnis, visi misi, dll). " .
                            "Jika pertanyaan di luar topik tersebut, tolak dengan sopan. " .
-                           "Jawablah dengan singkat, ramah, dan profesional.";
+                           "Jawablah dengan singkat, ramah, dan profesional. " .
+                           "JANGAN gunakan format Markdown seperti bold (**teks**) atau italic (*teks*). " .
+                           "Jika menyebutkan daftar produk atau poin-poin, gunakan penomoran angka (1, 2, 3, dst) agar lebih rapi.";
 
         $fullInstruction = $baseInstruction . " " . $additionalInstruction;
 
