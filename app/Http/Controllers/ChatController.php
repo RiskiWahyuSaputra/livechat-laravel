@@ -304,7 +304,7 @@ class ChatController extends Controller
                         'sender_id'       => 0,
                         'sender_type'     => 'admin',
                         'message_type'    => 'text',
-                        'content'         => "🤖 BEST AI Auto-Reply: " . $aiAutoResponse,
+                        'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiAutoResponse,
                     ]);
                     broadcast(new MessageSent($aiMessage));
                 }
@@ -380,7 +380,7 @@ class ChatController extends Controller
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => "Baik, Anda memilih kategori {$userMessage}. Silakan jelaskan permasalahan atau pertanyaan Anda secara singkat agar kami dapat membantu lebih cepat.",
+                    'content'         => "Baik, Anda memilih kategori {$userMessage}. Silakan jelaskan permasalahan atau pertanyaan Anda.\n\nSambil menunggu admin merespons, apakah Anda ingin mencoba bertanya pada BEST AI kami untuk mendapatkan jawaban instan?\n\n(Ketik 'YA' untuk mulai tanya-jawab otomatis, atau langsung jelaskan masalah Anda untuk admin).",
                 ]);
                 broadcast(new MessageSent($botMsg));
             } else {
@@ -395,7 +395,20 @@ class ChatController extends Controller
                 broadcast(new MessageSent($botMsg));
             }
         } elseif ($conversation->bot_phase === 'awaiting_explanation') {
-            // Dapatkan jawaban AI untuk membantu user sementara
+            // Jika user mengetik YA, kita biarkan bot phase tetap aktif untuk pertanyaan berikutnya
+            if (strtoupper(trim($userMessage)) === 'YA') {
+                $botMsg = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . "Silakan ajukan pertanyaan atau jelaskan masalah Anda mengenai {$conversation->problem_category}. Saya siap membantu!",
+                ]);
+                broadcast(new MessageSent($botMsg));
+                return response()->json(['success' => true]);
+            }
+
+            // Jika user langsung menjelaskan masalah (bukan mengetik YA)
             $aiResponse = $this->geminiService->askGemini($userMessage, "Pelanggan bertanya tentang {$conversation->problem_category}: ");
 
             // Hitung posisi antrian
@@ -416,7 +429,7 @@ class ChatController extends Controller
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'text',
-                'content'         => "🤖 BEST AI Helpdesk: " . $aiResponse,
+                'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
             ]);
             broadcast(new MessageSent($botMsg));
 
