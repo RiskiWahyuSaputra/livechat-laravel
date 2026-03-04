@@ -15,10 +15,21 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
 use App\Models\User;
+use App\Services\WhatsappService;
+use App\Services\GeminiService;
 
 class ChatController extends Controller
 {
     const BOT_CATEGORIES = ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'];
+
+    protected $whatsappService;
+    protected $geminiService;
+
+    public function __construct(WhatsappService $whatsappService, GeminiService $geminiService)
+    {
+        $this->whatsappService = $whatsappService;
+        $this->geminiService = $geminiService;
+    }
 
     /**
      * Tampilkan halaman chat user.
@@ -27,6 +38,7 @@ class ChatController extends Controller
     public function index()
     {
         return redirect()->route('user.home');
+        
     }
 
     /**
@@ -272,8 +284,35 @@ class ChatController extends Controller
             // Broadcast pesan real-time ke semua peserta
             broadcast(new MessageSent($message));
             \Log::info('Broadcast MessageSent success');
+
+            // --- WHAPI NOTIFICATION START ---
+            // Beri tahu admin via WhatsApp jika bot sedang off (berarti ini chat ke manusia)
+            if (!$conversation->bot_phase || $conversation->bot_phase === 'off') {
+                $adminText = "💬 Pesan baru dari web!\nDari: {$user->name} ({$user->origin})\nIsi: " . ($messageType === 'text' ? $message->content : "[Media]");
+                $this->whatsappService->notifyAdmin($adminText);
+                
+                if ($messageType !== 'text') {
+                    $this->whatsappService->sendMedia(env('WHAPI_ADMIN_NUMBER'), $message->content, "Media dari {$user->name}", $messageType);
+                }
+
+                // --- AUTO AI REPLY IF NO ADMIN CLAIMED ---
+                if (!$conversation->admin_id && $messageType === 'text') {
+                    $aiAutoResponse = $this->geminiService->askGemini($message->content, "Berikan jawaban singkat atas pertanyaan berikut dari pelanggan web:");
+                    
+                    $aiMessage = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => "🤖 BEST AI Auto-Reply: " . $aiAutoResponse,
+                    ]);
+                    broadcast(new MessageSent($aiMessage));
+                }
+            }
+            // --- WHAPI NOTIFICATION END ---
+
         } catch (\Exception $e) {
-            \Log::error('Broadcast MessageSent failed', ['error' => $e->getMessage()]);
+            \Log::error('Broadcast/Whapi MessageSent failed', ['error' => $e->getMessage()]);
             // We still return success because it's saved in DB
         }
 
@@ -356,16 +395,40 @@ class ChatController extends Controller
                 broadcast(new MessageSent($botMsg));
             }
         } elseif ($conversation->bot_phase === 'awaiting_explanation') {
-            $conversation->update(['bot_phase' => 'off']);
+            // Dapatkan jawaban AI untuk membantu user sementara
+            $aiResponse = $this->geminiService->askGemini($userMessage, "Pelanggan bertanya tentang {$conversation->problem_category}: ");
 
+            // Hitung posisi antrian
+            $queueCount = Conversation::whereIn('status', ['pending', 'queued'])
+                ->whereNull('admin_id')
+                ->where('id', '<=', $conversation->id)
+                ->count();
+
+            $conversation->update([
+                'bot_phase' => 'off',
+                'queue_position' => $queueCount
+            ]);
+
+            // Kirim jawaban AI
+            $logoUrl = asset('images/best-logo-1.png');
             $botMsg = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'text',
-                'content'         => "Oke, pesan kamu diterima. Mohon tunggu antrian, agen kami akan segera membalas pesan Anda.",
+                'content'         => "🤖 BEST AI Helpdesk: " . $aiResponse,
             ]);
             broadcast(new MessageSent($botMsg));
+
+            // Pesan info antrian
+            $queueMsg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "Pesan Anda sudah kami terima. Sambil menunggu agen kami (Antrean ke-{$queueCount}), silakan baca jawaban AI di atas.",
+            ]);
+            broadcast(new MessageSent($queueMsg));
 
             // Jika admin online, beri tahu ada chat masuk
             broadcast(new ConversationStatusChanged($conversation, 'system'));
