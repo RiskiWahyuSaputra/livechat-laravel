@@ -310,7 +310,7 @@
 
                                     <!-- Pesan Teks -->
                                     <div x-show="!msg.message_type || msg.message_type === 'text'" class="break-words">
-                                        <span x-text="msg.content"></span>
+                                        <div x-html="msg.content"></div>
                                     </div>
 
                                     <!-- Pesan Gambar -->
