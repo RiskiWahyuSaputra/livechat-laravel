@@ -19,12 +19,20 @@ class GeminiService
     /**
      * Memanggil API Gemini untuk mendapatkan respons AI
      */
-    public function askGemini($prompt, $systemInstruction = "Anda adalah admin helpdesk Best Corporation. Jawablah secara singkat.")
+    public function askGemini($prompt, $additionalInstruction = "")
     {
         if (!$this->apiKey) {
             Log::warning("GEMINI_API_KEY tidak ditemukan di .env");
             return "Maaf, sistem AI sedang tidak tersedia.";
         }
+
+        // Instruksi dasar yang membatasi topik
+        $baseInstruction = "Anda adalah asisten AI resmi PT BEST CORPORATION SYARIAH. " .
+                           "HANYA jawab pertanyaan yang berkaitan dengan PT BEST CORPORATION SYARIAH (produk, pendaftaran, sistem bisnis, visi misi, dll). " .
+                           "Jika pertanyaan di luar topik tersebut, tolak dengan sopan. " .
+                           "Jawablah dengan singkat, ramah, dan profesional.";
+
+        $fullInstruction = $baseInstruction . " " . $additionalInstruction;
 
         $url = "https://generativelanguage.googleapis.com/v1/models/{$this->primaryModel}:generateContent?key=" . $this->apiKey;
 
@@ -33,7 +41,7 @@ class GeminiService
                 'Content-Type' => 'application/json',
             ])->post($url, [
                 'contents' => [
-                    ['parts' => [['text' => "$systemInstruction $prompt"]]]
+                    ['parts' => [['text' => "Instruksi: $fullInstruction\n\nUser: $prompt"]]]
                 ]
             ]);
 
@@ -50,9 +58,10 @@ class GeminiService
                 'Content-Type' => 'application/json',
             ])->post($urlBackup, [
                 'contents' => [
-                    ['parts' => [['text' => "$systemInstruction $prompt"]]]
+                    ['parts' => [['text' => "Instruksi: $fullInstruction\n\nUser: $prompt"]]]
                 ]
             ]);
+
 
             if ($responseBackup->successful()) {
                 $backupText = $responseBackup->json('candidates.0.content.parts.0.text');

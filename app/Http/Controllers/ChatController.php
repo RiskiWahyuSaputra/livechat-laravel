@@ -304,7 +304,7 @@ class ChatController extends Controller
                         'sender_id'       => 0,
                         'sender_type'     => 'admin',
                         'message_type'    => 'text',
-                        'content'         => "🤖 **BEST AI Auto-Reply:** " . $aiAutoResponse,
+                        'content'         => "🤖 BEST AI Auto-Reply: " . $aiAutoResponse,
                     ]);
                     broadcast(new MessageSent($aiMessage));
                 }
@@ -416,7 +416,7 @@ class ChatController extends Controller
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'text',
-                'content'         => "🤖 **BEST AI Helpdesk:** " . $aiResponse,
+                'content'         => "🤖 BEST AI Helpdesk: " . $aiResponse,
             ]);
             broadcast(new MessageSent($botMsg));
 

@@ -263,11 +263,59 @@
         .charts-grid { grid-template-columns: 1fr; }
         .info-grid { grid-template-columns: 1fr; }
     }
+
+    /* Animation Styles */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out both;
+    }
+
+    .stats-grid .stat-box {
+        opacity: 0;
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+
+    .dashboard-card {
+        opacity: 0;
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+
+    /* Staggered delays for stat boxes */
+    .stats-grid .stat-box:nth-child(1) { animation-delay: 0.1s; }
+    .stats-grid .stat-box:nth-child(2) { animation-delay: 0.15s; }
+    .stats-grid .stat-box:nth-child(3) { animation-delay: 0.2s; }
+    .stats-grid .stat-box:nth-child(4) { animation-delay: 0.25s; }
+    .stats-grid .stat-box:nth-child(5) { animation-delay: 0.3s; }
+    .stats-grid .stat-box:nth-child(6) { animation-delay: 0.35s; }
+
+    /* Staggered delays for charts and other cards */
+    .charts-grid .dashboard-card:nth-child(1) { animation-delay: 0.45s; }
+    .charts-grid .dashboard-card:nth-child(2) { animation-delay: 0.5s; }
+    .charts-grid .dashboard-card:nth-child(3) { animation-delay: 0.55s; }
+    .info-grid .dashboard-card:nth-child(1) { animation-delay: 0.6s; }
+    .info-grid .dashboard-card:nth-child(2) { animation-delay: 0.65s; }
+    .info-grid .dashboard-card:nth-child(3) { animation-delay: 0.7s; }
+    .row.mt-4 .card { 
+        opacity: 0;
+        animation: fadeInUp 0.5s ease-out forwards;
+        animation-delay: 0.75s; 
+    }
 </style>
 @endpush
 
 @section('content')
-<!-- ==================== ANALYTICS SECTION ==================== -->
+<div class="animate-fade-in-up">
+    <!-- ==================== ANALYTICS SECTION ==================== -->
 <div class="row mb-4">
     <div class="col-12">
         <h4 class="page-title mb-3">Ringkasan Analisis</h4>
@@ -564,6 +612,7 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 @endsection
 
