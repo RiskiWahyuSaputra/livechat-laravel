@@ -16,7 +16,8 @@
         display: flex;
     }
 
-    .msg_card_body {
+    .msg_card_body,
+    .contacts_body {
         height: 100%;
         overflow-y: auto;
     }
@@ -174,10 +175,50 @@
     .quick-chip-row {
         overflow-x: auto;
         white-space: nowrap;
+        padding-bottom: 5px;
+    }
+
+    .quick-chip-row::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .quick-chip-row::-webkit-scrollbar-thumb {
+        background-color: #ced4da;
+        border-radius: 10px;
     }
 
     .quick-chip-row .btn {
         white-space: nowrap;
+        border-radius: 8px; /* Slightly square rounded */
+        padding: 6px 16px;
+        font-size: 0.85rem;
+    }
+
+    /* Style overrides for mockup match */
+    .chat-window .card {
+        border: 1px solid #eef2f7 !important;
+        box-shadow: 0 0 10px rgba(0,0,0,0.02) !important;
+        border-radius: 8px;
+    }
+
+    .contacts_card .chat-header h6 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+    }
+
+    .search-chat, .search-icon-bg {
+        background-color: #f9fafb !important;
+        border: 1px solid #f3f4f6 !important;
+    }
+
+    .search-chat {
+        border-radius: 8px;
+    }
+
+    .search_btn, .btn-outline-secondary {
+        border-color: #f3f4f6 !important;
     }
 
     .search-category {
@@ -210,15 +251,14 @@
 @section('content')
 <div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }})">
     <div class="row chat-window">
-        <!-- Chat User List -->
-        <div class="chat-cont-left d-flex transition-all"
+        <div class="chat-cont-left flex-column transition-all"
+            x-show="!sidebarCollapsed"
             :class="{
-                 'col-lg-5 col-xl-4': !sidebarCollapsed,
-                 'd-none': sidebarCollapsed,
-                 'mobile-hide': selectedChat
+                 'd-none': (selectedChat && window.innerWidth < 768),
+                 'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
              }">
-            <div class="card mb-0 contacts_card flex-fill">
-                <div class="chat-header">
+            <div class="card mb-3 contacts_card flex-shrink-0">
+                <div class="chat-header pb-0 border-bottom-0 shrink-0">
                     <div>
                         <h6>Percakapan</h6>
                         <p x-text="isGlobalSearchMode ? (totalSearchResultCount + ' hasil') : (filteredChats.length + ' Aktif & Antrean')"></p>
@@ -236,88 +276,80 @@
                         </button>
                     </div>
                 </div>
-                <div class="chat-search-panel">
-                    <div class="chat-search">
+                <div class="chat-search-panel shrink-0 mt-2">
+                    <div class="chat-search px-3 pb-1">
                         <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="search_btn"><i class="fe fe-search"></i></span>
-                            </div>
-                            <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchChats()" placeholder="Cari nama, kontak, atau pesan..." class="form-control search-chat">
-                            <div class="input-group-append" x-show="searchQuery.length > 0 || hasActiveFilter">
-                                <button class="btn btn-outline-secondary" type="button" @click="clearSearch()" title="Hapus pencarian">
-                                    <i class="fe fe-x"></i>
-                                </button>
-                            </div>
+                            <span class="input-group-text search-icon-bg border-end-0 text-muted ps-3 pe-2" style="border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-color: #f3f4f6;"><i class="fe fe-search"></i></span>
+                            <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchChats()" placeholder="Cari nama, kontak, atau pesan..." class="form-control search-chat border-start-0 ps-0 shadow-none" style="font-size: 0.9rem;">
+                            <span class="input-group-text search-icon-bg border-start-0 text-muted pe-3" x-show="searchQuery.length > 0 || hasActiveFilter" style="border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-color: #f3f4f6; cursor: pointer;" @click="clearSearch()" title="Hapus pencarian">
+                                <i class="fe fe-x"></i>
+                            </span>
                         </div>
                     </div>
 
-                    <div class="chat-filters px-3 py-2 border-bottom">
-                        <div class="d-flex align-items-center gap-2 quick-chip-row">
-                            <button type="button" class="btn btn-sm"
-                                :class="filters.unreadOnly ? 'btn-primary' : 'btn-outline-secondary'"
+                    <div class="chat-filters px-3 pt-2 pb-2 border-bottom-0">
+                        <div class="d-flex align-items-center gap-2 quick-chip-row pb-1">
+                            <button type="button" class="btn btn-outline-secondary bg-white text-muted shadow-sm"
+                                :class="filters.unreadOnly ? 'border-primary text-primary' : 'border-light'"
                                 @click="toggleUnreadFilter()">
                                 Belum dibaca
                             </button>
-                            <button type="button" class="btn btn-sm"
-                                :class="filters.messageType.includes('image') ? 'btn-primary' : 'btn-outline-secondary'"
+                            <button type="button" class="btn btn-outline-secondary bg-white text-muted shadow-sm"
+                                :class="filters.messageType.includes('image') ? 'border-primary text-primary' : 'border-light'"
                                 @click="toggleFilter('image')">
                                 Foto
                             </button>
-                            <button type="button" class="btn btn-sm"
-                                :class="filters.messageType.includes('video') ? 'btn-primary' : 'btn-outline-secondary'"
+                            <button type="button" class="btn btn-outline-secondary"
+                                :class="filters.messageType.includes('video') ? 'btn-primary text-white border-primary' : 'text-muted'"
                                 @click="toggleFilter('video')">
                                 Video
                             </button>
-                            <button type="button" class="btn btn-sm"
-                                :class="filters.messageType.includes('file') ? 'btn-primary' : 'btn-outline-secondary'"
+                            <button type="button" class="btn btn-outline-secondary"
+                                :class="filters.messageType.includes('file') ? 'btn-primary text-white border-primary' : 'text-muted'"
                                 @click="toggleFilter('file')">
                                 Dokumen
                             </button>
-                            <button type="button" class="btn btn-sm"
-                                :class="filters.messageType.includes('link') ? 'btn-primary' : 'btn-outline-secondary'"
+                            <button type="button" class="btn btn-outline-secondary"
+                                :class="filters.messageType.includes('link') ? 'btn-primary text-white border-primary' : 'text-muted'"
                                 @click="toggleFilter('link')">
                                 Tautan
                             </button>
-                            <button type="button" class="btn btn-sm"
-                                :class="filters.messageType.includes('audio') ? 'btn-primary' : 'btn-outline-secondary'"
+                            <button type="button" class="btn btn-outline-secondary"
+                                :class="filters.messageType.includes('audio') ? 'btn-primary text-white border-primary' : 'text-muted'"
                                 @click="toggleFilter('audio')">
                                 Audio
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> <!-- CLOSE the search card -->
 
-            <div class="card-body contacts_body chat-users-list chat-scroll">
+            <div class="contacts_body chat-users-list chat-scroll flex-grow-1 w-100" style="overflow-y: auto; overflow-x: hidden;">
                 <template x-if="!isGlobalSearchMode">
                     <div>
-                        <div class="chat-header inner-chat-header pt-0">
+                        <div class="chat-header inner-chat-header pt-2 pb-0 mb-2 border-0">
                             <div>
-                                <h6>Permintaan Baru</h6>
+                                <h6 class="fw-bold" style="font-size: 1.1rem; color: #1f2937;">Permintaan Baru</h6>
                             </div>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3 px-2">
                             <template x-for="chat in filteredChats.filter(c => ['pending', 'queued'].includes(c.status))" :key="chat.id">
-                                <a href="javascript:void(0);" @click="selectChat(chat)" class="media d-flex" :class="selectedChat && selectedChat.id === chat.id ? 'active' : ''">
-                                    <div class="media-img-wrap flex-shrink-0">
-                                        <div class="avatar avatar-online">
-                                            <div class="avatar-title rounded-circle bg-danger text-white">
+                                <a href="javascript:void(0);" @click="selectChat(chat)" class="d-flex align-items-center text-decoration-none border-bottom border-light" :class="selectedChat && selectedChat.id === chat.id ? 'bg-light rounded' : ''" style="transition: background-color 0.2s; padding: 12px 0;">
+                                    <div class="flex-shrink-0 me-3 px-2">
+                                        <div class="avatar avatar-online position-relative">
+                                            <div class="avatar-title rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.1rem;">
                                                 <span x-text="getInitial(chat.customer.name)"></span>
                                             </div>
+                                            <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-white rounded-circle" style="transform: translate(-10%, -10%); width: 13px; height: 13px;"></span>
                                         </div>
                                     </div>
-                                    <div class="media-body flex-grow-1">
-                                        <div>
-                                            <div class="user-name" x-html="highlightText(chat.customer.name)"></div>
-                                            <div class="user-last-chat font-weight-bold"
-                                                :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
-                                                x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
-                                                :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
-                                            <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
+                                    <div class="flex-grow-1 min-w-0 pe-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <div class="text-dark fw-bold text-truncate" style="font-size: 0.95rem;" x-html="highlightText(chat.customer.name)"></div>
+                                            <div class="text-muted whitespace-nowrap ms-2" style="font-size: 0.75rem;" x-text="formatShortDateTime(chat.created_at)"></div>
                                         </div>
-                                        <div>
-                                            <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
-                                        </div>
+                                        <div class="mb-1 text-danger" style="font-size: 0.85rem;" x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru' "></div>
+                                        <div class="text-secondary text-truncate" style="font-size: 0.75rem;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                 </a>
                             </template>
@@ -326,30 +358,29 @@
                             </div>
                         </div>
 
-                        <div class="chat-header inner-chat-header">
+                        <div class="chat-header inner-chat-header pt-4 pb-0 mb-2 border-0">
                             <div>
-                                <h6>Sedang Dibantu</h6>
+                                <h6 class="fw-bold" style="font-size: 1.1rem; color: #1f2937;">Sedang Dibantu</h6>
                             </div>
                         </div>
-                        <div>
+                        <div class="mb-3 px-2">
                             <template x-for="chat in filteredChats.filter(c => c.status === 'active')" :key="chat.id">
-                                <a href="javascript:void(0);" @click="selectChat(chat)" class="media d-flex" :class="selectedChat && selectedChat.id === chat.id ? 'active' : ''">
-                                    <div class="media-img-wrap flex-shrink-0">
-                                        <div class="avatar" :class="chat.customer.is_online ? 'avatar-online' : 'avatar-away'">
-                                            <div class="avatar-title rounded-circle bg-primary text-white">
+                                <a href="javascript:void(0);" @click="selectChat(chat)" class="d-flex align-items-center text-decoration-none border-bottom border-light" :class="selectedChat && selectedChat.id === chat.id ? 'bg-light rounded' : ''" style="transition: background-color 0.2s; padding: 12px 0;">
+                                    <div class="flex-shrink-0 me-3 px-2">
+                                        <div class="avatar position-relative" :class="chat.customer.is_online ? 'avatar-online' : 'avatar-away'">
+                                            <div class="avatar-title rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.1rem;">
                                                 <span x-text="getInitial(chat.customer.name)"></span>
                                             </div>
+                                            <span class="position-absolute bottom-0 end-0 p-1 border border-white rounded-circle" :class="chat.customer.is_online ? 'bg-success' : 'bg-secondary'" style="transform: translate(-10%, -10%); width: 13px; height: 13px;"></span>
                                         </div>
                                     </div>
-                                    <div class="media-body flex-grow-1">
-                                        <div>
-                                            <div class="user-name" x-html="highlightText(chat.customer.name)"></div>
-                                            <div class="user-last-chat" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
-                                            <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
+                                    <div class="flex-grow-1 min-w-0 pe-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <div class="text-dark fw-bold text-truncate" style="font-size: 0.95rem;" x-html="highlightText(chat.customer.name)"></div>
+                                            <div class="text-muted whitespace-nowrap ms-2" style="font-size: 0.75rem;" x-text="formatShortDateTime(chat.created_at)"></div>
                                         </div>
-                                        <div>
-                                            <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
-                                        </div>
+                                        <div class="mb-1 text-primary" style="font-size: 0.85rem;" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
+                                        <div class="text-secondary text-truncate" style="font-size: 0.75rem;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                 </a>
                             </template>
@@ -435,16 +466,15 @@
                 </template>
             </div>
         </div>
-    </div>
 
-    <!-- Chat Content -->
-    <div class="chat-cont-right transition-all"
-        :class="{
-                 'col-lg-7 col-xl-8': !sidebarCollapsed,
-                 'col-lg-12 col-xl-12': sidebarCollapsed,
-                 'mobile-show': selectedChat
-             }">
-        <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
+        <div class="chat-cont-right transition-all flex-grow-1"
+            :class="{
+                     'col-md-8 col-lg-7 col-xl-8': !sidebarCollapsed,
+                     'col-12': sidebarCollapsed,
+                     'd-none d-md-flex': !selectedChat && !sidebarCollapsed,
+                     'd-flex': selectedChat || sidebarCollapsed
+                 }">
+            <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
             <div class="h-100 d-flex flex-column">
                 <div class="card-header msg_head px-3 py-2">
                     <div class="d-flex bd-highlight align-items-center w-100">
