@@ -156,7 +156,7 @@
 
         /* Input row */
         .input-row {
-            display: flex; align-items: flex-end; gap: 8px;
+            display: flex; align-items: center; gap: 5px; /* Diubah dari flex-end ke center */
             background: #f8fafc; border: 1.5px solid #e2e8f0;
             border-radius: 16px; padding: 6px 6px 6px 10px;
             transition: border-color 0.2s, box-shadow 0.2s;
@@ -175,6 +175,7 @@
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: all 0.15s; flex-shrink: 0;
             background: transparent; color: #94a3b8;
+            padding: 0;
         }
         .input-icon-btn:hover { background: #f1f5f9; color: #475569; }
         .input-icon-btn.active-whisper { background: #fef3c7; color: #d97706; }
