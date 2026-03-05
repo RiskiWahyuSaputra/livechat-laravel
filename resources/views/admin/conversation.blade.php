@@ -54,16 +54,41 @@
 
                         <!-- Label Sender -->
                         <span x-show="msg.sender_type === 'user'" class="text-[11px] text-slate-400 font-medium mb-1 ml-1 text-left">Pelanggan</span>
-                        <span x-show="msg.sender_type === 'admin' && msg.message_type !== 'whisper'" class="text-[11px] text-slate-400 font-medium mb-1 mr-1 text-right">Anda</span>
+                        <span x-show="msg.sender_type === 'admin' && msg.message_type !== 'whisper'" 
+                              class="text-[11px] text-slate-400 font-medium mb-1 mr-1 text-right"
+                              x-text="msg.sender_id == 0 ? 'Bot Assistant' : 'Anda'"></span>
 
                         <!-- Bubble Box -->
-                        <div class="px-5 py-3 text-[15px] leading-relaxed relative max-w-[450px] mx-auto shadow-sm break-words overflow-hidden"
+                        <div class="px-4 py-2.5 md:px-5 md:py-3 text-[15px] leading-relaxed relative max-w-full md:max-w-[450px] mx-auto shadow-sm break-words overflow-hidden min-w-0"
                              :class="{
                                  'bg-blue-600 text-white rounded-2xl rounded-br-sm border border-blue-700': msg.sender_type === 'admin' && msg.message_type !== 'whisper', 
                                  'bg-white text-slate-800 rounded-2xl rounded-bl-sm border border-slate-200 shadow-sm': msg.sender_type === 'user',
                                  'bg-amber-100 text-amber-950 border-dashed border-2 border-amber-300 rounded-2xl w-fit': msg.message_type === 'whisper'
                              }">
-                            <span x-html="formatMessage(msg.content)"></span>
+                            <template x-if="msg.message_type === 'text' || msg.message_type === 'whisper'">
+                                <span x-html="formatMessage(msg.content)"></span>
+                            </template>
+                            <template x-if="msg.message_type === 'image'">
+                                <div class="space-y-2 max-w-full">
+                                    <img :src="msg.content" class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity object-cover" @click="window.open(msg.content, '_blank')">
+                                </div>
+                            </template>
+                            <template x-if="msg.message_type === 'file'">
+                                <div class="w-full min-w-0">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-10 h-10 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-black/5">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0 overflow-hidden text-left">
+                                            <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
+                                            <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:opacity-80 underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
+                                                <span>Unduh File</span>
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                         
                         <!-- Timestamp -->
@@ -150,12 +175,21 @@
                     <svg class="w-4 h-4" x-show="messageType === 'whisper'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                 </button>
 
+                <!-- File Upload Button -->
+                <button type="button" 
+                        @click="$refs.fileInput.click()"
+                        class="absolute left-[3.25rem] bottom-2.5 w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 flex items-center justify-center transition-colors z-10"
+                        title="Unggah Gambar atau File">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+                <input type="file" x-ref="fileInput" class="hidden" @change="uploadFile">
+
                 <textarea x-model="newMessage" x-ref="messageInput"
                           :placeholder="(!canReply) ? 'Menunggu obrolan diklaim...' : (messageType === 'whisper' ? 'Ketik catatan internal...' : 'Ketik balasan Anda ke pelanggan...')" 
                           @input="handleInput"
                           @keydown="handleKeydown"
                           :disabled="isSending || !canReply"
-                          class="flex-1 pl-12 max-h-32 min-h-[44px] border-transparent focus:ring-2 rounded-xl px-4 py-2 text-[13px] transition-colors resize-none overflow-y-auto"
+                          class="flex-1 pl-24 max-h-32 min-h-[44px] border-transparent focus:ring-2 rounded-xl px-4 py-2 text-[13px] transition-colors resize-none overflow-y-auto"
                           :class="messageType === 'whisper' ? 'bg-amber-50 focus:bg-white focus:border-amber-400 focus:ring-amber-200 text-amber-900 placeholder:text-amber-300' : 'bg-slate-100 focus:bg-white focus:border-blue-500 focus:ring-blue-200 text-slate-800 placeholder:text-slate-400'"
                           rows="1"></textarea>
                        
@@ -368,23 +402,23 @@
                         sender_type: 'admin',
                         message_type: type,
                         content: content,
-                        created_at: new Date().toISOString() // Store raw ISO string
+                        created_at: new Date().toISOString()
                     });
                     this.scrollToBottom();
 
                     try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('message_type', type);
+                        formData.append('content', content);
+
                         const response = await fetch('{{ route('admin.chat.send') }}', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                 'Accept': 'application/json'
                             },
-                            body: JSON.stringify({
-                                conversation_id: this.conversationId,
-                                message_type: type,
-                                content: content
-                            })
+                            body: formData
                         });
 
                         const data = await response.json();
@@ -393,6 +427,8 @@
                         const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
                         if (msgIndex !== -1) {
                             this.messages[msgIndex].id = data.message.id;
+                            this.messages[msgIndex].message_type = data.message.message_type;
+                            this.messages[msgIndex].content = data.message.content;
                         }
                     } catch (error) {
                         this.messages = this.messages.filter(m => m.temp_id !== tempId);
@@ -400,12 +436,68 @@
                     } finally {
                         this.isSending = false;
                         this.sendTypingEvent(false); 
-                        // Fokuskan kembali ke input agar admin bisa langsung mengetik lagi
                         this.$nextTick(() => {
                             if (this.$refs && this.$refs.messageInput) {
                                 this.$refs.messageInput.focus();
                             }
                         });
+                    }
+                },
+
+                async uploadFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    this.isSending = true;
+                    const tempId = Date.now();
+                    
+                    // Preview (if image)
+                    let previewUrl = '';
+                    let tempType = 'file';
+                    if (file.type.startsWith('image/')) {
+                        previewUrl = URL.createObjectURL(file);
+                        tempType = 'image';
+                    }
+
+                    this.messages.push({
+                        temp_id: tempId,
+                        sender_type: 'admin',
+                        message_type: tempType,
+                        content: previewUrl || file.name,
+                        created_at: new Date().toISOString()
+                    });
+                    this.scrollToBottom();
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('message_type', 'file'); // Will be corrected by server
+                        formData.append('file', file);
+
+                        const response = await fetch('{{ route('admin.chat.send') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || data.message || 'Server Error ' + response.status);
+
+                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                        if (msgIndex !== -1) {
+                            this.messages[msgIndex].id = data.message.id;
+                            this.messages[msgIndex].message_type = data.message.message_type;
+                            this.messages[msgIndex].content = data.message.content;
+                        }
+                    } catch (error) {
+                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        alert(error.message);
+                    } finally {
+                        this.isSending = false;
+                        e.target.value = ''; // Reset input
                     }
                 },
 

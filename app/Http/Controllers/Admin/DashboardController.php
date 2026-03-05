@@ -10,17 +10,46 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\AnalyticsService;
+use App\Services\WhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    protected $analyticsService;
+    protected $whatsappService;
+
+    public function __construct(AnalyticsService $analyticsService, WhatsappService $whatsappService)
+    {
+        $this->analyticsService = $analyticsService;
+        $this->whatsappService = $whatsappService;
+    }
+
     /**
      * Dashboard Utama — Statistik dan daftar pelanggan.
      */
     public function index(Request $request)
     {
         $admin = Auth::guard('admin')->user();
+        
+        // Date range for analytics
+        $startDate = $request->get('start_date', Carbon::now()->subDays(30)->startOfDay());
+        $endDate = $request->get('end_date', Carbon::now()->endOfDay());
+
+        // Get analytics data
+        $overview = $this->analyticsService->getOverviewStats();
+        $trends = $this->analyticsService->getConversationTrends();
+        $peakHours = $this->analyticsService->getPeakHours();
+        $topPerformers = $this->analyticsService->getTopPerformers();
+        $complaintCategories = $this->analyticsService->getComplaintCategories();
+        $customerSatisfaction = $this->analyticsService->getCustomerSatisfaction();
+        $agentWorkload = $this->analyticsService->getAgentWorkload();
+        $customerInsights = $this->analyticsService->getCustomerInsights();
+        $metrics = $this->analyticsService->getConversationMetrics();
+        $agentPerformance = $this->analyticsService->getAgentPerformance();
+        $statusDistribution = $this->analyticsService->getStatusDistribution();
         
         // Statistik Ringkas
         $stats = [
@@ -66,9 +95,36 @@ class DashboardController extends Controller
             });
         }
 
-        $customers = $query->latest()->paginate(10)->withQueryString();
+        $customers = $query->with(['conversations' => function($q) {
+            $q->latest(); // Default: hanya ambil yang non-trashed
+        }])->latest()->paginate(10)->withQueryString();
 
-        return view('admin.dashboard', compact('admin', 'stats', 'customers'));
+        // Map customers to include their current active status
+        $customers->getCollection()->transform(function($user) {
+            // Cari percakapan AKTIF (yang belum di-soft delete)
+            $activeConv = $user->conversations->whereIn('status', ['pending', 'queued', 'active'])->first();
+            $user->current_status = $activeConv ? $activeConv->status : 'no_session';
+            return $user;
+        });
+
+        return view('admin.dashboard', compact(
+            'admin', 
+            'stats', 
+            'customers',
+            'overview',
+            'trends',
+            'peakHours',
+            'topPerformers',
+            'complaintCategories',
+            'customerSatisfaction',
+            'agentWorkload',
+            'customerInsights',
+            'metrics',
+            'agentPerformance',
+            'statusDistribution',
+            'startDate',
+            'endDate'
+        ));
     }
 
     /**
@@ -192,8 +248,9 @@ class DashboardController extends Controller
     {
         $request->validate([
             'conversation_id' => ['required'], // existence checked manually
-            'content'         => ['required', 'string', 'max:2000'],
-            'message_type'    => ['required', 'in:text,whisper'],
+            'content'         => ['required_without:file', 'nullable', 'string', 'max:2000'],
+            'file'            => ['nullable', 'file', 'max:10240'], // Max 10MB
+            'message_type'    => ['required', 'in:text,whisper,image,file'],
         ]);
 
         $admin        = Auth::guard('admin')->user();
@@ -205,12 +262,25 @@ class DashboardController extends Controller
             return response()->json(['error' => 'Anda tidak memiliki akses tulis ke chat ini.'], 403);
         }
 
+        $messageType = $request->message_type;
+        $content = $request->content;
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $mime = $file->getMimeType();
+            $messageType = str_starts_with($mime, 'image/') ? 'image' : 'file';
+            
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/chat', $fileName, 'public');
+            $content = asset('storage/' . $path);
+        }
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => $admin->id,
             'sender_type'     => 'admin',
-            'message_type'    => $request->message_type,
-            'content'         => $request->content,
+            'message_type'    => $messageType,
+            'content'         => $content ?? '',
         ]);
 
         \Log::info('Message created by admin', ['id' => $message->id]);
@@ -220,16 +290,30 @@ class DashboardController extends Controller
         try {
             broadcast(new MessageSent($message));
             \Log::info('Admin Broadcast MessageSent success');
+
+            // --- WHAPI NOTIFICATION START ---
+            // Kirim ke WhatsApp user jika bukan pesan internal (whisper)
+            if ($messageType !== 'whisper' && $conversation->customer) {
+                $to = $conversation->customer->contact;
+                if ($messageType === 'text') {
+                    $this->whatsappService->sendMessage($to, "👩‍💼 *Admin:* " . $content);
+                } else {
+                    $this->whatsappService->sendMedia($to, $content, "👩‍💼 *Admin:* [Kirim Media]", $messageType);
+                }
+            }
+            // --- WHAPI NOTIFICATION END ---
+
         } catch (\Exception $e) {
-            \Log::error('Admin Broadcast MessageSent failed', ['error' => $e->getMessage()]);
+            \Log::error('Admin Broadcast/Whapi MessageSent failed', ['error' => $e->getMessage()]);
         }
 
         return response()->json([
             'success' => true,
             'message' => [
-                'id'         => $message->id,
-                'content'    => $message->content,
-                'created_at' => $message->created_at->format('H:i'),
+                'id'           => $message->id,
+                'content'      => $message->content,
+                'message_type' => $message->message_type,
+                'created_at'   => $message->created_at->format('H:i'),
             ],
         ]);
     }
@@ -291,9 +375,12 @@ class DashboardController extends Controller
 
         $admin = Auth::guard('admin')->user();
 
+        // Gunakan kategori dari request jika ada, jika tidak, pertahankan kategori yang sudah ada (dari bot)
+        $category = $request->problem_category ?: $conversation->problem_category;
+
         $conversation->update([
             'status'           => 'closed',
-            'problem_category' => $request->problem_category,
+            'problem_category' => $category,
         ]);
 
         $conversation->delete(); // Soft delete memindahkannya ke arsip

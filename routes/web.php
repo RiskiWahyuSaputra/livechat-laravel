@@ -21,10 +21,8 @@ Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home
 Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');
 Route::post('/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');
 
-// Routes Chat (Menggunakan Cookie Session Token, bukan Auth)
-Route::get('/chat', function () {
-    return redirect()->route('user.home');
-})->name('chat.index');
+// Routes Chat
+Route::get('/chat', [ChatController::class, 'showChat'])->name('chat.index');
 Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init');
 Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.send');
 Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
@@ -79,10 +77,35 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::resource('/customers', App\Http\Controllers\Admin\CustomerController::class)->only(['index', 'update', 'destroy']);
             });
 
-            // --- Menu 6: Roles & Admins Management ---
+            // --- Menu 6: Admins Management ---
             Route::middleware('admin.permission:manage_roles')->group(function () {
-                Route::resource('/roles', App\Http\Controllers\Admin\RoleController::class)->except(['show']);
+                Route::resource('/admins', App\Http\Controllers\Admin\RoleController::class)->names([
+                    'index' => 'admins.index',
+                    'store' => 'admins.store',
+                    'update' => 'admins.update',
+                    'destroy' => 'admins.destroy',
+                ]);
+
+                // --- Menu 8: Role CRUD ---
+                Route::resource('/roles-list', \App\Http\Controllers\RoleController::class)->names([
+                    'index' => 'roles.index',
+                    'create' => 'roles.create',
+                    'store' => 'roles.store',
+                    'edit' => 'roles.edit',
+                    'update' => 'roles.update',
+                    'destroy' => 'roles.destroy',
+                ]);
             });
+
+            // --- Menu 7: Analytics & Analysis ---
+            Route::get('/analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
+            Route::get('/analytics/filter', [App\Http\Controllers\Admin\AnalyticsController::class, 'filter'])->name('analytics.filter');
+            Route::get('/analytics/realtime', [App\Http\Controllers\Admin\AnalyticsController::class, 'realtime'])->name('analytics.realtime');
+            Route::get('/analytics/export', [App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
+
+            // --- Menu 9: Settings ---
+            Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+            Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
         }
         );
     });

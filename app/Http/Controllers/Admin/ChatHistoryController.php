@@ -5,12 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ChatHistoryController extends Controller
 {
     public function index(Request $request)
     {
         $query = Conversation::onlyTrashed()->with(['customer', 'admin']);
+
+        // Filter by "My Chat"
+        if ($request->input('filter') === 'my_chat') {
+            $query->where('admin_id', Auth::guard('admin')->id());
+        }
 
         // Filter by search term
         if ($request->filled('search')) {

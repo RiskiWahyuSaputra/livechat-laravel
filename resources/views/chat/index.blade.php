@@ -21,8 +21,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
-      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() }}, '{{ $conversation->status }}', {{ Js::from($messages) }})">
+    <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
+      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}')">
 
     <!-- Header Navbar Minimalist -->
     <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
@@ -77,7 +77,7 @@
                 </span>
             </div>
 
-            <template x-for="msg in messages" :key="msg.id || msg.temp_id">
+            <template x-for="(msg, index) in messages" :key="msg.id || msg.temp_id">
                 <div class="flex flex-col w-full" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                     
                     <!-- Pesan Sistem -->
@@ -100,11 +100,53 @@
                                  :class="msg.sender_type === 'admin' 
                                     ? 'bg-blue-600 text-white rounded-bl-sm border border-blue-700' 
                                     : 'bg-white text-slate-800 rounded-br-sm border border-slate-200'">
-                                <span x-html="formatMessage(msg.content)"></span>
+                                
+                                <!-- Pesan Teks -->
+                                <div x-show="!msg.message_type || msg.message_type === 'text'">
+                                    <span x-html="formatMessage(msg.content)"></span>
+                                </div>
+
+                                <!-- Pesan Gambar -->
+                                <div x-show="msg.message_type === 'image'">
+                                    <div class="space-y-2">
+                                        <img :src="msg.content" 
+                                             class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
+                                             @click="window.open(msg.content, '_blank')"
+                                             x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                    </div>
+                                </div>
+
+                                <!-- Pesan File -->
+                                <div x-show="msg.message_type === 'file'" class="w-full">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0 overflow-hidden text-left">
+                                            <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
+                                            <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
+                                                <span>Unduh Dokumen</span>
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Timestamp -->
                             <span class="text-[9px] md:text-[10px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
+
+                            <!-- Bot Categories Inline (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah awaiting_category) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_category' && index === messages.length - 1">
+                                <div class="mt-3 flex flex-wrap gap-2 w-full">
+                                    <template x-for="cat in botCategories" :key="cat">
+                                        <button @click="selectCategory(cat)" 
+                                                class="px-3 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 min-w-[140px] text-center">
+                                            <span x-text="cat"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
@@ -132,7 +174,15 @@
             </div>
 
             <!-- Form Input Bawah -->
-            <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="p-2 md:p-3 bg-white flex items-end gap-2">
+            <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="p-2 md:p-3 bg-white flex items-end gap-2 relative">
+                <button type="button" 
+                        @click="$refs.fileInput.click()"
+                        class="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 focus:outline-none transition-all"
+                        title="Unggah Gambar atau File">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+                <input type="file" x-ref="fileInput" class="hidden" @change="uploadFile">
+
                 <textarea x-model="newMessage" 
                           @input="sendTypingEvent"
                           @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
@@ -153,16 +203,18 @@
     <!-- Logic Alpine JS Tetap Sama, Tidak Diubah -->
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages) => ({
+            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase) => ({
                 conversationId: conversationId,
                 userId: userId,
                 status: initialStatus,
                 messages: initialMessages,
+                botPhase: initialBotPhase || 'off',
                 newMessage: '',
                 isSending: false,
                 isTyping: false,
                 typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
+                botCategories: ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'],
 
                 init() {
                     this.scrollToBottom();
@@ -192,7 +244,9 @@
 
                             this.messages.push({
                                 id: e.id,
+                                sender_id: e.sender_id,
                                 sender_type: e.sender_type,
+                                message_type: e.message_type,
                                 content: e.content,
                                 created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                             });
@@ -200,6 +254,7 @@
                         })
                         .listen('.conversation.status.changed', (e) => {
                             this.status = e.status;
+                            if (e.bot_phase) this.botPhase = e.bot_phase;
                         })
                         .listen('.typing', (e) => {
                             if (e.sender_type === 'admin') {
@@ -224,23 +279,24 @@
                     this.messages.push({
                         temp_id: tempId,
                         sender_type: 'user',
+                        message_type: 'text',
                         content: content,
                         created_at: ''
                     });
                     this.scrollToBottom();
 
                     try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('content', content);
+
                         const response = await fetch('{{ route('chat.send') }}', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                 'Accept': 'application/json'
                             },
-                            body: JSON.stringify({
-                                conversation_id: this.conversationId,
-                                content: content
-                            })
+                            body: formData
                         });
 
                         const data = await response.json();
@@ -248,7 +304,15 @@
                         const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
                         if (msgIndex !== -1 && data.success) {
                             this.messages[msgIndex].id = data.message.id;
+                            this.messages[msgIndex].message_type = data.message.message_type;
+                            this.messages[msgIndex].content = data.message.content;
                             this.messages[msgIndex].created_at = data.message.created_at;
+                            
+                            // Re-fetch chat data to update botPhase if needed, or we can wait for broadcast
+                            // But usually server response is faster for current user
+                            if (this.botPhase === 'awaiting_explanation') {
+                                this.botPhase = 'off';
+                            }
                         }
 
                     } catch (error) {
@@ -257,6 +321,70 @@
                         this.isSending = false;
                         this.sendTypingEvent(false);
                     }
+                },
+
+                async uploadFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    this.isSending = true;
+                    const tempId = Date.now();
+                    
+                    // Preview (if image)
+                    let previewUrl = '';
+                    let tempType = 'file';
+                    if (file.type.startsWith('image/')) {
+                        previewUrl = URL.createObjectURL(file);
+                        tempType = 'image';
+                    }
+
+                    this.messages.push({
+                        temp_id: tempId,
+                        sender_type: 'user',
+                        message_type: tempType,
+                        content: previewUrl || file.name,
+                        created_at: ''
+                    });
+                    this.scrollToBottom();
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('file', file);
+
+                        const response = await fetch('{{ route('chat.send') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || data.message || 'Server Error ' + response.status);
+
+                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                        if (msgIndex !== -1 && data.success) {
+                            this.messages[msgIndex].id = data.message.id;
+                            this.messages[msgIndex].message_type = data.message.message_type;
+                            this.messages[msgIndex].content = data.message.content;
+                            this.messages[msgIndex].created_at = data.message.created_at;
+                        }
+                    } catch (error) {
+                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        alert(error.message);
+                    } finally {
+                        this.isSending = false;
+                        e.target.value = ''; // Reset input
+                    }
+                },
+
+                async selectCategory(category) {
+                    if (this.isSending || this.botPhase !== 'awaiting_category') return;
+                    this.newMessage = category;
+                    await this.sendMessage();
+                    this.botPhase = 'awaiting_explanation';
                 },
 
                 sendTypingEvent(isTyping = true) {

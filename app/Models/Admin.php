@@ -13,6 +13,7 @@ class Admin extends Authenticatable
         'username',
         'email',
         'password',
+        'role_id',
         'role',
         'is_superadmin',
         'permissions',
@@ -32,6 +33,11 @@ class Admin extends Authenticatable
             'is_superadmin' => 'boolean',
             'permissions' => 'array',
         ];
+    }
+
+    public function roleModel()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
     }
 
     // Relasi: satu admin bisa pegang banyak conversation

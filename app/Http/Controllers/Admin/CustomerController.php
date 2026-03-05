@@ -29,7 +29,16 @@ class CustomerController extends Controller
             }
         }
 
-        $customers = $query->latest()->paginate(15)->withQueryString();
+        $customers = $query->with(['conversations' => function($q) {
+            $q->latest(); // Default: hanya yang non-trashed
+        }])->latest()->paginate(15)->withQueryString();
+
+        // Map customers to include their current active status
+        $customers->getCollection()->transform(function($user) {
+            $activeConv = $user->conversations->whereIn('status', ['pending', 'queued', 'active'])->first();
+            $user->current_status = $activeConv ? $activeConv->status : 'no_session';
+            return $user;
+        });
 
         return view('admin.customers.index', compact('customers'));
     }
