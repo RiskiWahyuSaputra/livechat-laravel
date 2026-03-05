@@ -256,6 +256,13 @@
             transition: all 0.2s ease-in-out;
             overflow-y: auto !important;
             height: 100vh;
+            /* Hide scrollbar for Chrome, Safari and Opera */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
+        }
+        
+        .sidebar::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
         }
         
         .sidebar-logo {
