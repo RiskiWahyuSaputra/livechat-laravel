@@ -153,6 +153,18 @@
                 visibility: hidden;
                 z-index: 11000 !important;
                 width: 260px !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                height: 100% !important;
+            }
+            .sidebar-inner {
+                height: 100% !important;
+                display: flex;
+                flex-direction: column;
+            }
+            #sidebar-menu {
+                flex: 1;
+                overflow-y: auto;
             }
             .slide-nav .sidebar {
                 margin-left: 0;
@@ -278,7 +290,7 @@
         }
 
         .sidebar-menu ul {
-            padding-bottom: 80px !important;
+            padding-bottom: 120px !important; /* Bertambah agar benar-benar aman */
         }
 
         .sidebar-menu ul li a {
