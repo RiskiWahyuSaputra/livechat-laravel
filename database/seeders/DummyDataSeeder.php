@@ -137,8 +137,8 @@ class DummyDataSeeder extends Seeder
         ];
         
         $categories = [
-            'General Inquiry', 'Technical Support', 'Billing', 'Sales', 
-            'Complaint', 'Feedback', 'Account', 'Product', 'Service', 'Other'
+            'Pertanyaan Umum', 'Dukungan Teknis', 'Pembayaran', 'Penjualan', 
+            'Keluhan', 'Umpan Balik', 'Akun', 'Produk', 'Layanan', 'Lainnya'
         ];
 
         $conversations = [];
@@ -267,16 +267,16 @@ class DummyDataSeeder extends Seeder
         // ============================================
         
         $quickReplies = [
-            ['title' => 'Greeting', 'content' => 'Hello! Thank you for contacting us. How can I help you today?'],
-            ['title' => 'Closing', 'content' => 'Is there anything else I can help you with? If not, thank you for chatting with us!'],
-            ['title' => 'Escalation', 'content' => 'I understand your concern. Let me escalate this to our specialist team who can better assist you.'],
-            ['title' => 'Wait', 'content' => 'Please wait a moment while I check this for you.'],
-            ['title' => 'Follow Up', 'content' => 'We will follow up with you via email within 24 hours.'],
-            ['title' => 'Technical Issue', 'content' => "I see you're experiencing a technical issue. Could you provide more details about the error message you're seeing?"],
-            ['title' => 'Billing Question', 'content' => 'For billing inquiries, I can help you review your account. Could you confirm your account email?'],
-            ['title' => 'Thank You', 'content' => 'Thank you for your patience. We appreciate your understanding.'],
-            ['title' => 'Account Help', 'content' => 'I can help you with your account. What specific issue are you facing?'],
-            ['title' => 'Product Info', 'content' => 'Our team will provide you with detailed product information shortly.'],
+            ['title' => 'Salam Utama', 'content' => 'Halo! Terima kasih telah menghubungi kami. Ada yang bisa saya bantu hari ini?'],
+            ['title' => 'Penutup', 'content' => 'Apakah ada hal lain yang bisa saya bantu? Jika tidak, terima kasih telah menghubungi kami!'],
+            ['title' => 'Eskalasi', 'content' => 'Saya mengerti kendala Anda. Izinkan saya meneruskan ini ke tim spesialis kami yang dapat membantu Anda dengan lebih baik.'],
+            ['title' => 'Mohon Tunggu', 'content' => 'Mohon tunggu sebentar, saya akan memeriksa data tersebut untuk Anda.'],
+            ['title' => 'Tindak Lanjut', 'content' => 'Kami akan menindaklanjuti permintaan Anda melalui email dalam waktu 24 jam.'],
+            ['title' => 'Masalah Teknis', 'content' => "Saya melihat Anda mengalami kendala teknis. Bisa jelaskan lebih detail mengenai pesan error yang muncul?"],
+            ['title' => 'Pertanyaan Pembayaran', 'content' => 'Untuk pertanyaan pembayaran, saya bisa membantu memeriksa akun Anda. Bisa konfirmasi alamat email akun Anda?'],
+            ['title' => 'Terima Kasih', 'content' => 'Terima kasih atas kesabaran Anda. Kami sangat menghargai pengertiannya.'],
+            ['title' => 'Bantuan Akun', 'content' => 'Saya bisa membantu masalah akun Anda. Kendala spesifik apa yang sedang Anda hadapi?'],
+            ['title' => 'Info Produk', 'content' => 'Tim kami akan segera memberikan informasi detail produk yang Anda butuhkan.'],
         ];
 
         foreach ($quickReplies as $reply) {
@@ -293,65 +293,65 @@ class DummyDataSeeder extends Seeder
         // ============================================
         
         $this->command->info('');
-        $this->command->info('=== Dummy Data Summary ===');
-        $this->command->info('Admins/Agents: ' . Admin::count());
+        $this->command->info('=== Ringkasan Data Dummy ===');
+        $this->command->info('Admin/Agen: ' . Admin::count());
         $this->command->info('  - Super Admin: 1');
-        $this->command->info('  - Agents: ' . ($agents->count()));
-        $this->command->info('Customers (Users): ' . User::count());
+        $this->command->info('  - Agen: ' . ($agents->count()));
+        $this->command->info('Pelanggan (User): ' . User::count());
         $this->command->info('  - Online: ' . User::where('is_online', true)->count());
-        $this->command->info('  - Blocked: ' . User::where('is_blocked', true)->count());
-        $this->command->info('Conversations: ' . Conversation::count());
-        $this->command->info('  - Closed: ' . Conversation::where('status', 'closed')->count());
-        $this->command->info('  - Active: ' . Conversation::where('status', 'active')->count());
+        $this->command->info('  - Diblokir: ' . User::where('is_blocked', true)->count());
+        $this->command->info('Percakapan: ' . Conversation::count());
+        $this->command->info('  - Selesai: ' . Conversation::where('status', 'closed')->count());
+        $this->command->info('  - Aktif: ' . Conversation::where('status', 'active')->count());
         $this->command->info('  - Pending: ' . Conversation::where('status', 'pending')->count());
-        $this->command->info('  - Queued: ' . Conversation::where('status', 'queued')->count());
-        $this->command->info('Messages: ' . Message::count());
-        $this->command->info('Quick Replies: ' . QuickReply::count());
+        $this->command->info('  - Antrean: ' . Conversation::where('status', 'queued')->count());
+        $this->command->info('Pesan: ' . Message::count());
+        $this->command->info('Balasan Cepat: ' . QuickReply::count());
         $this->command->info('=========================');
-        $this->command->info('Dummy data creation completed!');
+        $this->command->info('Pembuatan data dummy selesai!');
     }
 
     private function generateMessageContent($senderType, $index, $total)
     {
         $userMessages = [
-            "Hello, I need help with my account",
-            "Hi, I have a question about your service",
-            "Is anyone there?",
-            "I need technical support please",
-            "Can you help me?",
-            "I want to know more about your products",
-            "I have a problem with my order",
-            "How do I reset my password?",
-            "What are your business hours?",
-            "I want to file a complaint about my billing",
-            "Thank you for your help!",
-            "That's great, thanks a lot!",
-            "I'll try that solution",
-            "One more question please",
-            "Is there a way to upgrade my account?",
-            "Can I get a refund?",
-            "When will my order be shipped?",
-            "I need help with installation",
-            "The app is not working properly",
-            "I want to cancel my subscription"
+            "Halo, saya butuh bantuan dengan akun saya",
+            "Hai, saya punya pertanyaan mengenai layanan Anda",
+            "Apakah ada orang di sini?",
+            "Saya butuh dukungan teknis, tolong",
+            "Bisakah Anda membantu saya?",
+            "Saya ingin tahu lebih banyak tentang produk Anda",
+            "Saya ada masalah dengan pesanan saya",
+            "Bagaimana cara reset kata sandi saya?",
+            "Kapan jam operasional kantor?",
+            "Saya ingin mengajukan komplain mengenai pembayaran",
+            "Terima kasih atas bantuannya!",
+            "Bagus sekali, terima kasih banyak!",
+            "Saya akan mencoba solusi tersebut",
+            "Satu pertanyaan lagi, tolong",
+            "Apakah ada cara untuk upgrade akun saya?",
+            "Bisakah saya mendapatkan pengembalian dana?",
+            "Kapan pesanan saya akan dikirim?",
+            "Saya butuh bantuan untuk instalasi",
+            "Aplikasinya tidak berjalan dengan benar",
+            "Saya ingin membatalkan langganan saya"
         ];
 
         $adminMessages = [
-            "Hello! Welcome to our live chat. How can I assist you today?",
-            "Thank you for contacting us. I'll be happy to help you.",
-            "I understand your concern. Let me look into this for you.",
-            "Sure, I can help you with that right away.",
-            "One moment please, I'm checking the details.",
-            "Is there anything else I can help you with?",
-            "Your issue has been resolved. Please let me know if you need further assistance.",
-            "I've made the changes to your account as requested.",
-            "Could you please provide more details?",
-            "I see. Let me investigate this further for you.",
-            "Great! Is there anything else you need help with?",
-            "You're welcome! Have a great day!",
-            "I've forwarded your request to our technical team.",
-            "Please allow me a few minutes to process this.",
-            "Your request is being processed. We'll notify you via email."
+            "Halo! Selamat datang di layanan chat kami. Ada yang bisa saya bantu hari ini?",
+            "Terima kasih telah menghubungi kami. Saya akan dengan senang hati membantu Anda.",
+            "Saya mengerti kendala Anda. Izinkan saya memeriksanya terlebih dahulu.",
+            "Tentu, saya bisa langsung membantu Anda untuk hal tersebut.",
+            "Mohon tunggu sebentar, saya sedang memeriksa detailnya.",
+            "Apakah ada hal lain yang bisa saya bantu?",
+            "Masalah Anda telah diselesaikan. Beritahu saya jika butuh bantuan lebih lanjut.",
+            "Saya telah melakukan perubahan pada akun Anda sesuai permintaan.",
+            "Bisakah Anda memberikan detail lebih lanjut mengenai kendalanya?",
+            "Saya mengerti. Izinkan saya menyelidiki hal ini lebih lanjut.",
+            "Bagus! Apakah ada hal lain yang Anda perlukan?",
+            "Sama-sama! Semoga hari Anda menyenangkan!",
+            "Saya telah meneruskan permintaan Anda ke tim teknis kami.",
+            "Mohon berikan saya waktu beberapa menit untuk memproses ini.",
+            "Permintaan Anda sedang diproses. Kami akan memberi tahu Anda melalui email."
         ];
 
         if ($senderType === 'user') {
@@ -359,16 +359,16 @@ class DummyDataSeeder extends Seeder
         } elseif ($senderType === 'admin') {
             // First admin message should be greeting
             if ($index === 2 || $index === 1) {
-                return "Hello! Welcome. How can I help you today?";
+                return "Halo! Selamat datang. Ada yang bisa saya bantu hari ini?";
             }
             return $adminMessages[array_rand($adminMessages)];
         } else {
             // System message
             $systemMessages = [
-                "Conversation started",
-                "Agent joined the conversation",
-                "Conversation transferred",
-                "Chat closed by agent"
+                "Percakapan dimulai",
+                "Agen bergabung ke percakapan",
+                "Percakapan dialihkan",
+                "Chat ditutup oleh agen"
             ];
             return $systemMessages[array_rand($systemMessages)];
         }

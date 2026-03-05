@@ -848,7 +848,7 @@
                                 <template x-if="selectedChat && ['pending', 'queued'].includes(selectedChat.status)">
                                     <li class="ms-2">
                                         <button class="btn btn-sm btn-primary px-3" @click="claimChat(selectedChat.id)" :disabled="isClaiming">
-                                            <span x-text="isClaiming ? 'Claiming...' : 'Claim Chat'"></span>
+                                            <span x-text="isClaiming ? 'Mengambil...' : 'Klaim Chat'"></span>
                                         </button>
                                     </li>
                                 </template>
