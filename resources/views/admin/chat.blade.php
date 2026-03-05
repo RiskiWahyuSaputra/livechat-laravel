@@ -237,6 +237,8 @@
         overflow: hidden;
         border: 1.5px solid transparent;
         transition: border-color 0.2s;
+        display: flex;
+        align-items: center; /* Memastikan semua elemen (ikon kiri, input, tombol X) sejajar vertikal */
     }
     .sidebar-search .input-group:focus-within {
         border-color: #6366f1;
@@ -247,6 +249,8 @@
         border: none;
         color: #9ca3af;
         padding: 0 10px 0 14px;
+        display: flex;
+        align-items: center;
     }
     .sidebar-search input {
         background: transparent;
@@ -255,15 +259,20 @@
         font-size: 0.875rem;
         color: #374151;
         box-shadow: none !important;
+        flex: 1; /* Biar input mengisi sisa ruang */
     }
     .sidebar-search input::placeholder { color: #9ca3af; }
     .sidebar-search .clear-btn {
         background: transparent;
         border: none;
         color: #9ca3af;
-        padding: 0 12px 0 4px;
+        padding: 0 14px 0 4px; /* Tambah sedikit padding kanan agar tidak mepet edge */
         cursor: pointer;
-        font-size: 0.8rem;
+        font-size: 1rem; /* Perbesar sedikit icon x */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
     }
     .sidebar-search .clear-btn:hover { color: #374151; }
 
@@ -496,24 +505,91 @@
     }
 
     /* Search result styles */
-    .search-category { padding: 10px 12px 4px; }
+    .search-category { 
+        padding: 5px 12px 10px; 
+    }
+    .search-category h6 {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+        padding-left: 4px;
+    }
+    
+    .search-category .media {
+        padding: 8px 10px;
+        border-radius: 10px;
+        transition: background 0.15s;
+        text-decoration: none;
+        align-items: center;
+        margin-bottom: 2px;
+    }
+    .search-category .media:hover {
+        background: #f3f4f6;
+    }
+    body.dark-mode .search-category .media:hover {
+        background: #25253a;
+    }
+    
+    .search-category .media-img-wrap {
+        margin-right: 12px;
+    }
+    .search-category .avatar {
+        width: 36px;
+        height: 36px;
+    }
+    .search-category .avatar-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .search-category .user-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 2px;
+        line-height: 1.2;
+    }
+    body.dark-mode .search-category .user-name { color: #f9fafb; }
+    
+    .search-category .user-last-chat {
+        font-size: 0.75rem;
+        color: #6b7280;
+        line-height: 1.3;
+    }
+
     .search-time-divider {
         font-size: 0.7rem;
         font-weight: 700;
-        color: #6c757d;
-        letter-spacing: .04em;
-        margin: 10px 0 6px;
+        color: #9ca3af;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin: 12px 0 8px;
+        padding-left: 14px;
     }
     .search-snippet {
         font-size: 0.8rem;
-        color: #6c757d;
-        line-height: 1.35;
+        color: #4b5563;
+        line-height: 1.4;
+        margin: 3px 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
+    body.dark-mode .search-snippet { color: #9ca3af; }
+    
     .keyword-highlight {
         font-weight: 700;
-        color: #6366f1;
+        color: #4f46e5;
         background: transparent;
         padding: 0;
+    }
+    body.dark-mode .keyword-highlight {
+        color: #818cf8;
+        background: transparent;
     }
 
     .chat-search-panel {
@@ -704,27 +780,7 @@
                             <div x-show="searchResults.contacts.length === 0" class="text-muted small">Tidak ada kontak cocok.</div>
                         </div>
 
-                        <div class="search-category">
-                            <h6 class="mb-2">Grup</h6>
-                            <template x-for="group in searchResults.groups" :key="`group-${group.id}`">
-                                <a href="javascript:void(0);" class="media d-flex" @click="openConversationResult(group.id)">
-                                    <div class="media-img-wrap flex-shrink-0">
-                                        <div class="avatar" :class="group.is_online ? 'avatar-online' : 'avatar-away'">
-                                            <div class="avatar-title rounded-circle bg-primary text-white">
-                                                <span x-text="getInitial(group.customer_name)"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="media-body flex-grow-1">
-                                        <div class="user-name" x-html="highlightText(group.customer_name || '')"></div>
-                                        <div class="user-last-chat" x-text="group.status === 'queued' ? 'Antrean #' + group.queue_position : (group.status === 'active' ? 'Sedang dibantu' : 'Permintaan baru')"></div>
-                                    </div>
-                                </a>
-                            </template>
-                            <div x-show="searchResults.groups.length === 0" class="text-muted small">Tidak ada grup cocok.</div>
-                        </div>
-
-                        <div class="search-category">
+                        <div class="search-category" x-show="searchResults.messages && searchResults.messages.length > 0">
                             <h6 class="mb-2">Pesan</h6>
                             <template x-for="timeGroup in searchResults.messages" :key="`time-${timeGroup.time_group}`">
                                 <div>
@@ -747,10 +803,9 @@
                                     </template>
                                 </div>
                             </template>
-                            <div x-show="searchResults.messages.length === 0" class="text-muted small">Tidak ada pesan cocok.</div>
                         </div>
 
-                        <div x-show="totalSearchResultCount === 0" class="text-center p-3 text-muted small">
+                        <div x-show="totalSearchResultCount === 0" class="text-center p-3 text-muted small" style="margin-top: 20px;">
                             Tidak ada hasil pencarian.
                         </div>
                     </div>
@@ -1232,7 +1287,10 @@
                             'Accept': 'application/json'
                         }
                     });
-                    if (!res.ok) throw new Error('Gagal mengambil chat');
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.error || errData.message || `Gagal mengambil chat (HTTP ${res.status})`);
+                    }
 
                     // Update lists without reload
                     await this.fetchChats();
