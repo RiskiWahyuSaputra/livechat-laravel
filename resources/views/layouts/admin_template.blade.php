@@ -151,10 +151,20 @@
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 position: fixed;
                 visibility: hidden;
-                z-index: 11000 !important; /* Sangat tinggi agar di atas ruang chat */
+                z-index: 11000 !important;
                 width: 260px !important;
                 top: 0 !important;
                 bottom: 0 !important;
+                height: 100% !important;
+            }
+            .sidebar-inner {
+                height: 100% !important;
+                display: flex;
+                flex-direction: column;
+            }
+            #sidebar-menu {
+                flex: 1;
+                overflow-y: auto;
             }
             .slide-nav .sidebar {
                 margin-left: 0;
@@ -248,6 +258,25 @@
             }
         }
         
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 230px;
+            z-index: 1001;
+            transition: all 0.2s ease-in-out;
+            overflow-y: auto !important;
+            height: 100vh;
+            /* Hide scrollbar for Chrome, Safari and Opera */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
+        }
+        
+        .sidebar::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
+        }
+        
         .sidebar-logo {
             display: flex !important;
             justify-content: center;
@@ -258,6 +287,10 @@
         .sidebar-logo img.logo {
             max-height: 60px;
             width: auto;
+        }
+
+        .sidebar-menu ul {
+            padding-bottom: 120px !important; /* Bertambah agar benar-benar aman */
         }
 
         .sidebar-menu ul li a {
@@ -480,8 +513,17 @@
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('manage_roles'))
+                        <li class="{{ request()->routeIs('admin.admins.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.admins.index') }}"><i class="fe fe-shield"></i> <span>Hak Akses</span></a>
+                        </li>
                         <li class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                            <a href="{{ route('admin.roles.index') }}"><i class="fe fe-shield"></i> <span>Hak Akses</span></a>
+                            <a href="{{ route('admin.roles.index') }}"><i class="fe fe-list"></i> <span>Daftar Role</span></a>
+                        </li>
+                        @endif
+
+                        @if(auth('admin')->user()->is_superadmin)
+                        <li class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.settings.index') }}"><i class="fe fe-settings"></i> <span>Pengaturan</span></a>
                         </li>
                         @endif
 

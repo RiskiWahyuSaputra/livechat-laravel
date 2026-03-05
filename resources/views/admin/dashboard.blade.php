@@ -216,7 +216,7 @@
 
     .info-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 24px;
         margin-bottom: 24px;
     }
@@ -477,52 +477,15 @@
         </div>
         <div class="card-body-custom" style="padding: 20px;">
             @if($complaintCategories['categories']->count() > 0)
-                <div class="category-list">
-                    @foreach($complaintCategories['categories'] as $category)
-                    <div class="category-item">
-                        <div class="category-header">
-                            <span class="category-name">{{ $category['category'] }}</span>
-                            <span class="category-count">{{ $category['count'] }} ({{ $category['percentage'] }}%)</span>
-                        </div>
-                        <div class="progress-custom">
-                            <div class="progress-fill" style="width: {{ $category['percentage'] }}%; background: linear-gradient(90deg, #4f46e5, #7c3aed);">
-                            </div>
-                        </div>
-                    </div>
-                    @endforeach
+                <div class="chart-wrapper" style="height: 300px; display: flex; justify-content: center;">
+                    <canvas id="complaintCategoriesChart"></canvas>
                 </div>
             @else
                 <p style="color: var(--gray-500); text-align: center; padding: 20px;">No data available</p>
             @endif
         </div>
     </div>
-
-    <!-- Customer Satisfaction -->
-    <div class="dashboard-card">
-        <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-heart me-2"></i>Rating kepuasan</h5>
-        </div>
-        <div class="card-body-custom" style="padding: 20px; text-align: center;">
-            @if($customerSatisfaction['has_data'] ?? false)
-            <div class="rating-display justify-content-center mb-3">
-                <span class="rating-big">{{ $customerSatisfaction['average_rating'] }}</span>
-                <div>
-                    <div class="rating-stars">
-                        @for($i = 1; $i <= 5; $i++)
-                            <i class="fe fe-star @if($i <= floor($customerSatisfaction['average_rating'])) star-filled @else star-empty @endif"></i>
-                        @endfor
-                    </div>
-                    <small style="color: var(--gray-500);">{{ $customerSatisfaction['total_ratings'] }} reviews</small>
-                </div>
-            </div>
-            @else
-            <p style="color: var(--gray-500); padding: 30px;">Belum ada rating</p>
-            @endif
-        </div>
-    </div>
-
-    <!-- Top Origins -->
-    <div class="dashboard-card">
+<!-- Top Origins -->    <div class="dashboard-card">
         <div class="card-header-custom">
             <h5 class="card-title-custom"><i class="fe fe-map-pin me-2"></i>Daerah teratas</h5>
         </div>
@@ -569,7 +532,6 @@
                                 <th>Origin</th>
                                 <th>Status</th>
                                 <th>Tanggal Daftar</th>
-                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -592,13 +554,10 @@
                                     @endif
                                 </td>
                                 <td>{{ $customer->created_at->format('d M Y, H:i') }}</td>
-                                <td>
-                                    <a href="#" class="btn btn-sm btn-info text-white">Lihat</a>
-                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6" class="text-center">Tidak ada pelanggan</td>
+                                <td colspan="5" class="text-center">Tidak ada pelanggan</td>
                             </tr>
                             @endforelse
                         </tbody>
@@ -721,6 +680,44 @@
             }
         }
     });
+
+    // Complaint Categories Donut Chart
+    const complaintCategories = {!! json_encode($complaintCategories['categories']) !!};
+    if (complaintCategories.length > 0) {
+        const complaintLabels = complaintCategories.map(c => c.category);
+        const complaintData = complaintCategories.map(c => c.count);
+        const complaintColors = [
+            '#4f46e5', '#7c3aed', '#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#6b7280'
+        ].slice(0, complaintLabels.length);
+
+        new Chart(document.getElementById('complaintCategoriesChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: complaintLabels,
+                datasets: [{
+                    data: complaintData,
+                    backgroundColor: complaintColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     // ==================== ORIGINAL DASHBOARD CHARTS ====================
     // User Growth Chart
