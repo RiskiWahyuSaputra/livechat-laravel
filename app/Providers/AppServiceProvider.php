@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use App\Models\Message;
+use App\Observers\MessageObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,7 +23,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if (config('app.env') !== 'local' || isset($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
-        URL::forceScheme('https');
-    }
+            URL::forceScheme('https');
+        }
+
+        // Register Message Observer for auto-extracting URLs
+        Message::observe(MessageObserver::class);
     }
 }

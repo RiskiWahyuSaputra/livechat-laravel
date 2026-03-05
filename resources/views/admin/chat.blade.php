@@ -163,6 +163,43 @@
     .pulse-animation {
         animation: pulse-danger 2s infinite;
     }
+
+    /* Search Highlight Styling */
+    mark {
+        background-color: #fef08a;
+        color: #854d0e;
+        padding: 0.125rem 0.25rem;
+        border-radius: 0.125rem;
+        font-weight: 600;
+    }
+
+    /* Global Search Modal */
+    .search-results .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+
+    .search-results .list-group-item:first-child {
+        border-top: none;
+    }
+
+    .search-results .list-group-item:last-child {
+        border-bottom: none;
+    }
+
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
 </style>
 @endpush
 
@@ -200,7 +237,21 @@
                         <div class="input-group-prepend">
                             <span class="search_btn"><i class="fe fe-search"></i></span>
                         </div>
-                        <input type="text" x-model="searchQuery" placeholder="Cari nama atau kontak..." class="form-control search-chat">
+                        <input type="text" x-model="searchQuery" @input.debounce.500ms="performSearch()" placeholder="Cari pesan..." class="form-control search-chat">
+                    </div>
+                    <!-- Search Type Tabs -->
+                    <div class="mt-2 d-flex gap-1">
+                        <button @click="searchType = 'conversation'" class="btn btn-sm flex-fill" :class="searchType === 'conversation' ? 'btn-primary' : 'btn-outline-secondary'">Percakapan</button>
+                        <button @click="searchType = 'message'" class="btn btn-sm flex-fill" :class="searchType === 'message' ? 'btn-primary' : 'btn-outline-secondary'">Pesan</button>
+                    </div>
+                    <!-- Search Results Dropdown -->
+                    <div x-show="searchResults.length > 0" class="search-results-dropdown mt-2 border rounded" style="max-height: 300px; overflow-y: auto; position: absolute; z-index: 1000; background: white; width: 90%;">
+                        <template x-for="result in searchResults" :key="result.id">
+                            <a href="javascript:void(0);" @click="selectSearchResult(result)" class="d-block p-2 border-bottom text-decoration-none">
+                                <div class="small text-muted" x-text="searchType === 'message' ? (result.sender_name + ' - ' + formatShortDateTime(result.created_at)) : result.customer.name"></div>
+                                <div class="text-dark" x-html="searchType === 'message' ? result.highlighted_content : result.customer.name"></div>
+                            </a>
+                        </template>
                     </div>
                 </div>
 
@@ -376,6 +427,84 @@
             </div>
         </div>
     </div>
+
+    <!-- Global Search Modal -->
+    <div class="modal fade" :class="showGlobalSearch ? 'show d-block' : ''" tabindex="-1" x-show="showGlobalSearch" x-cloak>
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cari di Semua Pesan</h5>
+                    <button type="button" class="btn-close" @click="showGlobalSearch = false; globalSearchQuery = ''; globalSearchResults = [];"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="p-3 border-bottom bg-light">
+                        <div class="input-group">
+                            <input type="text" x-model="globalSearchQuery" @keyup.enter="performGlobalSearch()" placeholder="Ketik kata kunci..." class="form-control">
+                            <button class="btn btn-primary" @click="performGlobalSearch()" :disabled="globalSearchLoading || !globalSearchQuery.trim()">
+                                <span x-show="!globalSearchLoading"><i class="fe fe-search"></i> Cari</span>
+                                <span x-show="globalSearchLoading"><i class="fe fe-loader spin"></i> Mencari...</span>
+                            </button>
+                        </div>
+                        <div class="mt-2 d-flex gap-2 flex-wrap">
+                            <button @click="globalSearchType = 'all'" class="btn btn-sm" :class="globalSearchType === 'all' ? 'btn-primary' : 'btn-outline-secondary'" x-text="'Semua' + (globalSearchFacets.by_type.text ? ' (' + (globalSearchFacets.by_type.text + globalSearchFacets.by_type.image + globalSearchFacets.by_type.video + globalSearchFacets.by_type.file + globalSearchFacets.by_type.link) + ')' : '')"></button>
+                            <button @click="globalSearchType = 'text'" class="btn btn-sm" :class="globalSearchType === 'text' ? 'btn-primary' : 'btn-outline-secondary'">
+                                <i class="fe fe-file-text"></i> Teks <span x-show="globalSearchFacets.by_type.text" x-text="'(' + globalSearchFacets.by_type.text + ')'"></span>
+                            </button>
+                            <button @click="globalSearchType = 'image'" class="btn btn-sm" :class="globalSearchType === 'image' ? 'btn-primary' : 'btn-outline-secondary'">
+                                <i class="fe fe-image"></i> Foto <span x-show="globalSearchFacets.by_type.image" x-text="'(' + globalSearchFacets.by_type.image + ')'"></span>
+                            </button>
+                            <button @click="globalSearchType = 'video'" class="btn btn-sm" :class="globalSearchType === 'video' ? 'btn-primary' : 'btn-outline-secondary'">
+                                <i class="fe fe-video"></i> Video <span x-show="globalSearchFacets.by_type.video" x-text="'(' + globalSearchFacets.by_type.video + ')'"></span>
+                            </button>
+                            <button @click="globalSearchType = 'link'" class="btn btn-sm" :class="globalSearchType === 'link' ? 'btn-primary' : 'btn-outline-secondary'">
+                                <i class="fe fe-link"></i> Tautan <span x-show="globalSearchFacets.by_type.link" x-text="'(' + globalSearchFacets.by_type.link + ')'"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="search-results" style="max-height: 400px; overflow-y: auto;">
+                        <template x-if="globalSearchResults.length > 0">
+                            <div class="list-group list-group-flush">
+                                <template x-for="result in globalSearchResults" :key="result.id">
+                                    <a href="javascript:void(0);" @click="goToConversation(result.conversation_id)" class="list-group-item list-group-item-action">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="me-2">
+                                                <div class="font-weight-bold" x-text="result.sender_name"></div>
+                                                <div class="small text-muted" x-text="result.conversation_title + ' - ' + formatFullDateTime(result.created_at)"></div>
+                                                <div class="mt-1" style="font-size: 0.9em;">
+                                                    <span :class="getSenderTypeBadgeClass(result.sender_type)" x-text="result.sender_type"></span>
+                                                    <span class="badge bg-secondary ms-1" x-text="result.message_type"></span>
+                                                </div>
+                                                <div class="mt-1 text-dark" x-html="result.highlighted_content"></div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="globalSearchResults.length === 0 && globalSearchPerformed && !globalSearchLoading">
+                            <div class="text-center p-4 text-muted">
+                                <i class="fe fe-search" style="font-size: 3rem;"></i>
+                                <p class="mt-2">Tidak ada hasil pencarian</p>
+                            </div>
+                        </template>
+                        <template x-if="!globalSearchPerformed && !globalSearchLoading">
+                            <div class="text-center p-4 text-muted">
+                                <i class="fe fe-search" style="font-size: 3rem;"></i>
+                                <p class="mt-2">Masukkan kata kunci untuk mencari</p>
+                            </div>
+                        </template>
+                        <template x-if="globalSearchLoading">
+                            <div class="text-center p-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -389,6 +518,9 @@
             sidebarCollapsed: false,
             selectedChat: null,
             searchQuery: '',
+            searchType: 'conversation',
+            searchResults: [],
+            searchLoading: false,
             sortBy: 'recent',
             isClaiming: false,
             isSubmitting: false,
@@ -398,6 +530,27 @@
             audioUnlocked: false,
             notificationSound: null,
             iframeLoaded: false,
+            // Global Search
+            showGlobalSearch: false,
+            globalSearchQuery: '',
+            globalSearchResults: [],
+            globalSearchLoading: false,
+            globalSearchPerformed: false,
+            globalSearchType: 'all',
+            globalSearchFacets: {
+                by_type: {
+                    text: 0,
+                    image: 0,
+                    video: 0,
+                    file: 0,
+                    link: 0
+                },
+                by_sender: {
+                    user: 0,
+                    admin: 0,
+                    system: 0
+                }
+            },
 
             init() {
                 // Update currentTime every minute for relative time reactivity
@@ -502,7 +655,8 @@
             async fetchChats() {
                 console.log('🔄 Fetching chats...');
                 try {
-                    const res = await fetch(`/admin/chat?ajax=1&sort=${this.sortBy}`);
+                    const searchParam = this.searchQuery.trim() ? `&search=${encodeURIComponent(this.searchQuery.trim())}` : '';
+                    const res = await fetch(`/admin/chat?ajax=1&sort=${this.sortBy}${searchParam}`);
                     const data = await res.json();
                     console.log('📋 Chats received:', data);
                     this.chats = [...data.pending, ...data.active];
@@ -512,19 +666,68 @@
                 }
             },
 
+            async performSearch() {
+                if (!this.searchQuery.trim()) {
+                    this.searchResults = [];
+                    this.fetchChats();
+                    return;
+                }
+
+                this.searchLoading = true;
+
+                try {
+                    if (this.searchType === 'message') {
+                        // Search in all messages (Full-Text Search)
+                        const params = new URLSearchParams({
+                            q: this.searchQuery.trim(),
+                            type: 'all',
+                            per_page: 20
+                        });
+
+                        const res = await fetch(`/admin/messages/search?${params}`, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        });
+
+                        if (!res.ok) throw new Error('Search failed');
+
+                        const data = await res.json();
+                        if (data.success) {
+                            this.searchResults = data.data.results;
+                        }
+                    } else {
+                        // Original conversation search
+                        this.fetchChats();
+                        this.searchResults = [];
+                    }
+                } catch (e) {
+                    console.error('Search error:', e);
+                    this.searchResults = [];
+                } finally {
+                    this.searchLoading = false;
+                }
+            },
+
+            selectSearchResult(result) {
+                if (this.searchType === 'message') {
+                    // Navigate to conversation
+                    const chat = this.chats.find(c => c.id === result.conversation_id);
+                    if (chat) {
+                        this.selectChat(chat);
+                    } else {
+                        window.location.href = `/admin/conversation/${result.conversation_id}`;
+                    }
+                    this.searchResults = [];
+                    this.searchQuery = '';
+                }
+            },
+
             get filteredChats() {
                 let result = this.chats;
 
-                // Apply search filter
-                if (this.searchQuery.trim()) {
-                    const query = this.searchQuery.toLowerCase();
-                    result = result.filter(chat =>
-                        chat.customer.name.toLowerCase().includes(query) ||
-                        (chat.customer.contact && chat.customer.contact.toLowerCase().includes(query))
-                    );
-                }
-
-                // Apply sorting
+                // Sorting is handled by server now, but keep client-side sorting as fallback
                 if (this.sortBy === 'recent') {
                     result = [...result].sort((a, b) => {
                         const dateA = new Date(a.last_message_at || a.created_at);
@@ -733,6 +936,78 @@
                         }
                     }
                 });
+            },
+
+            // ============================================
+            // Global Search Methods
+            // ============================================
+            async performGlobalSearch() {
+                if (!this.globalSearchQuery.trim()) return;
+
+                this.globalSearchLoading = true;
+                this.globalSearchPerformed = true;
+
+                try {
+                    const params = new URLSearchParams({
+                        q: this.globalSearchQuery.trim(),
+                        type: this.globalSearchType,
+                        per_page: 20
+                    });
+
+                    const res = await fetch(`/admin/messages/search?${params}`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    });
+
+                    if (!res.ok) throw new Error('Gagal mencari');
+
+                    const data = await res.json();
+
+                    if (data.success) {
+                        this.globalSearchResults = data.data.results;
+                        this.globalSearchFacets = data.data.facets;
+                    } else {
+                        this.globalSearchResults = [];
+                        Toast.fire({
+                            icon: 'error',
+                            title: data.message || 'Pencarian gagal'
+                        });
+                    }
+                } catch (e) {
+                    console.error('Global search error:', e);
+                    this.globalSearchResults = [];
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Terjadi kesalahan saat pencarian'
+                    });
+                } finally {
+                    this.globalSearchLoading = false;
+                }
+            },
+
+            goToConversation(conversationId) {
+                this.showGlobalSearch = false;
+                this.globalSearchQuery = '';
+                this.globalSearchResults = [];
+                // Navigate to conversation
+                const chat = this.chats.find(c => c.id === conversationId);
+                if (chat) {
+                    this.selectChat(chat);
+                } else {
+                    // If not in current list, fetch and navigate
+                    window.location.href = `/admin/conversation/${conversationId}`;
+                }
+            },
+
+            getSenderTypeBadgeClass(senderType) {
+                const classes = {
+                    'user': 'badge bg-primary',
+                    'admin': 'badge bg-success',
+                    'system': 'badge bg-info'
+                };
+                return classes[senderType] || 'badge bg-secondary';
             }
         }));
     });
