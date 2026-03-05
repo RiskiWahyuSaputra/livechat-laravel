@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Services\WhatsappService;
+use App\Services\MessageSearchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -145,47 +146,43 @@ class DashboardController extends Controller
     }
 
     /**
-     * Workspace Chat — tampilkan semua antrian dan chat aktif.
+     * Workspace Chat — tampilkan semua antrian/chat aktif + global search kategori.
      */
     public function chatWorkspace(Request $request)
     {
         $admin = Auth::guard('admin')->user();
+        $searchService = new MessageSearchService();
 
-        // Get sort parameter (recent or oldest)
         $sortOrder = $request->get('sort', 'recent') === 'oldest' ? 'asc' : 'desc';
-        
-        // Get search parameter
-        $search = $request->get('search', '');
+        $search = trim((string) $request->get('search', ''));
+        $quickFilters = array_values(array_filter(explode(',', (string) $request->get('quick_filters', ''))));
+        $unreadOnly = $request->boolean('unread_only');
 
-        // Base query for pending conversations
         $pendingQuery = Conversation::with('customer')
             ->whereIn('status', ['pending', 'queued']);
-        
-        // Base query for active conversations
-        $activeQuery = Conversation::with(['customer', 'admin', 'messages' => function ($q) {
-            $q->latest()->limit(1);
-        }])
-            ->where('status', 'active');
 
-        // Apply search filter if provided
-        if ($search) {
-            $pendingQuery->where(function ($q) use ($search) {
-                $q->whereHas('customer', function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('contact', 'like', "%{$search}%");
-                })
-                ->orWhereHas('messages', function ($query) use ($search) {
-                    $query->where('message', 'like', "%{$search}%");
+        $activeQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
+            $query->latest()->limit(1);
+        }])->where('status', 'active');
+
+        if ($search !== '') {
+            $needle = '%' . mb_strtolower($search) . '%';
+
+            $pendingQuery->where(function ($query) use ($needle) {
+                $query->whereHas('customer', function ($customerQuery) use ($needle) {
+                    $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
+                        ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
+                })->orWhereHas('messages', function ($messageQuery) use ($needle) {
+                    $messageQuery->whereRaw('LOWER(content) LIKE ?', [$needle]);
                 });
             });
 
-            $activeQuery->where(function ($q) use ($search) {
-                $q->whereHas('customer', function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('contact', 'like', "%{$search}%");
-                })
-                ->orWhereHas('messages', function ($query) use ($search) {
-                    $query->where('message', 'like', "%{$search}%");
+            $activeQuery->where(function ($query) use ($needle) {
+                $query->whereHas('customer', function ($customerQuery) use ($needle) {
+                    $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
+                        ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
+                })->orWhereHas('messages', function ($messageQuery) use ($needle) {
+                    $messageQuery->whereRaw('LOWER(content) LIKE ?', [$needle]);
                 });
             });
         }
@@ -200,9 +197,25 @@ class DashboardController extends Controller
             ->get();
 
         if ($request->ajax() || $request->has('ajax')) {
+            $searchResults = [
+                'contacts' => [],
+                'groups' => [],
+                'messages' => [],
+            ];
+
+            if ($search !== '' || !empty($quickFilters) || $unreadOnly) {
+                $searchResults = $searchService->search($search, $quickFilters, $unreadOnly);
+            }
+
             return response()->json([
                 'pending' => $pendingConversations,
-                'active'  => $activeConversations,
+                'active' => $activeConversations,
+                'search_results' => $searchResults,
+                'search_summary' => [
+                    'query' => $search,
+                    'total_pending' => $pendingConversations->count(),
+                    'total_active' => $activeConversations->count(),
+                ],
             ]);
         }
 
