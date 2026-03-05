@@ -155,6 +155,12 @@
                 width: 260px !important;
                 top: 0 !important;
                 bottom: 0 !important;
+                overflow-y: auto !important; /* Perbaikan Scroll */
+                -webkit-overflow-scrolling: touch;
+                height: 100vh !important;
+            }
+            .sidebar-inner {
+                height: auto !important;
             }
             .slide-nav .sidebar {
                 margin-left: 0;
@@ -258,6 +264,10 @@
         .sidebar-logo img.logo {
             max-height: 60px;
             width: auto;
+        }
+
+        .sidebar-menu ul {
+            padding-bottom: 80px !important;
         }
 
         .sidebar-menu ul li a {
