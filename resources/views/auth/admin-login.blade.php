@@ -87,15 +87,15 @@
             <form method="POST" action="{{ route('admin.login') }}" class="space-y-6">
                 @csrf
                 
-                <!-- Email Field -->
+                <!-- Login Field (Email or Username) -->
                 <div>
-                    <label for="email" class="block text-sm font-semibold leading-6 text-[#0f2a4a]">Email Address</label>
+                    <label for="login" class="block text-sm font-semibold leading-6 text-[#0f2a4a]">Email / Username</label>
                     <div class="mt-2">
-                        <input id="email" name="email" type="email" autocomplete="email" value="{{ old('email') }}" required autofocus
+                        <input id="login" name="login" type="text" autocomplete="login" value="{{ old('login') }}" required autofocus
                             class="block w-full rounded-lg border-0 py-2.5 px-3.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#d11f26] sm:text-sm sm:leading-6 transition-colors duration-200" 
-                            placeholder="admin@livechat.com">
+                            placeholder="admin@livechat.com atau username">
                     </div>
-                    @error('email')
+                    @error('login')
                         <p class="mt-1.5 text-xs text-red-500">{{ $message }}</p>
                     @enderror
                 </div>
