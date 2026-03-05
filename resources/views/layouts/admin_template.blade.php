@@ -151,16 +151,11 @@
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 position: fixed;
                 visibility: hidden;
-                z-index: 11000 !important; /* Sangat tinggi agar di atas ruang chat */
+                z-index: 11000 !important;
                 width: 260px !important;
-                top: 0 !important;
+                top: 60px !important; /* Start below header */
                 bottom: 0 !important;
-                overflow-y: auto !important; /* Perbaikan Scroll */
-                -webkit-overflow-scrolling: touch;
-                height: 100vh !important;
-            }
-            .sidebar-inner {
-                height: auto !important;
+                height: calc(100vh - 60px) !important;
             }
             .slide-nav .sidebar {
                 margin-left: 0;
@@ -252,6 +247,20 @@
             .mini-sidebar .header-left {
                 width: 60px !important;
             }
+        }
+        
+        .sidebar {
+            background-color: #fff;
+            border-right: 1px solid #eee;
+            position: fixed;
+            top: 60px;
+            bottom: 0;
+            left: 0;
+            width: 230px;
+            z-index: 1001;
+            transition: all 0.2s ease-in-out;
+            overflow-y: auto !important; /* Enable Scroll for Desktop */
+            height: calc(100vh - 60px); /* Fill remaining height */
         }
         
         .sidebar-logo {
