@@ -8,47 +8,62 @@
         height: calc(100vh - 150px);
         margin: 0;
     }
-    .chat-cont-left, .chat-cont-right, .chat-cont-profile {
+
+    .chat-cont-left,
+    .chat-cont-right,
+    .chat-cont-profile {
         height: 100%;
         display: flex;
     }
+
     .msg_card_body {
         height: 100%;
         overflow-y: auto;
     }
+
     iframe {
         width: 100%;
         height: 100%;
         border: none;
     }
-    [x-cloak] { display: none !important; }
+
+    [x-cloak] {
+        display: none !important;
+    }
 
     /* Mobile Responsive Logic */
     @media (max-width: 991.98px) {
-        .chat-cont-left, .chat-cont-right {
+
+        .chat-cont-left,
+        .chat-cont-right {
             display: none !important;
         }
+
         .chat-window {
-            height: calc(100vh - 100px); /* Adjust to give room */
+            height: calc(100vh - 100px);
+            /* Adjust to give room */
             position: relative;
             margin: 0;
             padding: 0;
         }
+
         .chat-cont-left:not(.mobile-hide) {
             display: flex !important;
             width: 100%;
             height: 100%;
         }
+
         .chat-cont-right.mobile-show {
             display: flex !important;
             position: fixed !important;
-            top: 60px !important; 
+            top: 60px !important;
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
             width: 100% !important;
             height: calc(100vh - 60px) !important;
-            z-index: 1050 !important; /* Di bawah sidebar overlay (10900) */
+            z-index: 1050 !important;
+            /* Di bawah sidebar overlay (10900) */
             background: #ffffff !important;
             opacity: 1 !important;
             visibility: visible !important;
@@ -56,9 +71,11 @@
             padding: 0 !important;
             transform: none !important;
         }
+
         body.dark-mode .chat-cont-right.mobile-show {
             background: #1e1e1e !important;
         }
+
         .chat-cont-right .card {
             border-radius: 0 !important;
             height: 100% !important;
@@ -68,6 +85,7 @@
             display: flex !important;
             flex-direction: column !important;
         }
+
         .card-body {
             height: 100%;
             overflow: hidden;
@@ -76,32 +94,72 @@
 
     /* Skeleton Loading CSS */
     @keyframes skeleton-pulse {
-        0% { background-color: #e2e5e7; }
-        50% { background-color: #f1f3f5; }
-        100% { background-color: #e2e5e7; }
+        0% {
+            background-color: #e2e5e7;
+        }
+
+        50% {
+            background-color: #f1f3f5;
+        }
+
+        100% {
+            background-color: #e2e5e7;
+        }
     }
+
     .skeleton-avatar {
-        width: 40px; height: 40px; border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
         animation: skeleton-pulse 1.5s infinite ease-in-out;
     }
+
     .skeleton-text {
-        height: 60px; border-radius: 15px;
+        height: 60px;
+        border-radius: 15px;
         animation: skeleton-pulse 1.5s infinite ease-in-out;
     }
-    body.dark-mode .skeleton-loader-container { background-color: #121212 !important; }
-    body.dark-mode .skeleton-avatar, body.dark-mode .skeleton-text {
+
+    body.dark-mode .skeleton-loader-container {
+        background-color: #121212 !important;
+    }
+
+    body.dark-mode .skeleton-avatar,
+    body.dark-mode .skeleton-text {
         animation: skeleton-pulse-dark 1.5s infinite ease-in-out;
     }
+
     @keyframes skeleton-pulse-dark {
-        0% { background-color: #2a2a2a; }
-        50% { background-color: #3a3a3a; }
-        100% { background-color: #2a2a2a; }
+        0% {
+            background-color: #2a2a2a;
+        }
+
+        50% {
+            background-color: #3a3a3a;
+        }
+
+        100% {
+            background-color: #2a2a2a;
+        }
     }
+
     @keyframes pulse-danger {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        }
     }
+
     .pulse-animation {
         animation: pulse-danger 2s infinite;
     }
@@ -112,8 +170,8 @@
 <div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }})">
     <div class="row chat-window">
         <!-- Chat User List -->
-        <div class="chat-cont-left d-flex transition-all" 
-             :class="{
+        <div class="chat-cont-left d-flex transition-all"
+            :class="{
                  'col-lg-5 col-xl-4': !sidebarCollapsed,
                  'd-none': sidebarCollapsed,
                  'mobile-hide': selectedChat
@@ -127,6 +185,11 @@
                         <p class="text-xs text-muted" x-show="chats.length > 0" x-text="'Total: ' + chats.length + ' chats'"></p>
                     </div>
                     <div class="d-flex gap-2">
+                        <button @click="sortBy = sortBy === 'recent' ? 'oldest' : 'recent'; fetchChats()"
+                            class="btn btn-sm btn-outline-secondary"
+                            :title="sortBy === 'recent' ? 'Terbaru - Klik untuk urutkan terlama' : 'Terlama - Klik untuk urutkan terbaru'">
+                            <i class="fe" :class="sortBy === 'recent' ? 'fe-arrow-up' : 'fe-arrow-down'"></i>
+                        </button>
                         <button @click="fetchChats()" class="btn btn-sm btn-outline-secondary" title="Refresh">
                             <i class="fe fe-refresh-cw"></i>
                         </button>
@@ -140,7 +203,7 @@
                         <input type="text" x-model="searchQuery" placeholder="Cari nama atau kontak..." class="form-control search-chat">
                     </div>
                 </div>
-                
+
                 <div class="card-body contacts_body chat-users-list chat-scroll">
                     <!-- Antrean Section -->
                     <div class="chat-header inner-chat-header pt-0">
@@ -161,10 +224,10 @@
                                 <div class="media-body flex-grow-1">
                                     <div>
                                         <div class="user-name" x-text="chat.customer.name"></div>
-                                        <div class="user-last-chat font-weight-bold" 
-                                             :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
-                                             x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
-                                             :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
+                                        <div class="user-last-chat font-weight-bold"
+                                            :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
+                                            x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
+                                            :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
                                         <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                     <div>
@@ -198,7 +261,7 @@
                                     <div>
                                         <div class="user-name" x-text="chat.customer.name"></div>
                                         <div class="user-last-chat" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
-                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)" ></span></div>
+                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
                                     </div>
                                     <div>
                                         <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
@@ -213,10 +276,10 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Chat Content -->
-        <div class="chat-cont-right transition-all" 
-             :class="{
+        <div class="chat-cont-right transition-all"
+            :class="{
                  'col-lg-7 col-xl-8': !sidebarCollapsed,
                  'col-lg-12 col-xl-12': sidebarCollapsed,
                  'mobile-show': selectedChat
@@ -225,9 +288,9 @@
                 <div class="h-100 d-flex flex-column">
                     <div class="card-header msg_head px-3 py-2">
                         <div class="d-flex bd-highlight align-items-center w-100">
-                            <a href="javascript:void(0)" class="back-user-list me-3 d-lg-none" 
-                               :class="darkMode ? 'text-white' : 'text-dark'" 
-                               @click="selectedChat = null">
+                            <a href="javascript:void(0)" class="back-user-list me-3 d-lg-none"
+                                :class="darkMode ? 'text-white' : 'text-dark'"
+                                @click="selectedChat = null">
                                 <i class="fas fa-arrow-left fa-lg"></i>
                             </a>
                             <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary" @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
@@ -267,16 +330,16 @@
 
                     <div class="card-body p-0 flex-grow-1 position-relative" style="min-height: 0;">
                         <!-- Skeleton Loader overlay -->
-                        <div x-show="!iframeLoaded && selectedChat" 
-                             class="skeleton-loader-container position-absolute w-100 h-100 bg-white" 
-                             style="z-index: 10; padding: 20px; pointer-events: none;">
-                             <div class="skeleton-text w-75 mb-3"></div>
-                             <div class="skeleton-text w-50"></div>
+                        <div x-show="!iframeLoaded && selectedChat"
+                            class="skeleton-loader-container position-absolute w-100 h-100 bg-white"
+                            style="z-index: 10; padding: 20px; pointer-events: none;">
+                            <div class="skeleton-text w-75 mb-3"></div>
+                            <div class="skeleton-text w-50"></div>
                         </div>
-                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'" 
-                                class="w-100 h-100" 
-                                style="border: none; display: block;"
-                                @load="iframeLoaded = true"></iframe>
+                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'"
+                            class="w-100 h-100"
+                            style="border: none; display: block;"
+                            @load="iframeLoaded = true"></iframe>
                     </div>
                 </div>
             </div>
@@ -297,7 +360,7 @@
                         <select x-model="handoverToAdminId" class="form-select">
                             <option value="">-- Pilih Admin --</option>
                             @foreach($otherAdmins as $other)
-                                <option value="{{ $other->id }}">{{ $other->username }} ({{ ucfirst($other->status) }})</option>
+                            <option value="{{ $other->id }}">{{ $other->username }} ({{ ucfirst($other->status) }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -326,6 +389,7 @@
             sidebarCollapsed: false,
             selectedChat: null,
             searchQuery: '',
+            sortBy: 'recent',
             isClaiming: false,
             isSubmitting: false,
             showHandoverModal: false,
@@ -337,18 +401,20 @@
 
             init() {
                 // Update currentTime every minute for relative time reactivity
-                setInterval(() => { this.currentTime = Date.now(); }, 60000);
-                
+                setInterval(() => {
+                    this.currentTime = Date.now();
+                }, 60000);
+
                 // Auto-refresh chat list every 5 seconds
-                setInterval(() => { 
+                setInterval(() => {
                     console.log('🔄 Auto-refresh chat list...');
-                    this.fetchChats(); 
+                    this.fetchChats();
                 }, 5000);
-                
+
                 // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
                 const unlockAudio = () => {
                     if (!this.notificationSound) {
-                        this.notificationSound = new Audio('{{ asset('sounds/notification.mp3') }}');
+                        this.notificationSound = new Audio('{{ asset("sounds/notification.mp3") }}');
                         this.notificationSound.volume = 0; // Mute for dummy play
                         this.notificationSound.play().then(() => {
                             this.notificationSound.pause();
@@ -375,16 +441,20 @@
                             .listen('.conversation.status.changed', (e) => {
                                 console.log('🔔 Status Changed Received:', e);
                                 console.log('📝 Conversation ID:', e.conversation_id, 'Status:', e.status);
-                                
+
                                 // Update status offline secara reaktif dari data broadcast
                                 if (e.customer) {
                                     // 1. Update di chat yang terpilih (Header)
                                     if (this.selectedChat && this.selectedChat.customer && this.selectedChat.customer.id === e.customer.id) {
                                         this.selectedChat.customer.is_online = e.customer.is_online;
                                         // Paksa refresh teks status jika Alpine tidak mendeteksi perubahan properti dalam
-                                        this.$nextTick(() => { this.selectedChat = {...this.selectedChat}; });
+                                        this.$nextTick(() => {
+                                            this.selectedChat = {
+                                                ...this.selectedChat
+                                            };
+                                        });
                                     }
-                                    
+
                                     // 2. Update di daftar chat di kiri
                                     this.chats.forEach(c => {
                                         if (c.customer && c.customer.id === e.customer.id) {
@@ -397,11 +467,13 @@
                                     this.selectedChat.status = 'closed';
 
                                     // Refresh list setelah jeda agar chat pindah ke history
-                                    setTimeout(() => { this.fetchChats(); }, 1000);
+                                    setTimeout(() => {
+                                        this.fetchChats();
+                                    }, 1000);
                                 } else {
                                     this.fetchChats();
                                 }
-                                
+
                                 // Play sound if it's a new or queued request
                                 if (['pending', 'queued'].includes(e.status)) {
                                     this.playNotification();
@@ -420,7 +492,7 @@
                     this.notificationSound.currentTime = 0;
                     this.notificationSound.play().catch(e => console.log("Playback failed:", e));
                 } else {
-                    const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
+                    const audio = new Audio('{{ asset("sounds/notification.mp3") }}');
                     audio.play().catch(e => {
                         console.log("Audio play blocked. Click anywhere on the page first to unlock sound.");
                     });
@@ -430,27 +502,57 @@
             async fetchChats() {
                 console.log('🔄 Fetching chats...');
                 try {
-                    const res = await fetch('/admin/chat?ajax=1');
+                    const res = await fetch(`/admin/chat?ajax=1&sort=${this.sortBy}`);
                     const data = await res.json();
                     console.log('📋 Chats received:', data);
                     this.chats = [...data.pending, ...data.active];
                     console.log('✅ Total chats loaded:', this.chats.length);
-                } catch (e) { console.error('Failed to fetch chats', e); }
+                } catch (e) {
+                    console.error('Failed to fetch chats', e);
+                }
             },
 
             get filteredChats() {
-                if (!this.searchQuery.trim()) return this.chats;
-                const query = this.searchQuery.toLowerCase();
-                return this.chats.filter(chat => 
-                    chat.customer.name.toLowerCase().includes(query) || 
-                    (chat.customer.contact && chat.customer.contact.toLowerCase().includes(query))
-                );
+                let result = this.chats;
+
+                // Apply search filter
+                if (this.searchQuery.trim()) {
+                    const query = this.searchQuery.toLowerCase();
+                    result = result.filter(chat =>
+                        chat.customer.name.toLowerCase().includes(query) ||
+                        (chat.customer.contact && chat.customer.contact.toLowerCase().includes(query))
+                    );
+                }
+
+                // Apply sorting
+                if (this.sortBy === 'recent') {
+                    result = [...result].sort((a, b) => {
+                        const dateA = new Date(a.last_message_at || a.created_at);
+                        const dateB = new Date(b.last_message_at || b.created_at);
+                        return dateB - dateA; // Newest first
+                    });
+                } else if (this.sortBy === 'oldest') {
+                    result = [...result].sort((a, b) => {
+                        const dateA = new Date(a.last_message_at || a.created_at);
+                        const dateB = new Date(b.last_message_at || b.created_at);
+                        return dateA - dateB; // Oldest first
+                    });
+                }
+
+                return result;
             },
 
             formatTime(datetimeString) {
                 if (!datetimeString) return '';
                 const date = new Date(datetimeString);
-                const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                const options = {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta'
+                };
                 return date.toLocaleString('id-ID', options);
             },
 
@@ -466,14 +568,28 @@
             formatShortDateTime(datetimeString) {
                 if (!datetimeString) return '';
                 const date = new Date(datetimeString);
-                const options = { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                const options = {
+                    year: '2-digit',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta'
+                };
                 return date.toLocaleString('id-ID', options);
             },
 
             formatFullDateTime(datetimeString) {
                 if (!datetimeString) return '';
                 const date = new Date(datetimeString);
-                const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };
+                const options = {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta'
+                };
                 // Using 'id-ID' for Indonesian locale. Ensure the browser supports it.
                 return date.toLocaleString('id-ID', options);
             },
@@ -489,22 +605,29 @@
                 try {
                     const res = await fetch(`/admin/conversation/${conversationId}/claim`, {
                         method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
                     });
                     if (!res.ok) throw new Error('Gagal mengambil chat');
-                    
+
                     // Update lists without reload
                     await this.fetchChats();
-                    
+
                     // If we just claimed it, find it in the new list and select it
                     const claimed = this.chats.find(c => c.id === conversationId);
                     if (claimed) {
                         this.selectChat(claimed);
                     }
-                } catch (error) { 
-                    Toast.fire({ icon: 'error', title: error.message }); 
+                } catch (error) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: error.message
+                    });
+                } finally {
+                    this.isClaiming = false;
                 }
-                finally { this.isClaiming = false; }
             },
 
             async confirmCloseChat() {
@@ -529,23 +652,30 @@
                 try {
                     const res = await fetch(`/admin/conversation/${this.selectedChat.id}/close`, {
                         method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json', 
+                        headers: {
+                            'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                             'Accept': 'application/json'
                         }
                     });
                     if (!res.ok) throw new Error('Gagal menyelesaikan chat');
-                    
-                    Toast.fire({ icon: 'success', title: 'Percakapan diselesaikan' });
-                    
+
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Percakapan diselesaikan'
+                    });
+
                     // Reset selection and refresh list
                     this.selectedChat = null;
                     await this.fetchChats();
-                } catch (e) { 
-                    Toast.fire({ icon: 'error', title: e.message }); 
+                } catch (e) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: e.message
+                    });
+                } finally {
+                    this.isSubmitting = false;
                 }
-                finally { this.isSubmitting = false; }
             },
 
             async handoverChat() {
@@ -553,18 +683,25 @@
                 try {
                     const res = await fetch(`/admin/conversation/${this.selectedChat.id}/handover`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                        body: JSON.stringify({ 
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
                             to_admin_id: this.handoverToAdminId,
-                            internal_note: this.handoverNote 
+                            internal_note: this.handoverNote
                         })
                     });
                     if (!res.ok) throw new Error('Gagal mengoper chat');
                     window.location.reload();
-                } catch (e) { 
-                    Toast.fire({ icon: 'error', title: e.message }); 
+                } catch (e) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: e.message
+                    });
+                } finally {
+                    this.isSubmitting = false;
                 }
-                finally { this.isSubmitting = false; }
             },
 
             async blockUser(conversationId) {
@@ -582,12 +719,17 @@
                         try {
                             const res = await fetch(`/admin/conversation/${conversationId}/block`, {
                                 method: 'POST',
-                                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                }
                             });
                             if (!res.ok) throw new Error('Gagal blokir pelanggan');
                             window.location.reload();
-                        } catch (e) { 
-                            Toast.fire({ icon: 'error', title: e.message }); 
+                        } catch (e) {
+                            Toast.fire({
+                                icon: 'error',
+                                title: e.message
+                            });
                         }
                     }
                 });
