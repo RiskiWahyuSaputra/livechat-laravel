@@ -488,6 +488,12 @@
                         </li>
                         @endif
 
+                        @if(auth('admin')->user()->is_superadmin)
+                        <li class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.settings.index') }}"><i class="fe fe-settings"></i> <span>Pengaturan</span></a>
+                        </li>
+                        @endif
+
                         <li class="menu-title">
                             <h6>Account</h6>
                         </li>

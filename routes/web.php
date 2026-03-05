@@ -104,6 +104,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/analytics/filter', [App\Http\Controllers\Admin\AnalyticsController::class, 'filter'])->name('analytics.filter');
             Route::get('/analytics/realtime', [App\Http\Controllers\Admin\AnalyticsController::class, 'realtime'])->name('analytics.realtime');
             Route::get('/analytics/export', [App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
+
+            // --- Menu 9: Settings ---
+            Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+            Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
         }
         );
     });
