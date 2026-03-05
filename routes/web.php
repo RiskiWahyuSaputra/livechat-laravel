@@ -15,19 +15,19 @@ Route::get('/', function () {
 });
 
 // Home page dapat diakses publik
-Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home');
+Route::get('/home', [UserDashboardController::class, 'index'])->name('user.home');
 
 // Route registrasi chat
-Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');
-Route::post('/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');
+Route::post('/chat/register', [ChatController::class, 'register'])->name('chat.register');
+Route::post('/chat/logout', [ChatController::class, 'logout'])->name('chat.logout');
 
 // Routes Chat (Menggunakan Cookie Session Token, bukan Auth)
 Route::get('/chat', function () {
     return redirect()->route('user.home');
 })->name('chat.index');
-Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init');
-Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.send');
-Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
+Route::get('/chat/init', [ChatController::class, 'initChat'])->name('chat.init');
+Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
+Route::post('/chat/typing', [ChatController::class, 'typing'])->name('chat.typing');
 
 // Routes yang butuh login user (jika ada fitur user biasa)
 Route::middleware(['auth'])->group(function () {
@@ -38,35 +38,42 @@ Route::middleware(['auth'])->group(function () {
 Route::prefix('admin')->name('admin.')->group(function () {
 
     // Auth Admin (hanya saat belum login sebagai admin)
-    Route::middleware('guest:admin')->group(function () {
-            Route::get('/login', [AdminAuthController::class , 'showLogin'])->name('login');
-            Route::post('/login', [AdminAuthController::class , 'login']);
+    Route::middleware('guest:admin')->group(
+        function () {
+            Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
+            Route::post('/login', [AdminAuthController::class, 'login']);
         }
-        );
+    );
 
-        // Routes yang butuh login admin
-        Route::middleware('admin.auth')->group(function () {
-            Route::post('/logout', [AdminAuthController::class , 'logout'])->name('logout');
+    // Routes yang butuh login admin
+    Route::middleware('admin.auth')->group(
+        function () {
+            Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
-            Route::get('/dashboard', [DashboardController::class , 'index'])->name('dashboard');
+            Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
             Route::delete('/user/{user}', [DashboardController::class, 'destroyUser'])->name('user.destroy');
-            Route::post('/status', [DashboardController::class , 'updateStatus'])->name('status.update');
+            Route::post('/status', [DashboardController::class, 'updateStatus'])->name('status.update');
             // --- Menu 2: Live Chat Workspace ---
             Route::middleware('admin.permission:view_chat')->group(function () {
                 Route::get('/chat', [DashboardController::class, 'chatWorkspace'])->name('chat');
-                Route::get('/conversation/{conversation}', [DashboardController::class , 'showConversation'])->name('conversation.show');
-                Route::post('/chat/send', [DashboardController::class , 'sendMessage'])->name('chat.send');
-                Route::post('/chat/typing', [DashboardController::class , 'typing'])->name('chat.typing');
-                Route::post('/conversation/{conversation}/claim', [DashboardController::class , 'claimConversation'])->name('conversation.claim');
-                Route::post('/conversation/{conversation}/handover', [DashboardController::class , 'handoverConversation'])->name('conversation.handover');
-                Route::post('/conversation/{conversation}/close', [DashboardController::class , 'closeConversation'])->name('conversation.close');
-                Route::post('/conversation/{conversation}/block', [DashboardController::class , 'blockUser'])->name('conversation.block');
+                Route::get('/conversation/{conversation}', [DashboardController::class, 'showConversation'])->name('conversation.show');
+                Route::post('/chat/send', [DashboardController::class, 'sendMessage'])->name('chat.send');
+                Route::post('/chat/typing', [DashboardController::class, 'typing'])->name('chat.typing');
+                Route::post('/conversation/{conversation}/claim', [DashboardController::class, 'claimConversation'])->name('conversation.claim');
+                Route::post('/conversation/{conversation}/handover', [DashboardController::class, 'handoverConversation'])->name('conversation.handover');
+                Route::post('/conversation/{conversation}/close', [DashboardController::class, 'closeConversation'])->name('conversation.close');
+                Route::post('/conversation/{conversation}/block', [DashboardController::class, 'blockUser'])->name('conversation.block');
             });
 
             // --- Menu 3: Chat History / Archive ---
             Route::middleware('admin.permission:view_history')->group(function () {
                 Route::get('/history', [App\Http\Controllers\Admin\ChatHistoryController::class, 'index'])->name('history.index');
                 Route::get('/history/{id}', [App\Http\Controllers\Admin\ChatHistoryController::class, 'show'])->name('history.show');
+            });
+
+            // --- Menu 3.1: Global Message Search ---
+            Route::middleware('admin.permission:view_history')->group(function () {
+                Route::get('/messages/search', [App\Http\Controllers\Admin\GlobalSearchController::class, 'search'])->name('messages.search');
             });
 
             // --- Menu 4: Quick Replies Management ---
@@ -90,5 +97,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/analytics/realtime', [App\Http\Controllers\Admin\AnalyticsController::class, 'realtime'])->name('analytics.realtime');
             Route::get('/analytics/export', [App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
         }
-        );
-    });
+    );
+});

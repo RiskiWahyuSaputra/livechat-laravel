@@ -153,17 +153,49 @@ class DashboardController extends Controller
 
         // Get sort parameter (recent or oldest)
         $sortOrder = $request->get('sort', 'recent') === 'oldest' ? 'asc' : 'desc';
+        
+        // Get search parameter
+        $search = $request->get('search', '');
 
-        $pendingConversations = Conversation::with('customer')
-            ->whereIn('status', ['pending', 'queued'])
+        // Base query for pending conversations
+        $pendingQuery = Conversation::with('customer')
+            ->whereIn('status', ['pending', 'queued']);
+        
+        // Base query for active conversations
+        $activeQuery = Conversation::with(['customer', 'admin', 'messages' => function ($q) {
+            $q->latest()->limit(1);
+        }])
+            ->where('status', 'active');
+
+        // Apply search filter if provided
+        if ($search) {
+            $pendingQuery->where(function ($q) use ($search) {
+                $q->whereHas('customer', function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('contact', 'like', "%{$search}%");
+                })
+                ->orWhereHas('messages', function ($query) use ($search) {
+                    $query->where('message', 'like', "%{$search}%");
+                });
+            });
+
+            $activeQuery->where(function ($q) use ($search) {
+                $q->whereHas('customer', function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('contact', 'like', "%{$search}%");
+                })
+                ->orWhereHas('messages', function ($query) use ($search) {
+                    $query->where('message', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $pendingConversations = $pendingQuery
             ->orderBy('queue_position')
             ->orderBy('last_message_at', $sortOrder)
             ->get();
 
-        $activeConversations = Conversation::with(['customer', 'admin', 'messages' => function ($q) {
-            $q->latest()->limit(1);
-        }])
-            ->where('status', 'active')
+        $activeConversations = $activeQuery
             ->orderBy('last_message_at', $sortOrder)
             ->get();
 
