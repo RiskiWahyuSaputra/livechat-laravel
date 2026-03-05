@@ -33,7 +33,7 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Date range for analytics
         $startDate = $request->get('start_date', Carbon::now()->subDays(30)->startOfDay());
         $endDate = $request->get('end_date', Carbon::now()->endOfDay());
@@ -50,7 +50,7 @@ class DashboardController extends Controller
         $metrics = $this->analyticsService->getConversationMetrics();
         $agentPerformance = $this->analyticsService->getAgentPerformance();
         $statusDistribution = $this->analyticsService->getStatusDistribution();
-        
+
         // Statistik Ringkas
         $stats = [
             'total_users' => User::count(),
@@ -88,19 +88,19 @@ class DashboardController extends Controller
         }
 
         if ($request->has('search')) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('contact', 'like', '%' . $request->search . '%')
-                  ->orWhere('origin', 'like', '%' . $request->search . '%');
+                    ->orWhere('contact', 'like', '%' . $request->search . '%')
+                    ->orWhere('origin', 'like', '%' . $request->search . '%');
             });
         }
 
-        $customers = $query->with(['conversations' => function($q) {
+        $customers = $query->with(['conversations' => function ($q) {
             $q->latest(); // Default: hanya ambil yang non-trashed
         }])->latest()->paginate(10)->withQueryString();
 
         // Map customers to include their current active status
-        $customers->getCollection()->transform(function($user) {
+        $customers->getCollection()->transform(function ($user) {
             // Cari percakapan AKTIF (yang belum di-soft delete)
             $activeConv = $user->conversations->whereIn('status', ['pending', 'queued', 'active'])->first();
             $user->current_status = $activeConv ? $activeConv->status : 'no_session';
@@ -108,8 +108,8 @@ class DashboardController extends Controller
         });
 
         return view('admin.dashboard', compact(
-            'admin', 
-            'stats', 
+            'admin',
+            'stats',
             'customers',
             'overview',
             'trends',
@@ -138,7 +138,7 @@ class DashboardController extends Controller
             $conv->messages()->delete();
             $conv->delete();
         }
-        
+
         $user->delete();
 
         return back()->with('success', 'User berhasil dihapus secara permanen.');
@@ -151,16 +151,20 @@ class DashboardController extends Controller
     {
         $admin = Auth::guard('admin')->user();
 
+        // Get sort parameter (recent or oldest)
+        $sortOrder = $request->get('sort', 'recent') === 'oldest' ? 'asc' : 'desc';
+
         $pendingConversations = Conversation::with('customer')
             ->whereIn('status', ['pending', 'queued'])
             ->orderBy('queue_position')
-            ->orderBy('last_message_at')
+            ->orderBy('last_message_at', $sortOrder)
             ->get();
 
         $activeConversations = Conversation::with(['customer', 'admin', 'messages' => function ($q) {
-                $q->latest()->limit(1);
-            }])
+            $q->latest()->limit(1);
+        }])
             ->where('status', 'active')
+            ->orderBy('last_message_at', $sortOrder)
             ->get();
 
         if ($request->ajax() || $request->has('ajax')) {
@@ -231,7 +235,7 @@ class DashboardController extends Controller
         ]);
 
         broadcast(new MessageSent($sysMessage));
-        
+
         // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
         broadcast(new ConversationStatusChanged($conversation, $admin->username));
 
@@ -269,7 +273,7 @@ class DashboardController extends Controller
             $file = $request->file('file');
             $mime = $file->getMimeType();
             $messageType = str_starts_with($mime, 'image/') ? 'image' : 'file';
-            
+
             $fileName = time() . '_' . $file->getClientOriginalName();
             $path = $file->storeAs('uploads/chat', $fileName, 'public');
             $content = asset('storage/' . $path);
@@ -452,11 +456,11 @@ class DashboardController extends Controller
 
         broadcast(new TypingIndicator(
             conversationId: $request->conversation_id,
-            senderId:       $admin->id,
-            senderType:     'admin',
-            senderRole:     $admin->role,
-            senderName:     $admin->username,
-            isTyping:       $request->boolean('is_typing')
+            senderId: $admin->id,
+            senderType: 'admin',
+            senderRole: $admin->role,
+            senderName: $admin->username,
+            isTyping: $request->boolean('is_typing')
         ))->toOthers();
 
         return response()->json(['success' => true]);
