@@ -40,8 +40,9 @@
                             <label for="date_range" class="form-label">Rentang Tanggal</label>
                             <input type="text" name="date_range" id="date_range" value="{{ request('date_range') }}" class="form-control" placeholder="Pilih tanggal...">
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
+                        <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
+                            <a href="{{ route('admin.history.index', ['filter' => 'my_chat']) }}" class="btn btn-info w-100 me-2 {{ request('filter') === 'my_chat' ? 'active' : '' }}">My Chat</a>
                             <a href="{{ route('admin.history.index') }}" class="btn btn-secondary w-100">Reset</a>
                         </div>
                     </div>

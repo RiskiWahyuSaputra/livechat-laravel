@@ -172,47 +172,57 @@ class ChatController extends Controller
      */
     public function initChat(Request $request)
     {
-        $token = $request->cookie('guest_chat_token');
-        if (!$token) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+        try {
+            $token = $request->cookie('guest_chat_token');
+            if (!$token) {
+                return response()->json(['error' => 'Sesi tidak ditemukan atau kedaluwarsa. Silakan muat ulang halaman.'], 401);
+            }
+
+            $user = User::where('email', $token)->first();
+            if (!$user) {
+                return response()->json(['error' => 'Pengguna tidak terautentikasi. Mungkin cookie Anda terhapus.'], 401);
+            }
+
+            if ($user->is_blocked) {
+                return response()->json(['error' => 'Akun Anda telah diblokir. Hubungi dukungan untuk informasi lebih lanjut.'], 403);
+            }
+            
+            // Mark user online & ensure logged in
+            $user->update(['is_online' => true]);
+            Auth::guard('web')->login($user, true);
+
+            // Ambil conversation aktif user (pending/active/queued)
+            $activeConversation = $user->conversations()
+                ->whereIn('status', ['pending', 'active', 'queued'])
+                ->first();
+
+            if (!$activeConversation) {
+                $activeConversation = $this->createConversation($user);
+            }
+
+            // Ambil semua pesan dari semua percakapan Budi
+            $allConversations = $user->conversations()->withTrashed()->pluck('id');
+            $messages = Message::whereIn('conversation_id', $allConversations)
+                ->where('message_type', '!=', 'whisper')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            return response()->json([
+                'csrf_token'   => csrf_token(),
+                'conversation' => $activeConversation,
+                'messages'     => $messages,
+                'user_id'      => $user->id,
+                'status'       => $activeConversation->status,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Gagal mengambil data chat', [
+                'user_id' => optional(Auth::user())->id,
+                'token'   => $request->cookie('guest_chat_token'),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Terjadi kesalahan internal saat mengambil riwayat percakapan. Tim kami telah diberitahu. Silakan coba beberapa saat lagi.'], 500);
         }
-
-        $user = User::where('email', $token)->first();
-        if (!$user) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
-        }
-
-        if ($user->is_blocked) {
-            return response()->json(['error' => 'Akun Anda telah diblokir.'], 403);
-        }
-        
-        // Mark user online & ensure logged in
-        $user->update(['is_online' => true]);
-        Auth::guard('web')->login($user, true);
-
-        // Ambil conversation aktif user (pending/active/queued)
-        $activeConversation = $user->conversations()
-            ->whereIn('status', ['pending', 'active', 'queued'])
-            ->first();
-
-        if (!$activeConversation) {
-            $activeConversation = $this->createConversation($user);
-        }
-
-        // Ambil semua pesan dari semua percakapan Budi
-        $allConversations = $user->conversations()->withTrashed()->pluck('id');
-        $messages = Message::whereIn('conversation_id', $allConversations)
-            ->where('message_type', '!=', 'whisper')
-            ->orderBy('created_at', 'asc')
-            ->get();
-
-        return response()->json([
-            'csrf_token'   => csrf_token(),
-            'conversation' => $activeConversation,
-            'messages'     => $messages,
-            'user_id'      => $user->id,
-            'status'       => $activeConversation->status,
-        ]);
     }
 
     /**
@@ -230,23 +240,23 @@ class ChatController extends Controller
         $user = User::where('email', $token)->first();
         
         if (!$user) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+            return response()->json(['error' => 'Sesi Anda tidak valid. Silakan muat ulang dan coba lagi.'], 401);
         }
 
         if ($user->is_blocked) {
-            return response()->json(['error' => 'Diblokir'], 403);
+            return response()->json(['error' => 'Akun Anda diblokir dan tidak dapat mengirim pesan.'], 403);
         }
 
         // Conversation mungkin sudah di soft delete (closed), jadi kita pakai withTrashed untuk mengeceknya
         $conversation = Conversation::withTrashed()->find($request->conversation_id);
 
         if (!$conversation) {
-            return response()->json(['error' => 'Chat tidak ditemukan.'], 404);
+            return response()->json(['error' => 'Sesi chat tidak ditemukan atau sudah berakhir.'], 404);
         }
 
         // Pastikan conversation milik user ini (Gunakan non-strict agar aman dengan type)
         if ($conversation->user_id != $user->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            return response()->json(['error' => 'Anda tidak memiliki izin untuk mengakses chat ini.'], 403);
         }
 
         // Jika conversation ini sudah ditutup (closed / soft deleted), kita butuh buat tiket baru!
@@ -347,7 +357,7 @@ class ChatController extends Controller
         $user = User::where('email', $token)->first();
 
         if (!$user) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+            return response()->json(['error' => 'Sesi Anda tidak valid. Indikator pengetikan tidak dapat dikirim.'], 401);
         }
 
         broadcast(new TypingIndicator(
