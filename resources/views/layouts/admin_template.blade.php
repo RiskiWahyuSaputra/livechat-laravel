@@ -153,9 +153,9 @@
                 visibility: hidden;
                 z-index: 11000 !important;
                 width: 260px !important;
-                top: 60px !important; /* Start below header */
+                top: 0 !important;
                 bottom: 0 !important;
-                height: calc(100vh - 60px) !important;
+                height: 100vh !important;
             }
             .slide-nav .sidebar {
                 margin-left: 0;
@@ -250,8 +250,6 @@
         }
         
         .sidebar {
-            background-color: #fff;
-            border-right: 1px solid #eee;
             position: fixed;
             top: 60px;
             bottom: 0;
@@ -259,8 +257,8 @@
             width: 230px;
             z-index: 1001;
             transition: all 0.2s ease-in-out;
-            overflow-y: auto !important; /* Enable Scroll for Desktop */
-            height: calc(100vh - 60px); /* Fill remaining height */
+            overflow-y: auto !important;
+            height: calc(100vh - 60px);
         }
         
         .sidebar-logo {
