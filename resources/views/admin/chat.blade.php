@@ -165,66 +165,338 @@
         animation: pulse-danger 2s infinite;
     }
 
-    .chat-search-panel {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        background: inherit;
+    /* =============================================
+       SIDEBAR REDESIGN
+    ============================================= */
+
+    /* Top panel (header + search + content filters) */
+    .sidebar-top-panel {
+        background: #fff;
+        border: 1px solid #eef0f5;
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    body.dark-mode .sidebar-top-panel {
+        background: #1e1e2d;
+        border-color: #2a2a3d;
     }
 
-    .quick-chip-row {
+    /* Header inside top panel */
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 16px 10px;
+    }
+    .sidebar-header h6 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        letter-spacing: -0.3px;
+    }
+    .sidebar-header .subtitle {
+        font-size: 0.78rem;
+        color: #6b7280;
+        margin: 2px 0 0;
+    }
+    body.dark-mode .sidebar-header h6 { color: #f0f0f0; }
+    body.dark-mode .sidebar-header .subtitle { color: #9ca3af; }
+    .sidebar-header-actions {
+        display: flex;
+        gap: 6px;
+    }
+    .sidebar-header-actions .btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        color: #6b7280;
+        font-size: 0.85rem;
+        transition: all 0.15s;
+    }
+    .sidebar-header-actions .btn:hover {
+        background: #f3f4f6;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+
+    /* Search box */
+    .sidebar-search {
+        padding: 0 12px 10px;
+    }
+    .sidebar-search .input-group {
+        background: #f3f4f6;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1.5px solid transparent;
+        transition: border-color 0.2s;
+    }
+    .sidebar-search .input-group:focus-within {
+        border-color: #6366f1;
+        background: #fff;
+    }
+    .sidebar-search .input-group-text {
+        background: transparent;
+        border: none;
+        color: #9ca3af;
+        padding: 0 10px 0 14px;
+    }
+    .sidebar-search input {
+        background: transparent;
+        border: none;
+        padding: 9px 4px;
+        font-size: 0.875rem;
+        color: #374151;
+        box-shadow: none !important;
+    }
+    .sidebar-search input::placeholder { color: #9ca3af; }
+    .sidebar-search .clear-btn {
+        background: transparent;
+        border: none;
+        color: #9ca3af;
+        padding: 0 12px 0 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+    .sidebar-search .clear-btn:hover { color: #374151; }
+
+    /* Content filter chips */
+    .content-filter-row {
+        padding: 0 12px 12px;
+        display: flex;
+        gap: 6px;
         overflow-x: auto;
         white-space: nowrap;
-        padding-bottom: 5px;
     }
-
-    .quick-chip-row::-webkit-scrollbar {
-        height: 6px;
-    }
-
-    .quick-chip-row::-webkit-scrollbar-thumb {
-        background-color: #ced4da;
-        border-radius: 10px;
-    }
-
-    .quick-chip-row .btn {
+    .content-filter-row::-webkit-scrollbar { display: none; }
+    .content-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        border: 1.5px solid #e5e7eb;
+        background: #fff;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.15s;
         white-space: nowrap;
-        border-radius: 8px; /* Slightly square rounded */
-        padding: 6px 16px;
-        font-size: 0.85rem;
+        user-select: none;
     }
-
-    /* Style overrides for mockup match */
-    .chat-window .card {
-        border: 1px solid #eef2f7 !important;
-        box-shadow: 0 0 10px rgba(0,0,0,0.02) !important;
-        border-radius: 8px;
+    .content-chip:hover {
+        border-color: #a5b4fc;
+        color: #4338ca;
+        background: #eef2ff;
     }
-
-    .contacts_card .chat-header h6 {
-        font-size: 1.25rem;
+    .content-chip.active {
+        border-color: #6366f1;
+        background: #eef2ff;
+        color: #4338ca;
         font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 4px;
+    }
+    body.dark-mode .content-chip {
+        background: #2a2a3d;
+        border-color: #3a3a50;
+        color: #9ca3af;
+    }
+    body.dark-mode .content-chip.active {
+        background: #312e81;
+        border-color: #6366f1;
+        color: #c7d2fe;
     }
 
-    .search-chat, .search-icon-bg {
-        background-color: #f9fafb !important;
-        border: 1px solid #f3f4f6 !important;
+    /* ── Status Tab Strip ── */
+    .status-tab-strip {
+        padding: 10px 12px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .status-tab-strip .nav-tabs {
+        border: none;
+        gap: 4px;
+    }
+    .status-tab-strip .nav-link {
+        padding: 6px 14px;
+        border: none;
+        border-radius: 8px 8px 0 0;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #6b7280;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .status-tab-strip .nav-link:hover {
+        color: #374151;
+        background: #f3f4f6;
+    }
+    .status-tab-strip .nav-link.active {
+        color: #4338ca;
+        background: #eef2ff;
+        font-weight: 600;
+    }
+    .status-tab-strip .tab-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 10px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: #e5e7eb;
+        color: #374151;
+        line-height: 1;
+    }
+    .status-tab-strip .nav-link.active .tab-count {
+        background: #6366f1;
+        color: #fff;
+    }
+    .status-tab-strip .nav-link.tab-queue.active {
+        color: #b91c1c;
+        background: #fef2f2;
+    }
+    .status-tab-strip .nav-link.tab-queue.active .tab-count {
+        background: #ef4444;
+        color: #fff;
     }
 
-    .search-chat {
-        border-radius: 8px;
+    /* ── Chat List Container ── */
+    .chat-list-panel {
+        background: #fff;
+        border: 1px solid #eef0f5;
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    body.dark-mode .chat-list-panel {
+        background: #1e1e2d;
+        border-color: #2a2a3d;
     }
 
-    .search_btn, .btn-outline-secondary {
-        border-color: #f3f4f6 !important;
+    /* ── Chat Item ── */
+    .chat-item {
+        display: flex;
+        align-items: center;
+        padding: 11px 14px;
+        gap: 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+        text-decoration: none;
+        transition: background 0.15s;
+    }
+    .chat-item:last-child { border-bottom: none; }
+    .chat-item:hover { background: #f9fafb; }
+    .chat-item.is-selected { background: #eef2ff; }
+    body.dark-mode .chat-item:hover { background: #25253a; }
+    body.dark-mode .chat-item.is-selected { background: #1e1e4a; }
+    body.dark-mode .chat-item { border-bottom-color: #2a2a3d; }
+
+    /* Avatar */
+    .ci-avatar {
+        position: relative;
+        flex-shrink: 0;
+    }
+    .ci-avatar-circle {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #fff;
+    }
+    .ci-avatar-circle.queue-bg { background: linear-gradient(135deg, #ef4444, #f97316); }
+    .ci-avatar-circle.active-bg { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .ci-status-dot {
+        position: absolute;
+        bottom: 1px;
+        right: 1px;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+    }
+    .ci-status-dot.online  { background: #22c55e; }
+    .ci-status-dot.offline { background: #9ca3af; }
+    .ci-status-dot.queue-dot { background: #22c55e; }
+    body.dark-mode .ci-status-dot { border-color: #1e1e2d; }
+
+    /* Content */
+    .ci-content { flex: 1; min-width: 0; }
+    .ci-row1 {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 6px;
+        margin-bottom: 3px;
+    }
+    .ci-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #111827;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    body.dark-mode .ci-name { color: #f0f0f0; }
+    .ci-time {
+        font-size: 0.72rem;
+        color: #9ca3af;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .ci-row2 {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .ci-badge {
+        display: inline-block;
+        padding: 1px 7px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .ci-badge.queue { background: #fef2f2; color: #b91c1c; }
+    .ci-badge.active-mine { background: #eef2ff; color: #4338ca; }
+    .ci-badge.active-other { background: #f0fdf4; color: #166534; }
+
+    /* Empty state */
+    .chat-empty-state {
+        padding: 36px 16px;
+        text-align: center;
+        color: #9ca3af;
+    }
+    .chat-empty-state i {
+        font-size: 2rem;
+        display: block;
+        margin-bottom: 8px;
+        opacity: 0.4;
+    }
+    .chat-empty-state p {
+        font-size: 0.85rem;
+        margin: 0;
     }
 
-    .search-category {
-        padding: 10px 12px 4px;
-    }
-
+    /* Search result styles */
+    .search-category { padding: 10px 12px 4px; }
     .search-time-divider {
         font-size: 0.7rem;
         font-weight: 700;
@@ -232,18 +504,23 @@
         letter-spacing: .04em;
         margin: 10px 0 6px;
     }
-
     .search-snippet {
         font-size: 0.8rem;
         color: #6c757d;
         line-height: 1.35;
     }
-
     .keyword-highlight {
         font-weight: 700;
-        color: #0d6efd;
+        color: #6366f1;
         background: transparent;
         padding: 0;
+    }
+
+    .chat-search-panel {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: inherit;
     }
 </style>
 @endpush
@@ -257,137 +534,151 @@
                  'd-none': (selectedChat && window.innerWidth < 768),
                  'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
              }">
-            <div class="card mb-3 contacts_card flex-shrink-0">
-                <div class="chat-header pb-0 border-bottom-0 shrink-0">
+            <!-- ═══════════ TOP PANEL (Header + Search + Content Filters) ═══════════ -->
+            <div class="sidebar-top-panel mb-2 flex-shrink-0">
+
+                <!-- Header -->
+                <div class="sidebar-header">
                     <div>
                         <h6>Percakapan</h6>
-                        <p x-text="isGlobalSearchMode ? (totalSearchResultCount + ' hasil') : (filteredChats.length + ' Aktif & Antrean')"></p>
-                        <!-- Debug info -->
-                        <p class="text-xs text-muted" x-show="chats.length > 0" x-text="'Total: ' + chats.length + ' chats'"></p>
+                        <p class="subtitle" x-text="isGlobalSearchMode ? (totalSearchResultCount + ' hasil ditemukan') : (filteredChats.length + ' percakapan aktif')"></p>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="sidebar-header-actions">
                         <button @click="sortBy = sortBy === 'recent' ? 'oldest' : 'recent'; fetchChats()"
-                            class="btn btn-sm btn-outline-secondary"
-                            :title="sortBy === 'recent' ? 'Terbaru - Klik untuk urutkan terlama' : 'Terlama - Klik untuk urutkan terbaru'">
-                            <i class="fe" :class="sortBy === 'recent' ? 'fe-arrow-up' : 'fe-arrow-down'"></i>
+                            :title="sortBy === 'recent' ? 'Urutkan: Terlama' : 'Urutkan: Terbaru'">
+                            <i class="fe" :class="sortBy === 'recent' ? 'fe-arrow-down' : 'fe-arrow-up'"></i>
                         </button>
-                        <button @click="fetchChats()" class="btn btn-sm btn-outline-secondary" title="Refresh">
+                        <button @click="fetchChats()" title="Refresh">
                             <i class="fe fe-refresh-cw"></i>
                         </button>
                     </div>
                 </div>
-                <div class="chat-search-panel shrink-0 mt-2">
-                    <div class="chat-search px-3 pb-1">
-                        <div class="input-group">
-                            <span class="input-group-text search-icon-bg border-end-0 text-muted ps-3 pe-2" style="border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-color: #f3f4f6;"><i class="fe fe-search"></i></span>
-                            <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchChats()" placeholder="Cari nama, kontak, atau pesan..." class="form-control search-chat border-start-0 ps-0 shadow-none" style="font-size: 0.9rem;">
-                            <span class="input-group-text search-icon-bg border-start-0 text-muted pe-3" x-show="searchQuery.length > 0 || hasActiveFilter" style="border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-color: #f3f4f6; cursor: pointer;" @click="clearSearch()" title="Hapus pencarian">
-                                <i class="fe fe-x"></i>
-                            </span>
-                        </div>
-                    </div>
 
-                    <div class="chat-filters px-3 pt-2 pb-2 border-bottom-0">
-                        <div class="d-flex align-items-center gap-2 quick-chip-row pb-1">
-                            <button type="button" class="btn btn-outline-secondary bg-white text-muted shadow-sm"
-                                :class="filters.unreadOnly ? 'border-primary text-primary' : 'border-light'"
-                                @click="toggleUnreadFilter()">
-                                Belum dibaca
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary bg-white text-muted shadow-sm"
-                                :class="filters.messageType.includes('image') ? 'border-primary text-primary' : 'border-light'"
-                                @click="toggleFilter('image')">
-                                Foto
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary"
-                                :class="filters.messageType.includes('video') ? 'btn-primary text-white border-primary' : 'text-muted'"
-                                @click="toggleFilter('video')">
-                                Video
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary"
-                                :class="filters.messageType.includes('file') ? 'btn-primary text-white border-primary' : 'text-muted'"
-                                @click="toggleFilter('file')">
-                                Dokumen
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary"
-                                :class="filters.messageType.includes('link') ? 'btn-primary text-white border-primary' : 'text-muted'"
-                                @click="toggleFilter('link')">
-                                Tautan
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary"
-                                :class="filters.messageType.includes('audio') ? 'btn-primary text-white border-primary' : 'text-muted'"
-                                @click="toggleFilter('audio')">
-                                Audio
-                            </button>
-                        </div>
+                <!-- Search -->
+                <div class="sidebar-search">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fe fe-search" style="font-size:0.85rem;"></i></span>
+                        <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchChats()"
+                            placeholder="Cari nama, kontak, atau pesan..."
+                            class="form-control">
+                        <span class="clear-btn" x-show="searchQuery.length > 0 || hasActiveFilter"
+                            @click="clearSearch()" title="Hapus">
+                            <i class="fe fe-x"></i>
+                        </span>
                     </div>
                 </div>
-            </div> <!-- CLOSE the search card -->
 
-            <div class="contacts_body chat-users-list chat-scroll flex-grow-1 w-100" style="overflow-y: auto; overflow-x: hidden;">
+                <!-- Content Filter Chips -->
+                <div class="content-filter-row">
+                    <span class="content-chip"
+                        :class="filters.unreadOnly ? 'active' : ''"
+                        @click="toggleUnreadFilter()">
+                        Belum Dibaca
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('image') ? 'active' : ''"
+                        @click="toggleFilter('image')">
+                        Foto
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('video') ? 'active' : ''"
+                        @click="toggleFilter('video')">
+                        Video
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('file') ? 'active' : ''"
+                        @click="toggleFilter('file')">
+                        Dokumen
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('link') ? 'active' : ''"
+                        @click="toggleFilter('link')">
+                        Tautan
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('audio') ? 'active' : ''"
+                        @click="toggleFilter('audio')">
+                        Audio
+                    </span>
+                </div>
+
+            </div> <!-- /TOP PANEL -->
+
+            <!-- ═══════════ CHAT LIST PANEL ═══════════ -->
+            <div class="chat-list-panel flex-grow-1 d-flex flex-column" style="overflow: hidden;">
+
                 <template x-if="!isGlobalSearchMode">
-                    <div>
-                        <div class="chat-header inner-chat-header pt-2 pb-0 mb-2 border-0">
-                            <div>
-                                <h6 class="fw-bold" style="font-size: 1.1rem; color: #1f2937;">Permintaan Baru</h6>
-                            </div>
+                    <div class="d-flex flex-column h-100" style="overflow: hidden;">
+
+                        <!-- Status Tab Strip -->
+                        <div class="status-tab-strip flex-shrink-0">
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item">
+                                    <span class="nav-link" :class="statusFilter === 'all' ? 'active' : ''"
+                                        @click="statusFilter = 'all'" style="cursor:pointer;">
+                                        Semua
+                                        <span class="tab-count" x-text="filteredChats.length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
+                                    <span class="nav-link tab-queue" :class="statusFilter === 'queue' ? 'active' : ''"
+                                        @click="statusFilter = 'queue'" style="cursor:pointer;">
+                                        Antrean
+                                        <span class="tab-count" x-text="filteredChats.filter(c => ['pending','queued'].includes(c.status)).length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
+                                    <span class="nav-link" :class="statusFilter === 'active' ? 'active' : ''"
+                                        @click="statusFilter = 'active'" style="cursor:pointer;">
+                                        Aktif
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active').length"></span>
+                                    </span>
+                                </li>
+                            </ul>
                         </div>
-                        <div class="mb-3 px-2">
-                            <template x-for="chat in filteredChats.filter(c => ['pending', 'queued'].includes(c.status))" :key="chat.id">
-                                <a href="javascript:void(0);" @click="selectChat(chat)" class="d-flex align-items-center text-decoration-none border-bottom border-light" :class="selectedChat && selectedChat.id === chat.id ? 'bg-light rounded' : ''" style="transition: background-color 0.2s; padding: 12px 0;">
-                                    <div class="flex-shrink-0 me-3 px-2">
-                                        <div class="avatar avatar-online position-relative">
-                                            <div class="avatar-title rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.1rem;">
-                                                <span x-text="getInitial(chat.customer.name)"></span>
-                                            </div>
-                                            <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-white rounded-circle" style="transform: translate(-10%, -10%); width: 13px; height: 13px;"></span>
+
+                        <!-- Unified Chat List (scrollable) -->
+                        <div style="overflow-y: auto; flex: 1;">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active'))" :key="chat.id">
+                                <a href="javascript:void(0);" @click="selectChat(chat)"
+                                    class="chat-item"
+                                    :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
+                                    style="text-decoration: none;">
+
+                                    <!-- Avatar -->
+                                    <div class="ci-avatar">
+                                        <div class="ci-avatar-circle"
+                                            :class="['pending','queued'].includes(chat.status) ? 'queue-bg' : 'active-bg'">
+                                            <span x-text="getInitial(chat.customer.name)"></span>
                                         </div>
+                                        <span class="ci-status-dot"
+                                            :class="['pending','queued'].includes(chat.status) ? 'queue-dot' : (chat.customer.is_online ? 'online' : 'offline')"></span>
                                     </div>
-                                    <div class="flex-grow-1 min-w-0 pe-2">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <div class="text-dark fw-bold text-truncate" style="font-size: 0.95rem;" x-html="highlightText(chat.customer.name)"></div>
-                                            <div class="text-muted whitespace-nowrap ms-2" style="font-size: 0.75rem;" x-text="formatShortDateTime(chat.created_at)"></div>
+
+                                    <!-- Content -->
+                                    <div class="ci-content">
+                                        <div class="ci-row1">
+                                            <span class="ci-name" x-html="highlightText(chat.customer.name)"></span>
+                                            <span class="ci-time" x-text="formatShortDateTime(chat.created_at)"></span>
                                         </div>
-                                        <div class="mb-1 text-danger" style="font-size: 0.85rem;" x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru' "></div>
-                                        <div class="text-secondary text-truncate" style="font-size: 0.75rem;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
+                                        <div class="ci-row2">
+                                            <span class="ci-badge"
+                                                :class="['pending','queued'].includes(chat.status) ? 'queue' : (chat.admin_id === adminId ? 'active-mine' : 'active-other')"
+                                                x-text="chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position : (chat.status === 'pending' ? '🔔 Permintaan Baru' : (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen')))"
+                                            ></span>
+                                        </div>
                                     </div>
                                 </a>
                             </template>
-                            <div x-show="filteredChats.filter(c => ['pending', 'queued'].includes(c.status)).length === 0" class="text-center p-3 text-muted small">
-                                Tidak ada antrean.
+
+                            <!-- Empty state -->
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active')).length === 0"
+                                class="chat-empty-state">
+                                <i class="fe fe-message-circle"></i>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : 'Belum ada percakapan.')"></p>
                             </div>
                         </div>
 
-                        <div class="chat-header inner-chat-header pt-4 pb-0 mb-2 border-0">
-                            <div>
-                                <h6 class="fw-bold" style="font-size: 1.1rem; color: #1f2937;">Sedang Dibantu</h6>
-                            </div>
-                        </div>
-                        <div class="mb-3 px-2">
-                            <template x-for="chat in filteredChats.filter(c => c.status === 'active')" :key="chat.id">
-                                <a href="javascript:void(0);" @click="selectChat(chat)" class="d-flex align-items-center text-decoration-none border-bottom border-light" :class="selectedChat && selectedChat.id === chat.id ? 'bg-light rounded' : ''" style="transition: background-color 0.2s; padding: 12px 0;">
-                                    <div class="flex-shrink-0 me-3 px-2">
-                                        <div class="avatar position-relative" :class="chat.customer.is_online ? 'avatar-online' : 'avatar-away'">
-                                            <div class="avatar-title rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.1rem;">
-                                                <span x-text="getInitial(chat.customer.name)"></span>
-                                            </div>
-                                            <span class="position-absolute bottom-0 end-0 p-1 border border-white rounded-circle" :class="chat.customer.is_online ? 'bg-success' : 'bg-secondary'" style="transform: translate(-10%, -10%); width: 13px; height: 13px;"></span>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1 min-w-0 pe-2">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <div class="text-dark fw-bold text-truncate" style="font-size: 0.95rem;" x-html="highlightText(chat.customer.name)"></div>
-                                            <div class="text-muted whitespace-nowrap ms-2" style="font-size: 0.75rem;" x-text="formatShortDateTime(chat.created_at)"></div>
-                                        </div>
-                                        <div class="mb-1 text-primary" style="font-size: 0.85rem;" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
-                                        <div class="text-secondary text-truncate" style="font-size: 0.75rem;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
-                                    </div>
-                                </a>
-                            </template>
-                            <div x-show="filteredChats.filter(c => c.status === 'active').length === 0" class="text-center p-3 text-muted small">
-                                Tidak ada chat aktif.
-                            </div>
-                        </div>
                     </div>
                 </template>
 
@@ -593,6 +884,7 @@
                 groups: [],
                 messages: [],
             },
+            statusFilter: 'all',
             filters: {
                 messageType: [],
                 unreadOnly: false,
@@ -602,6 +894,7 @@
                 this.searchQuery = '';
                 this.filters.messageType = [];
                 this.filters.unreadOnly = false;
+                this.statusFilter = 'all';
                 this.fetchChats();
             },
 
