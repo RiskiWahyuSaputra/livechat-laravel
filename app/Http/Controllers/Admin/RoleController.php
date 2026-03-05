@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class RoleController extends Controller
 {
@@ -20,9 +22,40 @@ class RoleController extends Controller
 
     public function index()
     {
-        $admins = Admin::orderBy('is_superadmin', 'desc')->latest()->get();
+        // Auto-sync data (one-time logic)
+        $this->syncLegacyRoles();
+
+        $admins = Admin::with('roleModel')->orderBy('is_superadmin', 'desc')->latest()->get();
         $permissions = $this->availablePermissions;
-        return view('admin.roles.index', compact('admins', 'permissions'));
+        $rolesList = Role::all();
+        return view('admin.roles.admins', compact('admins', 'permissions', 'rolesList'));
+    }
+
+    private function syncLegacyRoles()
+    {
+        $defaultDescriptions = [
+            'super_admin' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
+            'agent' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
+        ];
+
+        // Pastikan role default ada dengan deskripsi
+        foreach ($defaultDescriptions as $slug => $desc) {
+            Role::updateOrCreate(
+                ['slug' => $slug],
+                [
+                    'name' => Str::title(str_replace('_', ' ', $slug)),
+                    'description' => $desc
+                ]
+            );
+        }
+
+        $admins = Admin::whereNull('role_id')->whereNotNull('role')->get();
+        foreach ($admins as $admin) {
+            $role = Role::where('slug', $admin->role)->first();
+            if ($role) {
+                $admin->update(['role_id' => $role->id]);
+            }
+        }
     }
 
     public function store(Request $request)
@@ -31,10 +64,11 @@ class RoleController extends Controller
             'username' => 'required|string|max:255|unique:admins',
             'email' => 'required|string|email|max:255|unique:admins',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:super_admin,agent',
+            'role' => 'required|string', // Ini sekarang slug role
             'permissions' => 'nullable|array',
         ]);
 
+        $role = Role::where('slug', $request->role)->first();
         $is_superadmin = $request->role === 'super_admin';
         $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
 
@@ -42,31 +76,33 @@ class RoleController extends Controller
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'role_id' => $role ? $role->id : null,
+            'role' => $request->role, // simpan slug sebagai fallback
             'is_superadmin' => $is_superadmin,
             'permissions' => $permissions,
         ]);
 
-        return redirect()->route('admin.roles.index')->with('success', 'Admin baru berhasil ditambahkan.');
+        return redirect()->route('admin.admins.index')->with('success', 'Admin baru berhasil ditambahkan.');
     }
 
-    public function update(Request $request, Admin $role)
+    public function update(Request $request, Admin $admin)
     {
-        $admin = $role; // alias
         $request->validate([
             'username' => 'required|string|max:255|unique:admins,username,' . $admin->id,
             'email' => 'required|string|email|max:255|unique:admins,email,' . $admin->id,
             'password' => 'nullable|string|min:8',
-            'role' => 'required|in:super_admin,agent',
+            'role' => 'required|string',
             'permissions' => 'nullable|array',
         ]);
 
+        $role = Role::where('slug', $request->role)->first();
         $is_superadmin = $request->role === 'super_admin';
         $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
 
         $data = [
             'username' => $request->username,
             'email' => $request->email,
+            'role_id' => $role ? $role->id : null,
             'role' => $request->role,
             'is_superadmin' => $is_superadmin,
             'permissions' => $permissions,
@@ -78,22 +114,16 @@ class RoleController extends Controller
 
         $admin->update($data);
 
-        // Jika mengupdate diri sendiri dan mencabut hak akses role, maka mungkin butuh redirect ke dashboard
-        if (auth('admin')->id() === $admin->id && !$admin->hasPermission('manage_roles')) {
-            return redirect()->route('admin.dashboard')->with('success', 'Akses Anda telah diperbarui.');
-        }
-
-        return redirect()->route('admin.roles.index')->with('success', 'Data admin berhasil diperbarui.');
+        return redirect()->route('admin.admins.index')->with('success', 'Data admin berhasil diperbarui.');
     }
 
-    public function destroy(Admin $role)
+    public function destroy(Admin $admin)
     {
-        $admin = $role; // alias
         if (auth('admin')->id() === $admin->id) {
             return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
         }
 
         $admin->delete();
-        return redirect()->route('admin.roles.index')->with('success', 'Admin berhasil dihapus.');
+        return redirect()->route('admin.admins.index')->with('success', 'Admin berhasil dihapus.');
     }
 }
