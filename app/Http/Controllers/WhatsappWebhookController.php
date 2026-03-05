@@ -70,7 +70,9 @@ class WhatsappWebhookController extends Controller
      */
     private function sendWhapiMessage($to, $text)
     {
-        $response = Http::withToken(env('WHAPI_TOKEN'))
+        $token = \App\Models\Setting::get('whapi_token', env('WHAPI_TOKEN'));
+        
+        $response = Http::withToken($token)
             ->post("https://gate.whapi.cloud/messages/text", [
                 'to' => $to,
                 'body' => $text,
