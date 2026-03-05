@@ -123,6 +123,13 @@
                     <div>
                         <h6>Percakapan</h6>
                         <p x-text="filteredChats.length + ' Aktif & Antrean'"></p>
+                        <!-- Debug info -->
+                        <p class="text-xs text-muted" x-show="chats.length > 0" x-text="'Total: ' + chats.length + ' chats'"></p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button @click="fetchChats()" class="btn btn-sm btn-outline-secondary" title="Refresh">
+                            <i class="fe fe-refresh-cw"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="chat-search">
@@ -249,7 +256,7 @@
                                     <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
                                         <li class="d-flex ms-2">
                                             <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
-                                            <button class="btn btn-sm btn-outline-success me-1" @click="showCloseModal = true" title="Selesaikan"><i class="fe fe-check"></i></button>
+                                            <button class="btn btn-sm btn-outline-success me-1" @click="confirmCloseChat()" :disabled="isSubmitting" title="Selesaikan"><i class="fe fe-check"></i></button>
                                             <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
                                         </li>
                                     </template>
@@ -277,33 +284,6 @@
     </div>
 
     <!-- Modals -->
-    <div class="modal fade" :class="showCloseModal ? 'show d-block' : ''" tabindex="-1" x-show="showCloseModal" x-cloak>
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Selesaikan Percakapan</h5>
-                    <button type="button" class="btn-close" @click="showCloseModal = false"></button>
-                </div>
-                <div class="modal-body">
-                    <label class="form-label">Kategori Masalah</label>
-                    <select x-model="closeCategory" class="form-select">
-                        <option value="">-- Pilih Kategori --</option>
-                        <option value="Info Produk">Info Produk</option>
-                        <option value="Dukungan Teknis">Dukungan Teknis</option>
-                        <option value="Pembayaran">Pembayaran</option>
-                        <option value="Komplain">Komplain</option>
-                        <option value="Lainnya">Lainnya</option>
-                    </select>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="showCloseModal = false">Batal</button>
-                    <button type="button" class="btn btn-primary" @click="closeChat()" :disabled="!closeCategory || isSubmitting">Selesaikan</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal-backdrop fade" :class="showCloseModal || showHandoverModal ? 'show d-block' : ''" x-show="showCloseModal || showHandoverModal" x-cloak></div>
-
     <div class="modal fade" :class="showHandoverModal ? 'show d-block' : ''" tabindex="-1" x-show="showHandoverModal" x-cloak>
         <div class="modal-dialog">
             <div class="modal-content">
@@ -348,9 +328,7 @@
             searchQuery: '',
             isClaiming: false,
             isSubmitting: false,
-            showCloseModal: false,
             showHandoverModal: false,
-            closeCategory: '',
             handoverToAdminId: '',
             handoverNote: '',
             audioUnlocked: false,
@@ -360,6 +338,12 @@
             init() {
                 // Update currentTime every minute for relative time reactivity
                 setInterval(() => { this.currentTime = Date.now(); }, 60000);
+                
+                // Auto-refresh chat list every 5 seconds
+                setInterval(() => { 
+                    console.log('🔄 Auto-refresh chat list...');
+                    this.fetchChats(); 
+                }, 5000);
                 
                 // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
                 const unlockAudio = () => {
@@ -390,6 +374,7 @@
                         window.Echo.private('admin.dashboard')
                             .listen('.conversation.status.changed', (e) => {
                                 console.log('🔔 Status Changed Received:', e);
+                                console.log('📝 Conversation ID:', e.conversation_id, 'Status:', e.status);
                                 
                                 // Update status offline secara reaktif dari data broadcast
                                 if (e.customer) {
@@ -411,16 +396,8 @@
                                 if (this.selectedChat && this.selectedChat.id === e.conversation_id && e.status === 'closed') {
                                     this.selectedChat.status = 'closed';
 
-                                    Swal.fire({
-                                        title: 'Sesi Berakhir',
-                                        text: 'Pelanggan telah tidak aktif. Sesi ditutup otomatis.',
-                                        icon: 'info',
-                                        timer: 4000,
-                                        showConfirmButton: false
-                                    });
-
                                     // Refresh list setelah jeda agar chat pindah ke history
-                                    setTimeout(() => { this.fetchChats(); }, 3000);
+                                    setTimeout(() => { this.fetchChats(); }, 1000);
                                 } else {
                                     this.fetchChats();
                                 }
@@ -451,10 +428,13 @@
             },
 
             async fetchChats() {
+                console.log('🔄 Fetching chats...');
                 try {
                     const res = await fetch('/admin/chat?ajax=1');
                     const data = await res.json();
+                    console.log('📋 Chats received:', data);
                     this.chats = [...data.pending, ...data.active];
+                    console.log('✅ Total chats loaded:', this.chats.length);
                 } catch (e) { console.error('Failed to fetch chats', e); }
             },
 
@@ -527,16 +507,41 @@
                 finally { this.isClaiming = false; }
             },
 
+            async confirmCloseChat() {
+                Swal.fire({
+                    title: 'Selesaikan Percakapan?',
+                    text: 'Percakapan ini akan ditutup dan dipindahkan ke riwayat.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Selesaikan',
+                    cancelButtonText: 'Batal'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await this.closeChat();
+                    }
+                });
+            },
+
             async closeChat() {
                 this.isSubmitting = true;
                 try {
                     const res = await fetch(`/admin/conversation/${this.selectedChat.id}/close`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                        body: JSON.stringify({ problem_category: this.closeCategory })
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
                     });
                     if (!res.ok) throw new Error('Gagal menyelesaikan chat');
-                    window.location.reload();
+                    
+                    Toast.fire({ icon: 'success', title: 'Percakapan diselesaikan' });
+                    
+                    // Reset selection and refresh list
+                    this.selectedChat = null;
+                    await this.fetchChats();
                 } catch (e) { 
                     Toast.fire({ icon: 'error', title: e.message }); 
                 }

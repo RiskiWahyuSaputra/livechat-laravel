@@ -13,6 +13,7 @@ class Conversation extends Model
         'user_id',
         'admin_id',
         'status',
+        'bot_phase',
         'queue_position',
         'problem_category',
         'last_message_at',

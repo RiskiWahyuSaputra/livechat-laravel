@@ -22,27 +22,30 @@
             <div class="card-body">
                 <!-- Filter Form -->
                 <form action="{{ route('admin.history.index') }}" method="GET" class="mb-4 p-3 border rounded">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-4">
+                    <div class="row g-3 justify-content-end">
+                        <div class="col-sm-6 col-md-4 col-lg-3">
                             <label for="search" class="form-label">Cari Pelanggan</label>
                             <input type="text" name="search" id="search" value="{{ request('search') }}" class="form-control" placeholder="Nama atau kontak...">
                         </div>
-                        <div class="col-md-3">
-                            <label for="category" class="form-label">Kategori Masalah</label>
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <label for="category" class="form-label">Kategori</label>
                             <select name="category" id="category" class="form-select">
-                                <option value="">Semua Kategori</option>
+                                <option value="">Semua</option>
                                 @foreach($problemCategories as $category)
                                     <option value="{{ $category }}" {{ request('category') == $category ? 'selected' : '' }}>{{ $category }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-md-3 col-lg-3">
                             <label for="date_range" class="form-label">Rentang Tanggal</label>
                             <input type="text" name="date_range" id="date_range" value="{{ request('date_range') }}" class="form-control" placeholder="Pilih tanggal...">
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
-                            <a href="{{ route('admin.history.index') }}" class="btn btn-secondary w-100">Reset</a>
+                        <div class="col-sm-6 col-md-auto d-flex align-items-end">
+                            <div class="btn-group">
+                                <button type="submit" class="btn btn-primary">Filter</button>
+                                <a href="{{ route('admin.history.index', ['filter' => 'my_chat']) }}" class="btn btn-info {{ request('filter') === 'my_chat' ? 'active' : '' }}">My Chat</a>
+                                <a href="{{ route('admin.history.index') }}" class="btn btn-secondary">Reset</a>
+                            </div>
                         </div>
                     </div>
                 </form>

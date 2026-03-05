@@ -64,11 +64,30 @@
                                     <small class="text-muted">{{ $customer->origin }}</small>
                                 </td>
                                 <td>
-                                    @if($customer->is_blocked)
-                                        <span class="badge bg-danger-light">Diblokir</span>
-                                    @else
-                                        <span class="badge bg-success-light">Aktif</span>
-                                    @endif
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="d-inline-block rounded-circle" 
+                                              style="width: 8px; height: 8px; background-color: {{ $customer->is_online ? '#28a745' : '#adb5bd' }};"></span>
+                                        <span class="badge rounded-pill fw-bold text-[10px] py-1 px-2 uppercase tracking-wider"
+                                              style="
+                                              @if($customer->is_blocked) background-color: #fee2e2; color: #dc2626; 
+                                              @elseif($customer->current_status === 'active') background-color: #dcfce7; color: #15803d; 
+                                              @elseif(in_array($customer->current_status, ['pending', 'queued'])) background-color: #fef9c3; color: #854d0e;
+                                              @else background-color: #f1f5f9; color: #64748b; @endif
+                                              ">
+                                            @if($customer->is_blocked) 
+                                                Diblokir 
+                                            @elseif($customer->current_status === 'active') 
+                                                Percakapan Aktif 
+                                            @elseif(in_array($customer->current_status, ['pending', 'queued'])) 
+                                                Menunggu 
+                                            @else 
+                                                Selesai 
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <small class="text-[10px] font-bold text-muted uppercase tracking-tighter">
+                                        {{ $customer->is_online ? 'Online' : 'Offline' }}
+                                    </small>
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex justify-content-end">
