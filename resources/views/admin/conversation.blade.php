@@ -12,196 +12,403 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
-        ::-webkit-scrollbar { width: 6px; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* ── Date Separator ── */
+        .date-separator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 16px 0 10px;
+        }
+        .date-separator::before, .date-separator::after {
+            content: ''; flex: 1; height: 1px; background: #e2e8f0;
+        }
+        .date-separator span {
+            font-size: 11px; font-weight: 600; color: #94a3b8;
+            white-space: nowrap; letter-spacing: 0.04em; text-transform: uppercase;
+        }
+
+        /* ── Message Row ── */
+        .msg-row {
+            display: flex; flex-direction: column;
+            max-width: 72%; margin-bottom: 2px;
+        }
+        .msg-row.from-admin { align-self: flex-end; align-items: flex-end; }
+        .msg-row.from-user  { align-self: flex-start; align-items: flex-start; }
+        .msg-row.from-system { align-self: center; align-items: center; max-width: 90%; }
+        .msg-row.from-whisper { align-self: center; align-items: center; max-width: 80%; }
+
+        /* ── Sender Label ── */
+        .sender-label {
+            font-size: 11px; font-weight: 600; color: #94a3b8;
+            margin-bottom: 4px; letter-spacing: 0.02em;
+        }
+        .from-admin .sender-label { color: #818cf8; }
+        .from-user  .sender-label { color: #64748b; }
+
+        /* ── Bubble ── */
+        .bubble {
+            padding: 10px 14px; border-radius: 18px;
+            font-size: 14px; line-height: 1.55;
+            word-break: break-word; max-width: 100%; position: relative;
+        }
+        .bubble-admin {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #fff;
+            border-radius: 18px 18px 4px 18px;
+            box-shadow: 0 2px 12px rgba(99,102,241,0.25);
+        }
+        .bubble-user {
+            background: #ffffff; color: #1e293b;
+            border-radius: 18px 18px 18px 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            border: 1px solid #f1f5f9;
+        }
+        .bubble-whisper {
+            background: #fffbeb; color: #78350f;
+            border: 1.5px dashed #fcd34d; border-radius: 14px; font-size: 13px;
+        }
+        .bubble-system {
+            background: #fef2f2; color: #991b1b;
+            border: 1px solid #fecaca; border-radius: 20px;
+            font-size: 12px; font-weight: 500; padding: 5px 14px;
+        }
+
+        /* ── Timestamp ── */
+        .msg-time { font-size: 10px; color: #94a3b8; margin-top: 4px; padding: 0 4px; }
+
+        /* ── Whisper Header ── */
+        .whisper-header {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 10px; font-weight: 700; color: #d97706;
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+        }
+
+        /* ── File Attachment ── */
+        .file-attachment { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+        .file-icon {
+            width: 38px; height: 38px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .bubble-admin .file-icon { background: rgba(255,255,255,0.2); }
+        .bubble-user  .file-icon { background: #f1f5f9; }
+
+        /* ── Sticky Footer ── */
+        .chat-footer {
+            flex-shrink: 0; background: #ffffff;
+            border-top: 1px solid #e8ecf3;
+            box-shadow: 0 -2px 16px rgba(0,0,0,0.05);
+        }
+
+        /* ── Typing Indicator ── */
+        .typing-bar {
+            padding: 6px 16px; display: flex; align-items: center; gap: 8px;
+            background: #f8fafc; border-bottom: 1px solid #f1f5f9;
+        }
+        .typing-bar span { font-size: 12px; color: #64748b; font-style: italic; font-weight: 500; }
+        .typing-dots { display: flex; gap: 3px; align-items: center; }
+        .typing-dot {
+            width: 5px; height: 5px; border-radius: 50%; background: #94a3b8;
+            animation: bounce-dot 1.2s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce-dot {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-5px); }
+        }
+
+        /* ── Cannot Reply Notice ── */
+        .no-reply-bar {
+            background: #f8fafc; color: #64748b;
+            padding: 10px 16px; text-align: center; font-size: 13px; font-weight: 500;
+        }
+
+        /* ── Input Form ── */
+        .input-form { padding: 10px 14px 12px; }
+
+        /* Quick Replies */
+        .quick-replies-bar {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px;
+        }
+        .quick-replies-bar::-webkit-scrollbar { height: 3px; }
+        .qr-label {
+            font-size: 10px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.07em;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .qr-chip {
+            flex-shrink: 0; padding: 5px 12px;
+            background: #f1f5f9; border: 1px solid #e2e8f0;
+            border-radius: 20px; font-size: 12px; font-weight: 500;
+            color: #475569; cursor: pointer; transition: all 0.15s;
+            white-space: nowrap; max-width: 200px;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .qr-chip:hover { background: #eef2ff; border-color: #a5b4fc; color: #4338ca; }
+
+        /* Input row */
+        .input-row {
+            display: flex; align-items: center; gap: 5px; /* Diubah dari flex-end ke center */
+            background: #f8fafc; border: 1.5px solid #e2e8f0;
+            border-radius: 16px; padding: 6px 6px 6px 10px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-row:focus-within {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+            background: #fff;
+        }
+        .input-row.whisper-mode { border-color: #fcd34d; background: #fffdf0; }
+        .input-row.whisper-mode:focus-within { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+
+        /* Icon buttons */
+        .input-icon-btn {
+            width: 32px; height: 32px; border-radius: 10px; border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+            background: transparent; color: #94a3b8;
+            padding: 0;
+        }
+        .input-icon-btn:hover { background: #f1f5f9; color: #475569; }
+        .input-icon-btn.active-whisper { background: #fef3c7; color: #d97706; }
+        .input-icon-btn.active-whisper:hover { background: #fde68a; }
+
+        /* Textarea */
+        .msg-textarea {
+            flex: 1; border: none; background: transparent; resize: none;
+            font-size: 14px; line-height: 1.5; color: #1e293b;
+            padding: 4px 2px; min-height: 32px; max-height: 128px;
+            overflow-y: auto; outline: none;
+        }
+        .msg-textarea::placeholder { color: #94a3b8; }
+        .msg-textarea.whisper-mode { color: #78350f; }
+        .msg-textarea.whisper-mode::placeholder { color: #d97706; opacity: 0.6; }
+
+        /* Send button */
+        .send-btn {
+            flex-shrink: 0; height: 36px; padding: 0 16px;
+            border-radius: 12px; border: none; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .send-btn.normal {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+        }
+        .send-btn.normal:hover { box-shadow: 0 4px 14px rgba(99,102,241,0.4); transform: translateY(-1px); }
+        .send-btn.whisper {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff; box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+        }
+        .send-btn.whisper:hover { box-shadow: 0 4px 14px rgba(245,158,11,0.4); transform: translateY(-1px); }
+        .send-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+        /* Slash dropdown */
+        .slash-dropdown {
+            position: absolute; bottom: calc(100% + 8px); left: 0; right: 0;
+            background: #fff; border: 1px solid #e2e8f0;
+            border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            z-index: 50; overflow: hidden; max-height: 200px; overflow-y: auto;
+        }
+        .slash-dropdown-header {
+            padding: 8px 14px; font-size: 10px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .slash-dropdown-item {
+            width: 100%; text-align: left; padding: 9px 14px; font-size: 13px;
+            border: none; background: transparent; cursor: pointer; display: block;
+            color: #374151; transition: background 0.1s;
+        }
+        .slash-dropdown-item:hover, .slash-dropdown-item.selected {
+            background: #eef2ff; color: #4338ca; font-weight: 500;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
+<body class="text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden"
+      style="background:#f0f2f8; margin:0;"
       x-data="adminChat({{ $conversation->id }}, {{ $admin->id }}, {{ Js::from($messages) }}, '{{ $conversation->status }}', {{ $conversation->admin_id }})">
 
-    <!-- Messages List -->
-    <main id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-4">
+    <!-- MESSAGES AREA -->
+    <main id="messages-container" style="flex:1; overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:2px;">
         <template x-for="(msg, index) in messages" :key="msg.id || msg.temp_id">
-            <div class="flex flex-col w-full">
+            <div style="display:flex; flex-direction:column; width:100%;">
                 <!-- Date Separator -->
                 <template x-if="shouldShowDateSeparator(msg.created_at, index)">
-                    <div class="w-full flex justify-center my-2">
-                        <span class="bg-slate-200 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium" x-text="formatDateSeparator(msg.created_at)"></span>
+                    <div class="date-separator">
+                        <span x-text="formatDateSeparator(msg.created_at)"></span>
                     </div>
                 </template>
-                <div class="flex flex-col w-full" :class="msg.message_type === 'whisper' ? 'items-center' : (msg.sender_type === 'admin' ? 'items-end' : 'items-start')">
-                
+
                 <!-- System Message -->
                 <template x-if="msg.sender_type === 'system'">
-                    <div class="w-full flex justify-center my-2">
-                        <div class="bg-red-50 text-red-600 font-medium text-[11px] px-3 py-1.5 rounded-full border border-red-100 text-center shadow-sm max-w-[85%]">
-                            <span x-html="formatMessage(msg.content)"></span>
-                        </div>
+                    <div class="msg-row from-system">
+                        <div class="bubble bubble-system"><span x-html="formatMessage(msg.content)"></span></div>
                     </div>
                 </template>
 
-                <!-- Normal Message OR Whisper -->
-                <template x-if="msg.sender_type !== 'system'">
-                    <div class="max-w-[85%] flex flex-col relative" :class="msg.message_type === 'whisper' ? 'items-center text-center' : (msg.sender_type === 'admin' ? 'items-end' : 'items-start')">
-                        
-                        <!-- Header text untuk whisper -->
-                        <span x-show="msg.message_type === 'whisper'" class="text-[10px] font-bold text-amber-600 tracking-wider mb-1 flex items-center justify-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                            INTERNAL NOTE
-                        </span>
+                <!-- Whisper / Internal Note -->
+                <template x-if="msg.sender_type !== 'system' && msg.message_type === 'whisper'">
+                    <div class="msg-row from-whisper">
+                        <div class="whisper-header">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            Internal Note
+                        </div>
+                        <div class="bubble bubble-whisper"><span x-html="formatMessage(msg.content)"></span></div>
+                        <span class="msg-time" x-text="timeAgo(msg.created_at)"></span>
+                    </div>
+                </template>
 
-                        <!-- Label Sender -->
-                        <span x-show="msg.sender_type === 'user'" class="text-[11px] text-slate-400 font-medium mb-1 ml-1 text-left">Pelanggan</span>
-                        <span x-show="msg.sender_type === 'admin' && msg.message_type !== 'whisper'" 
-                              class="text-[11px] text-slate-400 font-medium mb-1 mr-1 text-right"
-                              x-text="msg.sender_id == 0 ? 'Bot Assistant' : 'Anda'"></span>
+                <!-- Normal Message -->
+                <template x-if="msg.sender_type !== 'system' && msg.message_type !== 'whisper'">
+                    <div class="msg-row" :class="msg.sender_type === 'admin' ? 'from-admin' : 'from-user'">
 
-                        <!-- Bubble Box -->
-                        <div class="px-4 py-2.5 md:px-5 md:py-3 text-[15px] leading-relaxed relative max-w-full md:max-w-[450px] mx-auto shadow-sm break-words overflow-hidden min-w-0"
-                             :class="{
-                                 'bg-blue-600 text-white rounded-2xl rounded-br-sm border border-blue-700': msg.sender_type === 'admin' && msg.message_type !== 'whisper', 
-                                 'bg-white text-slate-800 rounded-2xl rounded-bl-sm border border-slate-200 shadow-sm': msg.sender_type === 'user',
-                                 'bg-amber-100 text-amber-950 border-dashed border-2 border-amber-300 rounded-2xl w-fit': msg.message_type === 'whisper'
-                             }">
-                            <template x-if="msg.message_type === 'text' || msg.message_type === 'whisper'">
-                                <span x-html="formatMessage(msg.content)"></span>
-                            </template>
-                            <template x-if="msg.message_type === 'image'">
-                                <div class="space-y-2 max-w-full">
-                                    <img :src="msg.content" class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity object-cover" @click="window.open(msg.content, '_blank')">
-                                </div>
-                            </template>
-                            <template x-if="msg.message_type === 'file'">
-                                <div class="w-full min-w-0">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-10 h-10 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-black/5">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                        </div>
-                                        <div class="flex-1 min-w-0 overflow-hidden text-left">
-                                            <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
-                                            <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:opacity-80 underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
-                                                <span>Unduh File</span>
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                            </a>
-                                        </div>
+                        <div class="sender-label" x-text="msg.sender_type === 'user' ? 'Pelanggan' : (msg.sender_id == 0 ? 'Bot Assistant' : 'Anda')"></div>
+
+                        <!-- Image -->
+                        <template x-if="msg.message_type === 'image'">
+                            <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'" style="padding:6px;">
+                                <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:pointer;" class="hover:opacity-90 transition-opacity" @click="window.open(msg.content, '_blank')">
+                            </div>
+                        </template>
+
+                        <!-- File -->
+                        <template x-if="msg.message_type === 'file'">
+                            <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'">
+                                <div class="file-attachment">
+                                    <div class="file-icon">
+                                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    </div>
+                                    <div style="flex:1; min-width:0;">
+                                        <p style="margin:0 0 4px; font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="msg.content.split('/').pop()"></p>
+                                        <a :href="msg.content" target="_blank"
+                                           style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;"
+                                           :style="msg.sender_type === 'admin' ? 'color:rgba(255,255,255,0.85)' : 'color:#6366f1'">
+                                            Unduh File ↓
+                                        </a>
                                     </div>
                                 </div>
-                            </template>
-                        </div>
-                        
-                        <!-- Timestamp -->
-                        <span class="text-[10px] text-slate-400 mt-1 mx-1" x-text="timeAgo(msg.created_at)" :title="new Date(msg.created_at).toLocaleString('id-ID', {day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta'})"></span>
+                            </div>
+                        </template>
+
+                        <!-- Text -->
+                        <template x-if="msg.message_type === 'text'">
+                            <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'">
+                                <span x-html="formatMessage(msg.content)"></span>
+                            </div>
+                        </template>
+
+                        <span class="msg-time"
+                            x-text="timeAgo(msg.created_at)"
+                            :title="new Date(msg.created_at).toLocaleString('id-ID', {day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'})">
+                        </span>
                     </div>
                 </template>
             </div>
         </template>
-        <!-- Anchor for auto-scroll -->
-        <div id="scroll-anchor" class="h-1"></div>
+        <div id="scroll-anchor" style="height:4px;"></div>
     </main>
 
-    <!-- Sticky Footer (Status & Input) -->
-    <div class="shrink-0 bg-white border-t border-slate-200">
-        
+    <!-- STICKY FOOTER -->
+    <div class="chat-footer">
+
         <!-- Typing Indicator -->
-        <div x-show="isTyping" x-cloak class="px-5 py-2 flex items-center gap-2 bg-slate-50/50">
-            <span class="text-xs italic text-slate-500 font-medium">Pengguna sedang mengetik</span>
-            <div class="flex gap-1">
-                <div class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0ms"></div>
-                <div class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 150ms"></div>
-                <div class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 300ms"></div>
+        <div class="typing-bar" x-show="isTyping" x-cloak>
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
             </div>
+            <span>Pelanggan sedang mengetik...</span>
         </div>
 
-        <!-- Cannot Reply Notice (If Read Only or Closed) -->
-        <div x-show="!canReply && status !== 'pending' && status !== 'queued'" x-cloak class="bg-slate-100 text-slate-600 py-3 text-center text-sm font-medium">
-            <span x-show="status === 'closed'">Sesi obrolan ini telah ditutup.</span>
-            <span x-show="status === 'active' && adminId !== sessionAdminId">Mode Membaca (Read-Only)</span>
+        <!-- Cannot Reply Notice -->
+        <div class="no-reply-bar" x-show="!canReply && status !== 'pending' && status !== 'queued'" x-cloak>
+            <span x-show="status === 'closed'">⛔ Sesi obrolan ini telah ditutup.</span>
+            <span x-show="status === 'active' && adminId !== sessionAdminId">👁 Mode Membaca (Read-Only)</span>
         </div>
 
-        <!-- Input Area (Form) -->
-        <form class="p-3 bg-white transition-opacity" :class="(!canReply) ? 'opacity-50' : ''" @submit.prevent="sendMessage" x-show="status === 'pending' || status === 'queued' || canReply" x-cloak>
-            
-            <!-- Type Toggle & Quick Replies -->
-            <div class="flex flex-col gap-2 mb-3">
-                <!-- Quick Replies Pills -->
-                <div class="flex items-center gap-2 overflow-x-auto pb-1" x-show="messageType === 'text'" x-transition 
-                     style="scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1 shrink-0">Balasan Cepat:</span>
-                    <template x-for="(reply, index) in quickReplies" :key="index">
-                        <button type="button" 
-                                @click="insertQuickReply(reply)"
-                                class="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-full text-[11px] font-semibold transition-all shadow-sm max-w-[200px] truncate text-left"
-                                :title="reply">
-                            <span x-text="reply"></span>
-                        </button>
-                    </template>
-                </div>
+        <!-- Input Form -->
+        <form class="input-form"
+              :class="(!canReply) ? 'opacity-50 pointer-events-none' : ''"
+              @submit.prevent="sendMessage"
+              x-show="status === 'pending' || status === 'queued' || canReply" x-cloak>
+
+            <!-- Quick Replies -->
+            <div class="quick-replies-bar" x-show="messageType === 'text'" x-transition>
+                <span class="qr-label">Cepat:</span>
+                <template x-for="(reply, index) in quickReplies" :key="index">
+                    <button type="button" class="qr-chip" @click="insertQuickReply(reply)" :title="reply">
+                        <span x-text="reply"></span>
+                    </button>
+                </template>
             </div>
-            
-            <!-- Input Textarea & Submit Button -->
-            <div class="flex items-end gap-2 relative">
-                
-                <!-- Slash Command Dropdown -->
-                <div x-show="showDropdown && filteredQuickReplies.length > 0" 
+
+            <!-- Input Row -->
+            <div class="input-row" :class="messageType === 'whisper' ? 'whisper-mode' : ''" style="position:relative;">
+
+                <!-- Slash dropdown -->
+                <div x-show="showDropdown && filteredQuickReplies.length > 0"
                      x-ref="quickReplyDropdown"
-                     x-transition.opacity.duration.200ms
+                     x-transition.opacity.duration.150ms
                      @click.away="showDropdown = false"
-                     class="absolute bottom-full left-12 mb-2 w-80 max-h-48 overflow-y-auto bg-white border border-slate-200 shadow-xl rounded-xl z-50 py-1"
-                     style="display: none;">
-                    <div class="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 flex justify-between items-center">
-                        <span>Pilih Balasan Cepat</span>
-                        <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">↑↓ + Enter</span>
+                     class="slash-dropdown">
+                    <div class="slash-dropdown-header">
+                        <span>Balasan Cepat</span>
+                        <span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:10px;">↑↓ Enter</span>
                     </div>
                     <template x-for="(reply, index) in filteredQuickReplies" :key="index">
-                        <button type="button" 
+                        <button type="button" class="slash-dropdown-item"
+                                :class="selectedIndex === index ? 'selected' : ''"
                                 @click="insertQuickReply(reply); showDropdown = false;"
-                                @mouseenter="selectedIndex = index"
-                                class="w-full text-left px-4 py-2 text-[13px] transition-colors block"
-                                :class="selectedIndex === index ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700 hover:bg-slate-50'">
+                                @mouseenter="selectedIndex = index">
                             <span x-text="reply"></span>
                         </button>
                     </template>
                 </div>
 
-                <!-- Internal Note Toggle Button -->
-                <button type="button" 
-                        @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
-                        class="absolute left-3 bottom-2.5 w-8 h-8 rounded-full flex items-center justify-center transition-colors z-10"
-                        :class="messageType === 'whisper' ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'"
-                        :title="messageType === 'whisper' ? 'Mode Catatan Internal Aktif' : 'Nyalakan Mode Catatan Internal'">
-                    <svg class="w-4 h-4" x-show="messageType === 'text'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                    <svg class="w-4 h-4" x-show="messageType === 'whisper'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                <!-- Internal Note Toggle -->
+                <button type="button" @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
+                        class="input-icon-btn" :class="messageType === 'whisper' ? 'active-whisper' : ''"
+                        :title="messageType === 'whisper' ? 'Catatan Internal Aktif — klik untuk matikan' : 'Catatan Internal'">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="messageType === 'text'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="messageType === 'whisper'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                 </button>
 
-                <!-- File Upload Button -->
-                <button type="button" 
-                        @click="$refs.fileInput.click()"
-                        class="absolute left-[3.25rem] bottom-2.5 w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 flex items-center justify-center transition-colors z-10"
-                        title="Unggah Gambar atau File">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                <!-- File Upload -->
+                <button type="button" @click="$refs.fileInput.click()" class="input-icon-btn" title="Lampirkan Gambar / File">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                 </button>
-                <input type="file" x-ref="fileInput" class="hidden" @change="uploadFile">
+                <input type="file" x-ref="fileInput" style="display:none;" @change="uploadFile">
 
+                <!-- Textarea -->
                 <textarea x-model="newMessage" x-ref="messageInput"
-                          :placeholder="(!canReply) ? 'Menunggu obrolan diklaim...' : (messageType === 'whisper' ? 'Ketik catatan internal...' : 'Ketik balasan Anda ke pelanggan...')" 
-                          @input="handleInput"
-                          @keydown="handleKeydown"
+                          :placeholder="(!canReply) ? 'Menunggu chat diklaim...' : (messageType === 'whisper' ? '🔒 Tulis catatan internal...' : 'Ketik pesan ke pelanggan...')"
+                          @input="handleInput" @keydown="handleKeydown"
                           :disabled="isSending || !canReply"
-                          class="flex-1 pl-24 max-h-32 min-h-[44px] border-transparent focus:ring-2 rounded-xl px-4 py-2 text-[13px] transition-colors resize-none overflow-y-auto"
-                          :class="messageType === 'whisper' ? 'bg-amber-50 focus:bg-white focus:border-amber-400 focus:ring-amber-200 text-amber-900 placeholder:text-amber-300' : 'bg-slate-100 focus:bg-white focus:border-blue-500 focus:ring-blue-200 text-slate-800 placeholder:text-slate-400'"
+                          class="msg-textarea" :class="messageType === 'whisper' ? 'whisper-mode' : ''"
                           rows="1"></textarea>
-                       
-                <button type="submit" 
+
+                <!-- Send Button -->
+                <button type="submit"
                         :disabled="!newMessage.trim() || isSending || !canReply"
-                        class="shrink-0 font-semibold px-4 h-11 rounded-xl text-white flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        :class="messageType === 'whisper' ? 'bg-amber-500 hover:bg-amber-600 shadow-md shadow-amber-500/20' : 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/20'">
-                    Kirim
+                        class="send-btn" :class="messageType === 'whisper' ? 'whisper' : 'normal'">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                    <span x-text="messageType === 'whisper' ? 'Catat' : 'Kirim'"></span>
                 </button>
             </div>
         </form>
     </div>
+
 
     <!-- Script Alpine.js Tidak Perlu Berubah Banyak -->
     <script>
