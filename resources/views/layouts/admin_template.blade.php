@@ -153,9 +153,6 @@
                 visibility: hidden;
                 z-index: 11000 !important;
                 width: 260px !important;
-                top: 0 !important;
-                bottom: 0 !important;
-                height: 100vh !important;
             }
             .slide-nav .sidebar {
                 margin-left: 0;
@@ -251,14 +248,14 @@
         
         .sidebar {
             position: fixed;
-            top: 60px;
+            top: 0;
             bottom: 0;
             left: 0;
             width: 230px;
             z-index: 1001;
             transition: all 0.2s ease-in-out;
             overflow-y: auto !important;
-            height: calc(100vh - 60px);
+            height: 100vh;
         }
         
         .sidebar-logo {
