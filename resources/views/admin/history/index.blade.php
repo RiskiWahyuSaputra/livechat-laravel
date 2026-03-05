@@ -7,41 +7,28 @@
     <div class="col-sm-12">
         <div class="card">
             <div class="card-header">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h4 class="card-title">Riwayat Chat & Arsip</h4>
-                    </div>
-                    <div class="col-auto">
-                        <form action="{{ route('admin.history.index') }}" method="GET" class="d-flex">
-                            <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Cari pelanggan...">
-                            <button type="submit" class="btn btn-sm btn-primary ms-2"><i class="fe fe-search"></i></button>
-                        </form>
-                    </div>
-                </div>
+                <h4 class="card-title">Riwayat Chat & Arsip</h4>
             </div>
             <div class="card-body">
                 <!-- Filter Form -->
-                <form action="{{ route('admin.history.index') }}" method="GET" class="mb-4 p-3 border rounded">
-                    <div class="row g-3 justify-content-end">
-                        <div class="col-sm-6 col-md-4 col-lg-3">
-                            <label for="search" class="form-label">Cari Pelanggan</label>
-                            <input type="text" name="search" id="search" value="{{ request('search') }}" class="form-control" placeholder="Nama atau kontak...">
+                <form action="{{ route('admin.history.index') }}" method="GET" class="mb-4">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-lg-4">
+                            <input type="text" name="search" id="search" value="{{ request('search') }}" class="form-control" placeholder="Cari pelanggan...">
                         </div>
-                        <div class="col-sm-6 col-md-3 col-lg-2">
-                            <label for="category" class="form-label">Kategori</label>
+                        <div class="col-lg-2">
                             <select name="category" id="category" class="form-select">
-                                <option value="">Semua</option>
+                                <option value="">Semua Kategori</option>
                                 @foreach($problemCategories as $category)
                                     <option value="{{ $category }}" {{ request('category') == $category ? 'selected' : '' }}>{{ $category }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-sm-6 col-md-3 col-lg-3">
-                            <label for="date_range" class="form-label">Rentang Tanggal</label>
+                        <div class="col-lg-3">
                             <input type="text" name="date_range" id="date_range" value="{{ request('date_range') }}" class="form-control" placeholder="Pilih tanggal...">
                         </div>
-                        <div class="col-sm-6 col-md-auto d-flex align-items-end">
-                            <div class="btn-group">
+                        <div class="col-lg-3">
+                            <div class="btn-group w-100">
                                 <button type="submit" class="btn btn-primary">Filter</button>
                                 <a href="{{ route('admin.history.index', ['filter' => 'my_chat']) }}" class="btn btn-info {{ request('filter') === 'my_chat' ? 'active' : '' }}">My Chat</a>
                                 <a href="{{ route('admin.history.index') }}" class="btn btn-secondary">Reset</a>
