@@ -79,9 +79,24 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::resource('/customers', App\Http\Controllers\Admin\CustomerController::class)->only(['index', 'update', 'destroy']);
             });
 
-            // --- Menu 6: Roles & Admins Management ---
+            // --- Menu 6: Admins Management ---
             Route::middleware('admin.permission:manage_roles')->group(function () {
-                Route::resource('/roles', App\Http\Controllers\Admin\RoleController::class)->except(['show']);
+                Route::resource('/admins', App\Http\Controllers\Admin\RoleController::class)->names([
+                    'index' => 'admins.index',
+                    'store' => 'admins.store',
+                    'update' => 'admins.update',
+                    'destroy' => 'admins.destroy',
+                ]);
+
+                // --- Menu 8: Role CRUD ---
+                Route::resource('/roles-list', \App\Http\Controllers\RoleController::class)->names([
+                    'index' => 'roles.index',
+                    'create' => 'roles.create',
+                    'store' => 'roles.store',
+                    'edit' => 'roles.edit',
+                    'update' => 'roles.update',
+                    'destroy' => 'roles.destroy',
+                ]);
             });
 
             // --- Menu 7: Analytics & Analysis ---
@@ -89,6 +104,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/analytics/filter', [App\Http\Controllers\Admin\AnalyticsController::class, 'filter'])->name('analytics.filter');
             Route::get('/analytics/realtime', [App\Http\Controllers\Admin\AnalyticsController::class, 'realtime'])->name('analytics.realtime');
             Route::get('/analytics/export', [App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
+
+            // --- Menu 9: Settings ---
+            Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+            Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
         }
         );
     });
