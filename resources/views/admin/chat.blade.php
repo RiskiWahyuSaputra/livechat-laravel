@@ -163,6 +163,47 @@
     .pulse-animation {
         animation: pulse-danger 2s infinite;
     }
+
+    .chat-search-panel {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: inherit;
+    }
+
+    .quick-chip-row {
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .quick-chip-row .btn {
+        white-space: nowrap;
+    }
+
+    .search-category {
+        padding: 10px 12px 4px;
+    }
+
+    .search-time-divider {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6c757d;
+        letter-spacing: .04em;
+        margin: 10px 0 6px;
+    }
+
+    .search-snippet {
+        font-size: 0.8rem;
+        color: #6c757d;
+        line-height: 1.35;
+    }
+
+    .keyword-highlight {
+        font-weight: 700;
+        color: #0d6efd;
+        background: transparent;
+        padding: 0;
+    }
 </style>
 @endpush
 
@@ -180,7 +221,7 @@
                 <div class="chat-header">
                     <div>
                         <h6>Percakapan</h6>
-                        <p x-text="filteredChats.length + ' Aktif & Antrean'"></p>
+                        <p x-text="isGlobalSearchMode ? (totalSearchResultCount + ' hasil') : (filteredChats.length + ' Aktif & Antrean')"></p>
                         <!-- Debug info -->
                         <p class="text-xs text-muted" x-show="chats.length > 0" x-text="'Total: ' + chats.length + ' chats'"></p>
                     </div>
@@ -195,187 +236,306 @@
                         </button>
                     </div>
                 </div>
-                <div class="chat-search">
-                    <div class="input-group">
-                        <div class="input-group-prepend">
-                            <span class="search_btn"><i class="fe fe-search"></i></span>
-                        </div>
-                        <input type="text" x-model="searchQuery" @input.debounce.500ms="fetchChats()" placeholder="Cari nama, kontak, atau pesan..." class="form-control search-chat">
-                    </div>
-                </div>
-
-                <div class="card-body contacts_body chat-users-list chat-scroll">
-                    <!-- Antrean Section -->
-                    <div class="chat-header inner-chat-header pt-0">
-                        <div>
-                            <h6>Permintaan Baru</h6>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <template x-for="chat in filteredChats.filter(c => ['pending', 'queued'].includes(c.status))" :key="chat.id">
-                            <a href="javascript:void(0);" @click="selectChat(chat)" class="media d-flex" :class="selectedChat && selectedChat.id === chat.id ? 'active' : ''">
-                                <div class="media-img-wrap flex-shrink-0">
-                                    <div class="avatar avatar-online">
-                                        <div class="avatar-title rounded-circle bg-danger text-white">
-                                            <span x-text="chat.customer.name.charAt(0).toUpperCase()"></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="media-body flex-grow-1">
-                                    <div>
-                                        <div class="user-name" x-text="chat.customer.name"></div>
-                                        <div class="user-last-chat font-weight-bold"
-                                            :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
-                                            x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
-                                            :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
-                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
-                                    </div>
-                                    <div>
-                                        <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
-                                    </div>
-                                </div>
-                            </a>
-                        </template>
-                        <div x-show="filteredChats.filter(c => ['pending', 'queued'].includes(c.status)).length === 0" class="text-center p-3 text-muted small">
-                            Tidak ada antrean.
+                <div class="chat-search-panel">
+                    <div class="chat-search">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="search_btn"><i class="fe fe-search"></i></span>
+                            </div>
+                            <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchChats()" placeholder="Cari nama, kontak, atau pesan..." class="form-control search-chat">
+                            <div class="input-group-append" x-show="searchQuery.length > 0 || hasActiveFilter">
+                                <button class="btn btn-outline-secondary" type="button" @click="clearSearch()" title="Hapus pencarian">
+                                    <i class="fe fe-x"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Aktif Section -->
-                    <div class="chat-header inner-chat-header">
-                        <div>
-                            <h6>Sedang Dibantu</h6>
-                        </div>
-                    </div>
-                    <div>
-                        <template x-for="chat in filteredChats.filter(c => c.status === 'active')" :key="chat.id">
-                            <a href="javascript:void(0);" @click="selectChat(chat)" class="media d-flex" :class="selectedChat && selectedChat.id === chat.id ? 'active' : ''">
-                                <div class="media-img-wrap flex-shrink-0">
-                                    <div class="avatar" :class="chat.customer.is_online ? 'avatar-online' : 'avatar-away'">
-                                        <div class="avatar-title rounded-circle bg-primary text-white">
-                                            <span x-text="chat.customer.name.charAt(0).toUpperCase()"></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="media-body flex-grow-1">
-                                    <div>
-                                        <div class="user-name" x-text="chat.customer.name"></div>
-                                        <div class="user-last-chat" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
-                                        <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
-                                    </div>
-                                    <div>
-                                        <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
-                                    </div>
-                                </div>
-                            </a>
-                        </template>
-                        <div x-show="filteredChats.filter(c => c.status === 'active').length === 0" class="text-center p-3 text-muted small">
-                            Tidak ada chat aktif.
+                    <div class="chat-filters px-3 py-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2 quick-chip-row">
+                            <button type="button" class="btn btn-sm"
+                                :class="filters.unreadOnly ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="toggleUnreadFilter()">
+                                Belum dibaca
+                            </button>
+                            <button type="button" class="btn btn-sm"
+                                :class="filters.messageType.includes('image') ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="toggleFilter('image')">
+                                Foto
+                            </button>
+                            <button type="button" class="btn btn-sm"
+                                :class="filters.messageType.includes('video') ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="toggleFilter('video')">
+                                Video
+                            </button>
+                            <button type="button" class="btn btn-sm"
+                                :class="filters.messageType.includes('file') ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="toggleFilter('file')">
+                                Dokumen
+                            </button>
+                            <button type="button" class="btn btn-sm"
+                                :class="filters.messageType.includes('link') ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="toggleFilter('link')">
+                                Tautan
+                            </button>
+                            <button type="button" class="btn btn-sm"
+                                :class="filters.messageType.includes('audio') ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="toggleFilter('audio')">
+                                Audio
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Chat Content -->
-        <div class="chat-cont-right transition-all"
-            :class="{
+            <div class="card-body contacts_body chat-users-list chat-scroll">
+                <template x-if="!isGlobalSearchMode">
+                    <div>
+                        <div class="chat-header inner-chat-header pt-0">
+                            <div>
+                                <h6>Permintaan Baru</h6>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <template x-for="chat in filteredChats.filter(c => ['pending', 'queued'].includes(c.status))" :key="chat.id">
+                                <a href="javascript:void(0);" @click="selectChat(chat)" class="media d-flex" :class="selectedChat && selectedChat.id === chat.id ? 'active' : ''">
+                                    <div class="media-img-wrap flex-shrink-0">
+                                        <div class="avatar avatar-online">
+                                            <div class="avatar-title rounded-circle bg-danger text-white">
+                                                <span x-text="getInitial(chat.customer.name)"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="media-body flex-grow-1">
+                                        <div>
+                                            <div class="user-name" x-html="highlightText(chat.customer.name)"></div>
+                                            <div class="user-last-chat font-weight-bold"
+                                                :class="isLongWaiting(chat.last_message_at) ? 'text-white bg-danger px-2 py-1 rounded-pill pulse-animation d-inline-block mt-1' : 'text-danger'"
+                                                x-text="chat.status === 'queued' ? 'Antrean #' + chat.queue_position : 'Baru'"
+                                                :style="isLongWaiting(chat.last_message_at) ? 'font-size: 0.75rem;' : ''"></div>
+                                            <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
+                                        </div>
+                                        <div>
+                                            <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </template>
+                            <div x-show="filteredChats.filter(c => ['pending', 'queued'].includes(c.status)).length === 0" class="text-center p-3 text-muted small">
+                                Tidak ada antrean.
+                            </div>
+                        </div>
+
+                        <div class="chat-header inner-chat-header">
+                            <div>
+                                <h6>Sedang Dibantu</h6>
+                            </div>
+                        </div>
+                        <div>
+                            <template x-for="chat in filteredChats.filter(c => c.status === 'active')" :key="chat.id">
+                                <a href="javascript:void(0);" @click="selectChat(chat)" class="media d-flex" :class="selectedChat && selectedChat.id === chat.id ? 'active' : ''">
+                                    <div class="media-img-wrap flex-shrink-0">
+                                        <div class="avatar" :class="chat.customer.is_online ? 'avatar-online' : 'avatar-away'">
+                                            <div class="avatar-title rounded-circle bg-primary text-white">
+                                                <span x-text="getInitial(chat.customer.name)"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="media-body flex-grow-1">
+                                        <div>
+                                            <div class="user-name" x-html="highlightText(chat.customer.name)"></div>
+                                            <div class="user-last-chat" x-text="chat.admin_id === adminId ? 'Anda membantu' : 'Oleh ' + (chat.admin ? chat.admin.username : 'agen')"></div>
+                                            <div class="user-last-chat text-muted" style="font-size: 0.75em;">Mulai: <span x-text="formatShortDateTime(chat.created_at)"></span></div>
+                                        </div>
+                                        <div>
+                                            <div class="last-chat-time" x-text="formatTime(chat.last_message_at)"></div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </template>
+                            <div x-show="filteredChats.filter(c => c.status === 'active').length === 0" class="text-center p-3 text-muted small">
+                                Tidak ada chat aktif.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="isGlobalSearchMode">
+                    <div>
+                        <div class="search-category">
+                            <h6 class="mb-2">Kontak</h6>
+                            <template x-for="contact in searchResults.contacts" :key="`contact-${contact.id}`">
+                                <a href="javascript:void(0);" class="media d-flex" @click="openContactResult(contact)">
+                                    <div class="media-img-wrap flex-shrink-0">
+                                        <div class="avatar" :class="contact.is_online ? 'avatar-online' : 'avatar-away'">
+                                            <div class="avatar-title rounded-circle bg-info text-white">
+                                                <span x-text="getInitial(contact.name)"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="media-body flex-grow-1">
+                                        <div class="user-name" x-html="highlightText(contact.name)"></div>
+                                        <div class="user-last-chat" x-html="highlightText(contact.contact || '')"></div>
+                                    </div>
+                                </a>
+                            </template>
+                            <div x-show="searchResults.contacts.length === 0" class="text-muted small">Tidak ada kontak cocok.</div>
+                        </div>
+
+                        <div class="search-category">
+                            <h6 class="mb-2">Grup</h6>
+                            <template x-for="group in searchResults.groups" :key="`group-${group.id}`">
+                                <a href="javascript:void(0);" class="media d-flex" @click="openConversationResult(group.id)">
+                                    <div class="media-img-wrap flex-shrink-0">
+                                        <div class="avatar" :class="group.is_online ? 'avatar-online' : 'avatar-away'">
+                                            <div class="avatar-title rounded-circle bg-primary text-white">
+                                                <span x-text="getInitial(group.customer_name)"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="media-body flex-grow-1">
+                                        <div class="user-name" x-html="highlightText(group.customer_name || '')"></div>
+                                        <div class="user-last-chat" x-text="group.status === 'queued' ? 'Antrean #' + group.queue_position : (group.status === 'active' ? 'Sedang dibantu' : 'Permintaan baru')"></div>
+                                    </div>
+                                </a>
+                            </template>
+                            <div x-show="searchResults.groups.length === 0" class="text-muted small">Tidak ada grup cocok.</div>
+                        </div>
+
+                        <div class="search-category">
+                            <h6 class="mb-2">Pesan</h6>
+                            <template x-for="timeGroup in searchResults.messages" :key="`time-${timeGroup.time_group}`">
+                                <div>
+                                    <div class="search-time-divider" x-text="timeGroup.time_group_label"></div>
+                                    <template x-for="message in timeGroup.messages" :key="`message-${message.id}`">
+                                        <a href="javascript:void(0);" class="media d-flex" @click="openMessageResult(message)">
+                                            <div class="media-img-wrap flex-shrink-0">
+                                                <div class="avatar avatar-away">
+                                                    <div class="avatar-title rounded-circle bg-secondary text-white">
+                                                        <span x-text="getInitial(message.customer_name)"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="media-body flex-grow-1">
+                                                <div class="user-name" x-html="highlightText(message.customer_name || '')"></div>
+                                                <div class="search-snippet" x-html="highlightText(message.snippet || '')"></div>
+                                                <div class="user-last-chat text-muted" style="font-size: 0.75em;" x-text="formatShortDateTime(message.created_at)"></div>
+                                            </div>
+                                        </a>
+                                    </template>
+                                </div>
+                            </template>
+                            <div x-show="searchResults.messages.length === 0" class="text-muted small">Tidak ada pesan cocok.</div>
+                        </div>
+
+                        <div x-show="totalSearchResultCount === 0" class="text-center p-3 text-muted small">
+                            Tidak ada hasil pencarian.
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Content -->
+    <div class="chat-cont-right transition-all"
+        :class="{
                  'col-lg-7 col-xl-8': !sidebarCollapsed,
                  'col-lg-12 col-xl-12': sidebarCollapsed,
                  'mobile-show': selectedChat
              }">
-            <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
-                <div class="h-100 d-flex flex-column">
-                    <div class="card-header msg_head px-3 py-2">
-                        <div class="d-flex bd-highlight align-items-center w-100">
-                            <a href="javascript:void(0)" class="back-user-list me-3 d-lg-none"
-                                :class="darkMode ? 'text-white' : 'text-dark'"
-                                @click="selectedChat = null">
-                                <i class="fas fa-arrow-left fa-lg"></i>
-                            </a>
-                            <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary" @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
-                                <i class="fas fa-bars fa-lg"></i>
-                            </a>
-                            <div class="img_cont flex-shrink-0">
-                                <div class="avatar avatar-sm">
-                                    <div class="avatar-title rounded-circle bg-primary text-white">
-                                        <span x-text="selectedChat ? selectedChat.customer.name.charAt(0).toUpperCase() : ''"></span>
-                                    </div>
+        <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
+            <div class="h-100 d-flex flex-column">
+                <div class="card-header msg_head px-3 py-2">
+                    <div class="d-flex bd-highlight align-items-center w-100">
+                        <a href="javascript:void(0)" class="back-user-list me-3 d-lg-none"
+                            :class="darkMode ? 'text-white' : 'text-dark'"
+                            @click="selectedChat = null">
+                            <i class="fas fa-arrow-left fa-lg"></i>
+                        </a>
+                        <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary" @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
+                            <i class="fas fa-bars fa-lg"></i>
+                        </a>
+                        <div class="img_cont flex-shrink-0">
+                            <div class="avatar avatar-sm">
+                                <div class="avatar-title rounded-circle bg-primary text-white">
+                                    <span x-text="selectedChat ? selectedChat.customer.name.charAt(0).toUpperCase() : ''"></span>
                                 </div>
                             </div>
-                            <div class="user_info ms-2 flex-grow-1 overflow-hidden">
-                                <span class="text-truncate d-block" x-text="selectedChat ? selectedChat.customer.name : ''"></span>
-                                <p class="mb-0 small" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
-                            </div>
-                            <div class="chat-options ms-auto flex-shrink-0">
-                                <ul class="d-flex align-items-center list-unstyled mb-0">
-                                    <template x-if="selectedChat && ['pending', 'queued'].includes(selectedChat.status)">
-                                        <li class="ms-2">
-                                            <button class="btn btn-sm btn-primary px-3" @click="claimChat(selectedChat.id)" :disabled="isClaiming">
-                                                <span x-text="isClaiming ? 'Claiming...' : 'Claim Chat'"></span>
-                                            </button>
-                                        </li>
-                                    </template>
-                                    <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
-                                        <li class="d-flex ms-2">
-                                            <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
-                                            <button class="btn btn-sm btn-outline-success me-1" @click="confirmCloseChat()" :disabled="isSubmitting" title="Selesaikan"><i class="fe fe-check"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
+                        </div>
+                        <div class="user_info ms-2 flex-grow-1 overflow-hidden">
+                            <span class="text-truncate d-block" x-text="selectedChat ? selectedChat.customer.name : ''"></span>
+                            <p class="mb-0 small" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
+                        </div>
+                        <div class="chat-options ms-auto flex-shrink-0">
+                            <ul class="d-flex align-items-center list-unstyled mb-0">
+                                <template x-if="selectedChat && ['pending', 'queued'].includes(selectedChat.status)">
+                                    <li class="ms-2">
+                                        <button class="btn btn-sm btn-primary px-3" @click="claimChat(selectedChat.id)" :disabled="isClaiming">
+                                            <span x-text="isClaiming ? 'Claiming...' : 'Claim Chat'"></span>
+                                        </button>
+                                    </li>
+                                </template>
+                                <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
+                                    <li class="d-flex ms-2">
+                                        <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
+                                        <button class="btn btn-sm btn-outline-success me-1" @click="confirmCloseChat()" :disabled="isSubmitting" title="Selesaikan"><i class="fe fe-check"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
                     </div>
+                </div>
 
-                    <div class="card-body p-0 flex-grow-1 position-relative" style="min-height: 0;">
-                        <!-- Skeleton Loader overlay -->
-                        <div x-show="!iframeLoaded && selectedChat"
-                            class="skeleton-loader-container position-absolute w-100 h-100 bg-white"
-                            style="z-index: 10; padding: 20px; pointer-events: none;">
-                            <div class="skeleton-text w-75 mb-3"></div>
-                            <div class="skeleton-text w-50"></div>
-                        </div>
-                        <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'"
-                            class="w-100 h-100"
-                            style="border: none; display: block;"
-                            @load="iframeLoaded = true"></iframe>
+                <div class="card-body p-0 flex-grow-1 position-relative" style="min-height: 0;">
+                    <!-- Skeleton Loader overlay -->
+                    <div x-show="!iframeLoaded && selectedChat"
+                        class="skeleton-loader-container position-absolute w-100 h-100 bg-white"
+                        style="z-index: 10; padding: 20px; pointer-events: none;">
+                        <div class="skeleton-text w-75 mb-3"></div>
+                        <div class="skeleton-text w-50"></div>
                     </div>
+                    <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'"
+                        class="w-100 h-100"
+                        style="border: none; display: block;"
+                        @load="iframeLoaded = true"></iframe>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Modals -->
-    <div class="modal fade" :class="showHandoverModal ? 'show d-block' : ''" tabindex="-1" x-show="showHandoverModal" x-cloak>
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Oper Percakapan</h5>
-                    <button type="button" class="btn-close" @click="showHandoverModal = false"></button>
+<!-- Modals -->
+<div class="modal fade" :class="showHandoverModal ? 'show d-block' : ''" tabindex="-1" x-show="showHandoverModal" x-cloak>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Oper Percakapan</h5>
+                <button type="button" class="btn-close" @click="showHandoverModal = false"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Pilih Admin</label>
+                    <select x-model="handoverToAdminId" class="form-select">
+                        <option value="">-- Pilih Admin --</option>
+                        @foreach($otherAdmins as $other)
+                        <option value="{{ $other->id }}">{{ $other->username }} ({{ ucfirst($other->status) }})</option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Pilih Admin</label>
-                        <select x-model="handoverToAdminId" class="form-select">
-                            <option value="">-- Pilih Admin --</option>
-                            @foreach($otherAdmins as $other)
-                            <option value="{{ $other->id }}">{{ $other->username }} ({{ ucfirst($other->status) }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Catatan Internal (Opsional)</label>
-                        <textarea x-model="handoverNote" class="form-control" rows="3" placeholder="Pesan untuk agen selanjutnya..."></textarea>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Catatan Internal (Opsional)</label>
+                    <textarea x-model="handoverNote" class="form-control" rows="3" placeholder="Pesan untuk agen selanjutnya..."></textarea>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="showHandoverModal = false">Batal</button>
-                    <button type="button" class="btn btn-primary" @click="handoverChat()" :disabled="!handoverToAdminId || isSubmitting">Oper</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @click="showHandoverModal = false">Batal</button>
+                <button type="button" class="btn btn-primary" @click="handoverChat()" :disabled="!handoverToAdminId || isSubmitting">Oper</button>
             </div>
         </div>
     </div>
+</div>
 </div>
 @endsection
 
@@ -398,6 +558,105 @@
             audioUnlocked: false,
             notificationSound: null,
             iframeLoaded: false,
+            searchResults: {
+                contacts: [],
+                groups: [],
+                messages: [],
+            },
+            filters: {
+                messageType: [],
+                unreadOnly: false,
+            },
+
+            clearSearch() {
+                this.searchQuery = '';
+                this.filters.messageType = [];
+                this.filters.unreadOnly = false;
+                this.fetchChats();
+            },
+
+            toggleFilter(type) {
+                const index = this.filters.messageType.indexOf(type);
+                if (index > -1) {
+                    this.filters.messageType.splice(index, 1);
+                } else {
+                    this.filters.messageType.push(type);
+                }
+                this.fetchChats();
+            },
+
+            toggleUnreadFilter() {
+                this.filters.unreadOnly = !this.filters.unreadOnly;
+                this.fetchChats();
+            },
+
+            emptySearchResults() {
+                return {
+                    contacts: [],
+                    groups: [],
+                    messages: [],
+                };
+            },
+
+            escapeHtml(text) {
+                return String(text ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            },
+
+            escapeRegex(str) {
+                return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            },
+
+            highlightText(text) {
+                const safeText = this.escapeHtml(text);
+                const keyword = this.searchQuery.trim();
+
+                if (!keyword) {
+                    return safeText;
+                }
+
+                const regex = new RegExp(`(${this.escapeRegex(keyword)})`, 'gi');
+                return safeText.replace(regex, '<span class="keyword-highlight">$1</span>');
+            },
+
+            getInitial(name) {
+                const normalized = String(name ?? '').trim();
+                return normalized ? normalized.charAt(0).toUpperCase() : '?';
+            },
+
+            async openConversationResult(conversationId) {
+                let chat = this.chats.find(c => c.id === conversationId);
+
+                if (!chat) {
+                    await this.fetchChats();
+                    chat = this.chats.find(c => c.id === conversationId);
+                }
+
+                if (chat) {
+                    this.selectChat(chat);
+                }
+            },
+
+            async openContactResult(contact) {
+                let chat = this.chats.find(c => c.customer && c.customer.id === contact.id);
+
+                if (!chat) {
+                    await this.fetchChats();
+                    chat = this.chats.find(c => c.customer && c.customer.id === contact.id);
+                }
+
+                if (chat) {
+                    this.selectChat(chat);
+                }
+            },
+
+            async openMessageResult(message) {
+                await this.openConversationResult(message.conversation_id);
+            },
 
             init() {
                 // Update currentTime every minute for relative time reactivity
@@ -502,15 +761,63 @@
             async fetchChats() {
                 console.log('🔄 Fetching chats...');
                 try {
-                    const searchParam = this.searchQuery.trim() ? `&search=${encodeURIComponent(this.searchQuery.trim())}` : '';
-                    const res = await fetch(`/admin/chat?ajax=1&sort=${this.sortBy}${searchParam}`);
+                    const params = new URLSearchParams({
+                        ajax: '1',
+                        sort: this.sortBy,
+                    });
+
+                    const keyword = this.searchQuery.trim();
+                    if (keyword) {
+                        params.set('search', keyword);
+                    }
+
+                    if (this.filters.messageType.length > 0) {
+                        params.set('quick_filters', this.filters.messageType.join(','));
+                    }
+
+                    if (this.filters.unreadOnly) {
+                        params.set('unread_only', '1');
+                    }
+
+                    const res = await fetch(`/admin/chat?${params.toString()}`);
+                    if (!res.ok) {
+                        throw new Error('Gagal mengambil data pencarian chat');
+                    }
+
                     const data = await res.json();
-                    console.log('📋 Chats received:', data);
-                    this.chats = [...data.pending, ...data.active];
-                    console.log('✅ Total chats loaded:', this.chats.length);
+                    this.chats = [...(data.pending || []), ...(data.active || [])];
+                    this.searchResults = data.search_results || this.emptySearchResults();
+
+                    if (this.selectedChat) {
+                        const updatedSelected = this.chats.find(chat => chat.id === this.selectedChat.id);
+                        if (updatedSelected) {
+                            this.selectedChat = {
+                                ...this.selectedChat,
+                                ...updatedSelected,
+                            };
+                        }
+                    }
                 } catch (e) {
                     console.error('Failed to fetch chats', e);
                 }
+            },
+
+            get hasActiveFilter() {
+                return this.filters.messageType.length > 0 || this.filters.unreadOnly;
+            },
+
+            get isGlobalSearchMode() {
+                return this.searchQuery.trim().length > 0 || this.hasActiveFilter;
+            },
+
+            get totalSearchResultCount() {
+                const messageCount = (this.searchResults.messages || []).reduce((total, group) => {
+                    return total + (group.messages ? group.messages.length : 0);
+                }, 0);
+
+                return (this.searchResults.contacts || []).length +
+                    (this.searchResults.groups || []).length +
+                    messageCount;
             },
 
             get filteredChats() {
