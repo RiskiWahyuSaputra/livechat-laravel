@@ -569,15 +569,28 @@
             </div>
             <div class="card-body-custom">
                 @if(count($complaintCategories['categories']) > 0)
+                    @php
+                        $categoryColors = [
+                            'Pendaftaran & Aktivasi' => '#4f46e5',
+                            'Dukungan Teknis' => '#10b981',
+                            'Masalah Pembayaran' => '#f59e0b',
+                            'Komplain / Keluhan' => '#ef4444',
+                            'Lain-lain' => '#6b7280'
+                        ];
+                        $fallbackPalette = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#3b82f6', '#06b6d4', '#14b8a6'];
+                    @endphp
                     <div class="category-list">
-                        @foreach($complaintCategories['categories'] as $category)
+                        @foreach($complaintCategories['categories'] as $index => $category)
                         <div class="category-item">
                             <div class="category-header">
                                 <span class="category-name">{{ $category['category'] }}</span>
                                 <span class="category-count">{{ $category['count'] }} ({{ $category['percentage'] }}%)</span>
                             </div>
                             <div class="progress-custom">
-                                <div class="progress-fill" style="width: {{ $category['percentage'] }}%; background: linear-gradient(90deg, #4f46e5, #7c3aed);">
+                                @php
+                                    $color = $categoryColors[$category['category']] ?? $fallbackPalette[$index % count($fallbackPalette)];
+                                @endphp
+                                <div class="progress-fill" style="width: {{ $category['percentage'] }}%; background: {{ $color }};">
                                 </div>
                             </div>
                         </div>
