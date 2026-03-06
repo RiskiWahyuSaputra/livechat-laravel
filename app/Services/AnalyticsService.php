@@ -173,7 +173,6 @@ class AnalyticsService
      */
     public function getComplaintCategories()
     {
-<<<<<<< HEAD
         $definedCategories = config('chat.complaint_categories', [
             'Pendaftaran & Aktivasi',
             'Dukungan Teknis',
@@ -182,10 +181,7 @@ class AnalyticsService
             'Lain-lain'
         ]);
         
-        $dbCategories = Conversation::select('problem_category', DB::raw('count(*) as count'))
-=======
-        $categories = Conversation::withTrashed()->select('problem_category', DB::raw('count(*) as count'))
->>>>>>> c2ebbc7cc750eb042cd3acfd61ecb97208bb71ea
+        $dbCategories = Conversation::withTrashed()->select('problem_category', DB::raw('count(*) as count'))
             ->whereNotNull('problem_category')
             ->where('problem_category', '!=', '')
             ->groupBy('problem_category')
