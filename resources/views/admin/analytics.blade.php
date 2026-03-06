@@ -568,7 +568,7 @@
                 </h5>
             </div>
             <div class="card-body-custom">
-                @if($complaintCategories['categories']->count() > 0)
+                @if(count($complaintCategories['categories']) > 0)
                     <div class="category-list">
                         @foreach($complaintCategories['categories'] as $category)
                         <div class="category-item">

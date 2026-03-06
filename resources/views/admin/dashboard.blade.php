@@ -570,7 +570,7 @@
             <h5 class="card-title-custom"><i class="fe fe-alert-circle me-2"></i>Kategori Komplen</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
-            @if($complaintCategories['categories']->count() > 0)
+            @if(count($complaintCategories['categories']) > 0)
                 <div class="chart-wrapper" style="height: 300px; display: flex; justify-content: center;">
                     <canvas id="complaintCategoriesChart"></canvas>
                 </div>

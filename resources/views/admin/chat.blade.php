@@ -1295,11 +1295,19 @@
                     // Update lists without reload
                     await this.fetchChats();
 
+                    // Switch to active tab so the admin can see their new chat
+                    this.statusFilter = 'active';
+
                     // If we just claimed it, find it in the new list and select it
                     const claimed = this.chats.find(c => c.id === conversationId);
                     if (claimed) {
                         this.selectChat(claimed);
                     }
+
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Chat berhasil diambil'
+                    });
                 } catch (error) {
                     Toast.fire({
                         icon: 'error',
