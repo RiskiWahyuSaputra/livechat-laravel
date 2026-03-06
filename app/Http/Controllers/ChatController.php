@@ -73,7 +73,8 @@ class ChatController extends Controller
 
         return view('chat.index', [
             'conversation' => $activeConversation,
-            'messages' => $messages
+            'messages' => $messages,
+            'botCategories' => config('chat.complaint_categories')
         ]);
     }
 
@@ -243,6 +244,7 @@ class ChatController extends Controller
                 'user_id'      => $user->id,
                 'status'       => $activeConversation->status,
                 'bot_phase'    => $activeConversation->bot_phase,
+                'botCategories' => config('chat.complaint_categories'),
             ]);
         } catch (\Exception $e) {
             \Log::error('Gagal mengambil data chat', ['error' => $e->getMessage()]);
