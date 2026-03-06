@@ -3,6 +3,7 @@
 @section('title', 'Dashboard')
 
 @push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
     .empty-state {
         padding: 60px 20px;
@@ -257,6 +258,99 @@
     .origin-name { font-size: 13px; color: var(--gray-500); }
     .origin-count { font-size: 12px; font-weight: 600; color: var(--primary); }
 
+    /* Choropleth Map Styles */
+    #indonesia-map {
+        height: 420px;
+        width: 100%;
+        border-radius: 8px;
+        background: #f8fafc;
+        z-index: 1;
+    }
+    .map-legend {
+        background: white;
+        padding: 10px 14px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        font-size: 12px;
+        line-height: 20px;
+    }
+    .map-legend i {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        margin-right: 6px;
+        border-radius: 3px;
+        vertical-align: middle;
+    }
+    .map-legend .legend-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--dark);
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+    .map-info-tooltip {
+        padding: 8px 12px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 3px 14px rgba(0,0,0,0.2);
+        font-size: 13px;
+        line-height: 1.6;
+        min-width: 180px;
+    }
+    .map-info-tooltip .province-name {
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--dark);
+        margin-bottom: 4px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 4px;
+    }
+    .map-info-tooltip .city-row {
+        display: flex;
+        justify-content: space-between;
+        color: #4b5563;
+        font-size: 12px;
+    }
+    .map-info-tooltip .city-row .city-count {
+        font-weight: 600;
+        color: var(--primary);
+    }
+    .map-info-tooltip .total-row {
+        margin-top: 4px;
+        padding-top: 4px;
+        border-top: 1px solid #e5e7eb;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        color: var(--dark);
+    }
+    body.dark-mode #indonesia-map {
+        background: #1a1a2e;
+    }
+    body.dark-mode .map-legend {
+        background: #1e1e1e;
+        color: #e0e0e0;
+    }
+    body.dark-mode .map-legend .legend-title {
+        color: #e0e0e0;
+    }
+    body.dark-mode .map-info-tooltip {
+        background: #1e1e1e;
+        color: #e0e0e0;
+    }
+    body.dark-mode .map-info-tooltip .province-name {
+        color: #fff;
+        border-bottom-color: #333;
+    }
+    body.dark-mode .map-info-tooltip .city-row {
+        color: #aaa;
+    }
+    body.dark-mode .map-info-tooltip .total-row {
+        color: #fff;
+        border-top-color: #333;
+    }
+
     @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 768px) { 
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -485,10 +579,13 @@
             @endif
         </div>
     </div>
-<!-- Top Origins -->    <div class="dashboard-card">
-        <div class="card-header-custom">
-            <h5 class="card-title-custom"><i class="fe fe-map-pin me-2"></i>Daerah teratas</h5>
+<!-- Interactive Indonesia Map -->
+    <div class="dashboard-card">
+        <div class="card-header-custom" style="display:flex;justify-content:space-between;align-items:center;">
+            <h5 class="card-title-custom"><i class="fe fe-map me-2"></i>Peta Sebaran Pelanggan</h5>
+            <span style="font-size:11px;color:var(--gray-500);">Hover untuk detail</span>
         </div>
+<<<<<<< HEAD
         <div class="card-body-custom" style="padding: 20px;">
             @if(count($customerInsights['origins']) > 0)
                 <div class="origin-list">
@@ -502,6 +599,10 @@
             @else
                 <p style="color: var(--gray-500); text-align: center; padding: 20px;">No data available</p>
             @endif
+=======
+        <div class="card-body-custom" style="padding: 12px;">
+            <div id="indonesia-map"></div>
+>>>>>>> c2ebbc7cc750eb042cd3acfd61ecb97208bb71ea
         </div>
     </div>
 </div>
@@ -577,6 +678,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // ==================== ANALYTICS CHARTS ====================
     Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
@@ -732,6 +834,206 @@
             }
         });
     }
+
+    // ==================== CHOROPLETH MAP ====================
+    (function() {
+        const CITY_TO_PROVINCE = {
+            'jakarta': 'DKI JAKARTA', 'jakarta utara': 'DKI JAKARTA', 'jakarta selatan': 'DKI JAKARTA',
+            'jakarta barat': 'DKI JAKARTA', 'jakarta timur': 'DKI JAKARTA', 'jakarta pusat': 'DKI JAKARTA',
+            'bekasi': 'JAWA BARAT', 'bandung': 'JAWA BARAT', 'bogor': 'JAWA BARAT', 'depok': 'JAWA BARAT',
+            'cirebon': 'JAWA BARAT', 'tasikmalaya': 'JAWA BARAT', 'karawang': 'JAWA BARAT', 'sukabumi': 'JAWA BARAT',
+            'tangerang': 'BANTEN', 'serang': 'BANTEN', 'cilegon': 'BANTEN',
+            'semarang': 'JAWA TENGAH', 'solo': 'JAWA TENGAH', 'surakarta': 'JAWA TENGAH', 'pekalongan': 'JAWA TENGAH',
+            'surabaya': 'JAWA TIMUR', 'malang': 'JAWA TIMUR', 'kediri': 'JAWA TIMUR', 'sidoarjo': 'JAWA TIMUR',
+            'yogyakarta': 'DI YOGYAKARTA', 'jogja': 'DI YOGYAKARTA',
+            'medan': 'SUMATERA UTARA', 'pematangsiantar': 'SUMATERA UTARA',
+            'padang': 'SUMATERA BARAT', 'bukittinggi': 'SUMATERA BARAT',
+            'palembang': 'SUMATERA SELATAN',
+            'lampung': 'LAMPUNG', 'bandar lampung': 'LAMPUNG',
+            'pekanbaru': 'RIAU', 'dumai': 'RIAU',
+            'batam': 'KEPULAUAN RIAU', 'tanjungpinang': 'KEPULAUAN RIAU',
+            'jambi': 'JAMBI',
+            'bengkulu': 'BENGKULU',
+            'banda aceh': 'ACEH', 'aceh': 'ACEH',
+            'pangkal pinang': 'BANGKA BELITUNG', 'bangka': 'BANGKA BELITUNG',
+            'pontianak': 'KALIMANTAN BARAT',
+            'banjarmasin': 'KALIMANTAN SELATAN',
+            'palangkaraya': 'KALIMANTAN TENGAH',
+            'samarinda': 'KALIMANTAN TIMUR', 'balikpapan': 'KALIMANTAN TIMUR',
+            'tarakan': 'KALIMANTAN UTARA',
+            'kalimantan': 'KALIMANTAN TIMUR',
+            'makassar': 'SULAWESI SELATAN', 'pare-pare': 'SULAWESI SELATAN',
+            'manado': 'SULAWESI UTARA',
+            'palu': 'SULAWESI TENGAH',
+            'kendari': 'SULAWESI TENGGARA',
+            'gorontalo': 'GORONTALO',
+            'mamuju': 'SULAWESI BARAT',
+            'sulawesi': 'SULAWESI SELATAN',
+            'denpasar': 'BALI', 'bali': 'BALI',
+            'mataram': 'NUSA TENGGARA BARAT', 'lombok': 'NUSA TENGGARA BARAT',
+            'kupang': 'NUSA TENGGARA TIMUR',
+            'ambon': 'MALUKU', 'maluku': 'MALUKU',
+            'ternate': 'MALUKU UTARA',
+            'jayapura': 'PAPUA', 'papua': 'PAPUA',
+            'manokwari': 'PAPUA BARAT',
+            'sorong': 'PAPUA BARAT DAYA',
+            'merauke': 'PAPUA SELATAN',
+            'timika': 'PAPUA TENGAH',
+            'wamena': 'PAPUA PEGUNUNGAN',
+        };
+
+        // Normalize a GeoJSON province name to uppercase for matching
+        function normalizeProvince(name) {
+            if (!name) return '';
+            return name.toUpperCase()
+                .replace(/KEPULAUAN\s+/g, 'KEPULAUAN ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // Color scale function
+        function getColor(d) {
+            return d > 10 ? '#084594' :
+                   d > 7  ? '#2171b5' :
+                   d > 4  ? '#4292c6' :
+                   d > 2  ? '#6baed6' :
+                   d > 0  ? '#c6dbef' :
+                            '#f0f0f0';
+        }
+
+        const map = L.map('indonesia-map', {
+            center: [-2.5, 118],
+            zoom: 5,
+            minZoom: 4,
+            maxZoom: 8,
+            zoomControl: true,
+            attributionControl: false
+        });
+
+        // Tile layer — light clean style
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Info control (hover tooltip)
+        const info = L.control({ position: 'topright' });
+        info.onAdd = function() {
+            this._div = L.DomUtil.create('div', 'map-info-tooltip');
+            this.update();
+            return this._div;
+        };
+        info.update = function(props) {
+            if (!props) {
+                this._div.innerHTML = '<div style="color:var(--gray-500);font-size:12px;">Arahkan kursor<br>ke area provinsi</div>';
+                return;
+            }
+            let html = '<div class="province-name">' + props.provinceName + '</div>';
+            if (props.cities && props.cities.length > 0) {
+                props.cities.forEach(c => {
+                    html += '<div class="city-row"><span>' + c.name + '</span><span class="city-count">' + c.count + '</span></div>';
+                });
+            }
+            html += '<div class="total-row"><span>Total</span><span>' + props.total + '</span></div>';
+            this._div.innerHTML = html;
+        };
+        info.addTo(map);
+
+        // Legend
+        const legend = L.control({ position: 'bottomleft' });
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'map-legend');
+            const grades = [0, 1, 3, 5, 8, 11];
+            const labels = ['0', '1-2', '3-4', '5-7', '8-10', '11+'];
+            div.innerHTML = '<div class="legend-title">Jumlah Pelanggan</div>';
+            for (let i = 0; i < grades.length; i++) {
+                div.innerHTML += '<i style="background:' + getColor(grades[i] || 0.5) + '"></i> ' + labels[i] + '<br>';
+            }
+            return div;
+        };
+        legend.addTo(map);
+
+        // Fetch map data and GeoJSON
+        let provinceData = {}; // { 'JAWA BARAT': { total: 9, cities: [{name:'Bekasi',count:5},...] } }
+
+        fetch('{{ route("admin.map.data") }}')
+            .then(r => r.json())
+            .then(origins => {
+                // Aggregate city data into provinces
+                origins.forEach(item => {
+                    const originLower = (item.origin || '').toLowerCase().trim();
+                    let province = CITY_TO_PROVINCE[originLower];
+
+                    // If not in mapping, try direct match (maybe it's already a province name)
+                    if (!province) {
+                        province = originLower.toUpperCase();
+                    }
+
+                    if (!provinceData[province]) {
+                        provinceData[province] = { total: 0, cities: [] };
+                    }
+                    provinceData[province].total += item.count;
+                    provinceData[province].cities.push({ name: item.origin, count: item.count });
+                });
+
+                // Load GeoJSON — 38 provinsi terbaru (termasuk pemekaran Papua)
+                return fetch('https://raw.githubusercontent.com/denyherianto/indonesia-geojson-topojson-maps-with-38-provinces/main/GeoJSON/indonesia-38-provinces.geojson');
+            })
+            .then(r => r.json())
+            .then(geojson => {
+                var geojsonLayer = L.geoJSON(geojson, {
+                    style: function(feature) {
+                        const provName = normalizeProvince(feature.properties.PROVINSI || feature.properties.Propinsi || feature.properties.NAME_1 || feature.properties.name || '');
+                        const data = findProvinceData(provName);
+                        const total = data ? data.total : 0;
+                        return {
+                            fillColor: getColor(total),
+                            weight: 1.5,
+                            opacity: 1,
+                            color: '#ffffff',
+                            fillOpacity: 0.8
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        const provName = normalizeProvince(feature.properties.PROVINSI || feature.properties.Propinsi || feature.properties.NAME_1 || feature.properties.name || '');
+                        const displayName = (feature.properties.PROVINSI || feature.properties.Propinsi || feature.properties.NAME_1 || feature.properties.name || 'Unknown');
+                        const data = findProvinceData(provName);
+
+                        layer.on({
+                            mouseover: function(e) {
+                                const l = e.target;
+                                l.setStyle({ weight: 3, color: '#4f46e5', fillOpacity: 0.9 });
+                                l.bringToFront();
+                                info.update({
+                                    provinceName: displayName,
+                                    cities: data ? data.cities : [],
+                                    total: data ? data.total : 0
+                                });
+                            },
+                            mouseout: function(e) {
+                                geojsonLayer.resetStyle(e.target);
+                                info.update();
+                            }
+                        });
+                    }
+                }).addTo(map);
+            })
+            .catch(err => console.error('Map error:', err));
+
+        // Helper to find province data with fuzzy matching
+        function findProvinceData(normalizedName) {
+            // Direct match first
+            if (provinceData[normalizedName]) return provinceData[normalizedName];
+
+            // Fuzzy: try partial matching
+            for (const key in provinceData) {
+                if (normalizedName.includes(key) || key.includes(normalizedName)) {
+                    return provinceData[key];
+                }
+            }
+            return null;
+        }
+    })();
 
     // ==================== ORIGINAL DASHBOARD CHARTS ====================
     // User Growth Chart
