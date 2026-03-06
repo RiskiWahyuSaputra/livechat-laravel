@@ -173,28 +173,49 @@ class AnalyticsService
      */
     public function getComplaintCategories()
     {
-        $categories = Conversation::select('problem_category', DB::raw('count(*) as count'))
+        $definedCategories = config('chat.complaint_categories', [
+            'Pendaftaran & Aktivasi',
+            'Dukungan Teknis',
+            'Masalah Pembayaran',
+            'Komplain / Keluhan',
+            'Lain-lain'
+        ]);
+        
+        $dbCategories = Conversation::select('problem_category', DB::raw('count(*) as count'))
             ->whereNotNull('problem_category')
             ->where('problem_category', '!=', '')
             ->groupBy('problem_category')
-            ->orderByDesc('count')
-            ->get();
+            ->get()
+            ->pluck('count', 'problem_category')
+            ->toArray();
 
-        $total = $categories->sum('count');
+        // Merge defined categories with those actually found in database to show "many" categories
+        $allCategoryNames = array_unique(array_merge($definedCategories, array_keys($dbCategories)));
 
-        $result = $categories->map(function ($cat) use ($total) {
-            return [
-                'category' => $cat->problem_category,
-                'count' => $cat->count,
-                'percentage' => $total > 0 ? round(($cat->count / $total) * 100, 1) : 0,
+        $result = [];
+        $chartData = [];
+        $chartLabels = [];
+        $total = array_sum($dbCategories);
+
+        foreach ($allCategoryNames as $cat) {
+            $count = $dbCategories[$cat] ?? 0;
+            $percentage = $total > 0 ? round(($count / $total) * 100, 1) : 0;
+            
+            $result[] = [
+                'category' => $cat,
+                'count' => $count,
+                'percentage' => $percentage,
             ];
-        });
+            
+            $chartData[] = $count;
+            $chartLabels[] = $cat;
+        }
 
         return [
             'categories' => $result,
             'total' => $total,
-            'chart_data' => $result->pluck('count')->toArray(),
-            'chart_labels' => $result->pluck('category')->toArray(),
+            'chart_data' => $chartData,
+            'chart_labels' => $chartLabels,
         ];
     }
 

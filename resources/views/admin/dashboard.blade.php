@@ -476,7 +476,7 @@
             <h5 class="card-title-custom"><i class="fe fe-alert-circle me-2"></i>Kategori Komplen</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
-            @if($complaintCategories['categories']->count() > 0)
+            @if(count($complaintCategories['categories']) > 0)
                 <div class="chart-wrapper" style="height: 300px; display: flex; justify-content: center;">
                     <canvas id="complaintCategoriesChart"></canvas>
                 </div>
@@ -490,7 +490,7 @@
             <h5 class="card-title-custom"><i class="fe fe-map-pin me-2"></i>Daerah teratas</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
-            @if($customerInsights['origins']->count() > 0)
+            @if(count($customerInsights['origins']) > 0)
                 <div class="origin-list">
                     @foreach($customerInsights['origins'] as $origin)
                     <div class="origin-item">
@@ -686,9 +686,23 @@
     if (complaintCategories.length > 0) {
         const complaintLabels = complaintCategories.map(c => c.category);
         const complaintData = complaintCategories.map(c => c.count);
-        const complaintColors = [
-            '#4f46e5', '#7c3aed', '#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#6b7280'
-        ].slice(0, complaintLabels.length);
+        
+        // Map specific colors to specific categories, with a fallback palette for "many" categories
+        const categoryColorMap = {
+            'Pendaftaran & Aktivasi': '#4f46e5',
+            'Dukungan Teknis': '#10b981',
+            'Masalah Pembayaran': '#f59e0b',
+            'Komplain / Keluhan': '#ef4444',
+            'Lain-lain': '#6b7280'
+        };
+        
+        const fallbackPalette = [
+            '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#3b82f6', '#06b6d4', '#14b8a6'
+        ];
+        
+        const complaintColors = complaintLabels.map((label, i) => {
+            return categoryColorMap[label] || fallbackPalette[i % fallbackPalette.length];
+        });
 
         new Chart(document.getElementById('complaintCategoriesChart').getContext('2d'), {
             type: 'doughnut',
