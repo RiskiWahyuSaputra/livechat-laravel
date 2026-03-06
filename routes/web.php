@@ -21,10 +21,8 @@ Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home
 Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');
 Route::post('/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');
 
-// Routes Chat (Menggunakan Cookie Session Token, bukan Auth)
-Route::get('/chat', function () {
-    return redirect()->route('user.home');
-})->name('chat.index');
+// Routes Chat
+Route::get('/chat', [ChatController::class, 'showChat'])->name('chat.index');
 Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init');
 Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.send');
 Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
@@ -98,6 +96,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     'destroy' => 'roles.destroy',
                 ]);
             });
+
+            // --- Map Data API ---
+            Route::get('/map/data', [App\Http\Controllers\Admin\MapController::class, 'getMapData'])->name('map.data');
 
             // --- Menu 7: Analytics & Analysis ---
             Route::get('/analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
