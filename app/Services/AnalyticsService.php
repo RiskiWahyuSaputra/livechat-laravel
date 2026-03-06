@@ -189,7 +189,7 @@ class AnalyticsService
             ->pluck('count', 'problem_category')
             ->toArray();
 
-        // Merge defined categories with those actually found in database
+        // Merge defined categories with those actually found in database to show "many" categories
         $allCategoryNames = array_unique(array_merge($definedCategories, array_keys($dbCategories)));
 
         $result = [];

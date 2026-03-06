@@ -20,8 +20,6 @@ use App\Services\GeminiService;
 
 class ChatController extends Controller
 {
-    const BOT_CATEGORIES = ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'];
-
     protected $whatsappService;
     protected $geminiService;
 
@@ -74,7 +72,7 @@ class ChatController extends Controller
         return view('chat.index', [
             'conversation' => $activeConversation,
             'messages' => $messages,
-            'botCategories' => config('chat.complaint_categories')
+            'botCategories' => config('chat.complaint_categories'),
         ]);
     }
 
@@ -368,9 +366,10 @@ class ChatController extends Controller
     private function handleBotResponse($conversation, $userMessage)
     {
         $newBotMessages = [];
+        $botCategories = config('chat.complaint_categories');
 
         if ($conversation->bot_phase === 'awaiting_category') {
-            if (in_array($userMessage, self::BOT_CATEGORIES)) {
+            if (in_array($userMessage, $botCategories)) {
                 $conversation->update(['problem_category' => $userMessage, 'bot_phase' => 'awaiting_explanation']);
                 $newBotMessages[] = Message::create([
                     'conversation_id' => $conversation->id,
@@ -469,8 +468,9 @@ class ChatController extends Controller
             'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin bantuan tim Support.",
         ]);
 
+        $botCategories = config('chat.complaint_categories');
         $categoryButtons = "";
-        foreach (self::BOT_CATEGORIES as $cat) { $categoryButtons .= "- {$cat}\n"; }
+        foreach ($botCategories as $cat) { $categoryButtons .= "- {$cat}\n"; }
         
         $botMsg = Message::create([
             'conversation_id' => $conversation->id,

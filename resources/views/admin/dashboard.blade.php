@@ -772,9 +772,23 @@
     if (complaintCategories.length > 0) {
         const complaintLabels = complaintCategories.map(c => c.category);
         const complaintData = complaintCategories.map(c => c.count);
-        const complaintColors = [
-            '#4f46e5', '#7c3aed', '#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#6b7280'
-        ].slice(0, complaintLabels.length);
+        
+        // Map specific colors to specific categories, with a fallback palette for "many" categories
+        const categoryColorMap = {
+            'Pendaftaran & Aktivasi': '#4f46e5',
+            'Dukungan Teknis': '#10b981',
+            'Masalah Pembayaran': '#f59e0b',
+            'Komplain / Keluhan': '#ef4444',
+            'Lain-lain': '#6b7280'
+        };
+        
+        const fallbackPalette = [
+            '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#3b82f6', '#06b6d4', '#14b8a6'
+        ];
+        
+        const complaintColors = complaintLabels.map((label, i) => {
+            return categoryColorMap[label] || fallbackPalette[i % fallbackPalette.length];
+        });
 
         new Chart(document.getElementById('complaintCategoriesChart').getContext('2d'), {
             type: 'doughnut',
