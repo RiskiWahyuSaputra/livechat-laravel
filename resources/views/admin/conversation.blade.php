@@ -261,7 +261,7 @@
                     <div class="msg-row from-whisper">
                         <div class="whisper-header">
                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                            Internal Note
+                            Catatan Internal
                         </div>
                         <div class="bubble bubble-whisper"><span x-html="formatMessage(msg.content)"></span></div>
                         <span class="msg-time" x-text="timeAgo(msg.created_at)"></span>
@@ -345,7 +345,7 @@
 
             <!-- Quick Replies -->
             <div class="quick-replies-bar" x-show="messageType === 'text'" x-transition>
-                <span class="qr-label">Cepat:</span>
+                <span class="qr-label">Balasan:</span>
                 <template x-for="(reply, index) in quickReplies" :key="index">
                     <button type="button" class="qr-chip" @click="insertQuickReply(reply)" :title="reply">
                         <span x-text="reply"></span>

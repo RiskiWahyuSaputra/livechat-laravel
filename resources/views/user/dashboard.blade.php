@@ -566,6 +566,11 @@
                             body: JSON.stringify(this.regForm)
                         });
 
+                        const contentType = response.headers.get("content-type");
+                        if (!contentType || !contentType.includes("application/json")) {
+                            throw new Error("Server mengalami masalah internal (500).");
+                        }
+
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
@@ -574,10 +579,11 @@
                             this.regForm = { name: '', contact: '', origin: '' };
                             await this.fetchChatData();
                         } else {
-                            this.regError = data.message || 'Terjadi kesalahan. Silakan coba lagi.';
+                            this.regError = data.message || 'Terjadi kesalahan validasi data.';
                         }
                     } catch (error) {
-                        this.regError = 'Gagal terhubung ke server.';
+                        console.error("Registration Error:", error);
+                        this.regError = error.message || 'Gagal terhubung ke server.';
                     } finally {
                         this.isLoading = false;
                     }
@@ -604,7 +610,7 @@
                         this.conversationId = data.conversation.id;
                         this.userId = data.user_id;
                         this.status = data.status;
-                        this.botPhase = data.conversation.bot_phase || 'off';
+                        this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
                         
                         this.messages = data.messages.map(m => ({
                             id: m.id,
@@ -612,7 +618,7 @@
                             sender_type: m.sender_type,
                             message_type: m.message_type,
                             content: m.content,
-                            created_at: m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''
+                            created_at: m.created_at
                         }));
 
                         this.isInitialized = true;
@@ -704,10 +710,22 @@
                             const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
                             if (msgIndex !== -1) {
                                 this.messages[msgIndex].id = data.message.id;
-                                this.messages[msgIndex].message_type = data.message_type;
+                                this.messages[msgIndex].message_type = data.message.message_type;
                                 this.messages[msgIndex].content = data.message.content;
-                                if (this.botPhase === 'awaiting_explanation') this.botPhase = 'off';
                             }
+
+                            // Tambahkan balasan bot jika ada di response JSON
+                            if (data.bot_replies && data.bot_replies.length > 0) {
+                                data.bot_replies.forEach(botMsg => {
+                                    // Cek agar tidak duplikat dengan broadcast
+                                    if (!this.messages.some(m => m.id === botMsg.id)) {
+                                        this.messages.push(botMsg);
+                                    }
+                                });
+                            }
+
+                            if (data.bot_phase) this.botPhase = data.bot_phase;
+                            
                         } else {
                             this.messages = this.messages.filter(m => m.temp_id !== tempId);
                             alert('Gagal mengirim: ' + (data.error || data.message || 'Server Error ' + response.status));
