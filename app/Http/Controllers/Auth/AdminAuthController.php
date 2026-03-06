@@ -21,20 +21,29 @@ class AdminAuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => ['required', 'email'],
+            'login'    => ['required', 'string'],
             'password' => ['required'],
         ]);
 
-        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
+        $loginField = filter_var($request->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        $authCredentials = [
+            $loginField => $request->login,
+            'password'  => $request->password,
+        ];
+
+        if (Auth::guard('admin')->attempt($authCredentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            
             // Set admin online
             Auth::guard('admin')->user()->update(['status' => 'online']);
+            
             return redirect()->intended(route('admin.dashboard'));
         }
 
         return back()->withErrors([
-            'email' => 'Email atau password admin salah.',
-        ])->onlyInput('email');
+            'login' => 'Email/Username atau password yang Anda masukkan salah.',
+        ])->onlyInput('login');
     }
 
     // Logout admin
