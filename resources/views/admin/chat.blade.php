@@ -607,7 +607,7 @@
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
             :class="{
-                 'd-none': (selectedChat && window.innerWidth < 768),
+                 'mobile-hide d-none d-lg-flex': selectedChat,
                  'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
              }">
             <!-- ═══════════ TOP PANEL (Header + Search + Content Filters) ═══════════ -->
@@ -817,8 +817,8 @@
             :class="{
                      'col-md-8 col-lg-7 col-xl-8': !sidebarCollapsed,
                      'col-12': sidebarCollapsed,
-                     'd-none d-md-flex': !selectedChat && !sidebarCollapsed,
-                     'd-flex': selectedChat || sidebarCollapsed
+                     'd-none d-lg-flex': !selectedChat && !sidebarCollapsed,
+                     'mobile-show d-flex': selectedChat || sidebarCollapsed
                  }">
             <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
             <div class="h-100 d-flex flex-column">
