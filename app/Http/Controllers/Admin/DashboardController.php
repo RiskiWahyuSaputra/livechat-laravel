@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Services\WhatsappService;
+use App\Services\MessageSearchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -33,7 +34,7 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Date range for analytics
         $startDate = $request->get('start_date', Carbon::now()->subDays(30)->startOfDay());
         $endDate = $request->get('end_date', Carbon::now()->endOfDay());
@@ -50,7 +51,7 @@ class DashboardController extends Controller
         $metrics = $this->analyticsService->getConversationMetrics();
         $agentPerformance = $this->analyticsService->getAgentPerformance();
         $statusDistribution = $this->analyticsService->getStatusDistribution();
-        
+
         // Statistik Ringkas
         $stats = [
             'total_users' => User::count(),
@@ -88,19 +89,19 @@ class DashboardController extends Controller
         }
 
         if ($request->has('search')) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('contact', 'like', '%' . $request->search . '%')
-                  ->orWhere('origin', 'like', '%' . $request->search . '%');
+                    ->orWhere('contact', 'like', '%' . $request->search . '%')
+                    ->orWhere('origin', 'like', '%' . $request->search . '%');
             });
         }
 
-        $customers = $query->with(['conversations' => function($q) {
+        $customers = $query->with(['conversations' => function ($q) {
             $q->latest(); // Default: hanya ambil yang non-trashed
         }])->latest()->paginate(10)->withQueryString();
 
         // Map customers to include their current active status
-        $customers->getCollection()->transform(function($user) {
+        $customers->getCollection()->transform(function ($user) {
             // Cari percakapan AKTIF (yang belum di-soft delete)
             $activeConv = $user->conversations->whereIn('status', ['pending', 'queued', 'active'])->first();
             $user->current_status = $activeConv ? $activeConv->status : 'no_session';
@@ -108,8 +109,8 @@ class DashboardController extends Controller
         });
 
         return view('admin.dashboard', compact(
-            'admin', 
-            'stats', 
+            'admin',
+            'stats',
             'customers',
             'overview',
             'trends',
@@ -138,35 +139,83 @@ class DashboardController extends Controller
             $conv->messages()->delete();
             $conv->delete();
         }
-        
+
         $user->delete();
 
         return back()->with('success', 'User berhasil dihapus secara permanen.');
     }
 
     /**
-     * Workspace Chat — tampilkan semua antrian dan chat aktif.
+     * Workspace Chat — tampilkan semua antrian/chat aktif + global search kategori.
      */
     public function chatWorkspace(Request $request)
     {
         $admin = Auth::guard('admin')->user();
+        $searchService = new MessageSearchService();
 
-        $pendingConversations = Conversation::with('customer')
-            ->whereIn('status', ['pending', 'queued'])
+        $sortOrder = $request->get('sort', 'recent') === 'oldest' ? 'asc' : 'desc';
+        $search = trim((string) $request->get('search', ''));
+        $quickFilters = array_values(array_filter(explode(',', (string) $request->get('quick_filters', ''))));
+        $unreadOnly = $request->boolean('unread_only');
+
+        $pendingQuery = Conversation::with('customer')
+            ->whereIn('status', ['pending', 'queued']);
+
+        $activeQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
+            $query->latest()->limit(1);
+        }])->where('status', 'active');
+
+        if ($search !== '') {
+            $needle = '%' . mb_strtolower($search) . '%';
+
+            $pendingQuery->where(function ($query) use ($needle) {
+                $query->whereHas('customer', function ($customerQuery) use ($needle) {
+                    $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
+                        ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
+                })->orWhereHas('messages', function ($messageQuery) use ($needle) {
+                    $messageQuery->whereRaw('LOWER(content) LIKE ?', [$needle]);
+                });
+            });
+
+            $activeQuery->where(function ($query) use ($needle) {
+                $query->whereHas('customer', function ($customerQuery) use ($needle) {
+                    $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
+                        ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
+                })->orWhereHas('messages', function ($messageQuery) use ($needle) {
+                    $messageQuery->whereRaw('LOWER(content) LIKE ?', [$needle]);
+                });
+            });
+        }
+
+        $pendingConversations = $pendingQuery
             ->orderBy('queue_position')
-            ->orderBy('last_message_at')
+            ->orderBy('last_message_at', $sortOrder)
             ->get();
 
-        $activeConversations = Conversation::with(['customer', 'admin', 'messages' => function ($q) {
-                $q->latest()->limit(1);
-            }])
-            ->where('status', 'active')
+        $activeConversations = $activeQuery
+            ->orderBy('last_message_at', $sortOrder)
             ->get();
 
         if ($request->ajax() || $request->has('ajax')) {
+            $searchResults = [
+                'contacts' => [],
+                'groups' => [],
+                'messages' => [],
+            ];
+
+            if ($search !== '' || !empty($quickFilters) || $unreadOnly) {
+                $searchResults = $searchService->search($search, $quickFilters, $unreadOnly);
+            }
+
             return response()->json([
                 'pending' => $pendingConversations,
-                'active'  => $activeConversations,
+                'active' => $activeConversations,
+                'search_results' => $searchResults,
+                'search_summary' => [
+                    'query' => $search,
+                    'total_pending' => $pendingConversations->count(),
+                    'total_active' => $activeConversations->count(),
+                ],
             ]);
         }
 
@@ -231,7 +280,7 @@ class DashboardController extends Controller
         ]);
 
         broadcast(new MessageSent($sysMessage));
-        
+
         // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
         broadcast(new ConversationStatusChanged($conversation, $admin->username));
 
@@ -269,7 +318,7 @@ class DashboardController extends Controller
             $file = $request->file('file');
             $mime = $file->getMimeType();
             $messageType = str_starts_with($mime, 'image/') ? 'image' : 'file';
-            
+
             $fileName = time() . '_' . $file->getClientOriginalName();
             $path = $file->storeAs('uploads/chat', $fileName, 'public');
             $content = asset('storage/' . $path);
@@ -452,11 +501,11 @@ class DashboardController extends Controller
 
         broadcast(new TypingIndicator(
             conversationId: $request->conversation_id,
-            senderId:       $admin->id,
-            senderType:     'admin',
-            senderRole:     $admin->role,
-            senderName:     $admin->username,
-            isTyping:       $request->boolean('is_typing')
+            senderId: $admin->id,
+            senderType: 'admin',
+            senderRole: $admin->role,
+            senderName: $admin->username,
+            isTyping: $request->boolean('is_typing')
         ))->toOthers();
 
         return response()->json(['success' => true]);
