@@ -55,6 +55,7 @@
                                     <div class="form-group mb-3">
                                         <label class="form-label">Gemini Model</label>
                                         <select name="gemini_model" class="form-select">
+                                            <option value="gemini-pro" {{ ($settings['gemini_model'] ?? '') == 'gemini-pro' ? 'selected' : '' }}>Gemini Pro (Paling Stabil)</option>
                                             <option value="gemini-1.5-flash" {{ ($settings['gemini_model'] ?? '') == 'gemini-1.5-flash' ? 'selected' : '' }}>Gemini 1.5 Flash (Cepat)</option>
                                             <option value="gemini-1.5-pro" {{ ($settings['gemini_model'] ?? '') == 'gemini-1.5-pro' ? 'selected' : '' }}>Gemini 1.5 Pro (Pintar)</option>
                                         </select>
