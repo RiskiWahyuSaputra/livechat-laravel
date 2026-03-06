@@ -492,6 +492,14 @@
             background: #25253a;
         }
 
+        .chat-item.is-selected {
+            background: #eef2ff;
+        }
+
+        body.dark-mode .chat-item:hover {
+            background: #25253a;
+        }
+
         body.dark-mode .chat-item.is-selected {
             background: #1e1e4a;
         }
@@ -754,918 +762,860 @@
 @endpush
 
 @section('content')
-    <div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }}, {{ Js::from($closedConversations) }})">
-        <div class="row chat-window">
-            <div class="chat-cont-left flex-column transition-all" x-show="!sidebarCollapsed"
-                :class="{
-                    'd-none': (selectedChat && window.innerWidth < 768),
-                    'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
-                }">
-                <!-- ═══════════ TOP PANEL (Header + Search + Content Filters) ═══════════ -->
-                <div class="sidebar-top-panel mb-2 flex-shrink-0">
+<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }}, {{ Js::from($closedConversations) }})">
+    <div class="row chat-window">
+        <div class="chat-cont-left flex-column transition-all"
+            x-show="!sidebarCollapsed"
+            :class="{
+                 'mobile-hide d-none d-lg-flex': selectedChat,
+                 'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
+             }">
+            <!-- ═══════════ TOP PANEL (Header + Search + Content Filters) ═══════════ -->
+            <div class="sidebar-top-panel mb-2 flex-shrink-0">
 
-                    <!-- Header -->
-                    <div class="sidebar-header">
-                        <div>
-                            <h6>Percakapan</h6>
-                            <p class="subtitle"
-                                x-text="isGlobalSearchMode ? (totalSearchResultCount + ' hasil ditemukan') : (filteredChats.length + ' percakapan aktif')">
-                            </p>
-                        </div>
-                        <div class="sidebar-header-actions">
-                            <button @click="sortBy = sortBy === 'recent' ? 'oldest' : 'recent'; fetchChats()"
-                                :title="sortBy === 'recent' ? 'Urutkan: Terlama' : 'Urutkan: Terbaru'">
-                                <i class="fe" :class="sortBy === 'recent' ? 'fe-arrow-down' : 'fe-arrow-up'"></i>
-                            </button>
-                            <button @click="fetchChats()" title="Refresh">
-                                <i class="fe fe-refresh-cw"></i>
-                            </button>
-                        </div>
+                <!-- Header -->
+                <div class="sidebar-header">
+                    <div>
+                        <h6>Percakapan</h6>
+                        <p class="subtitle" x-text="isGlobalSearchMode ? (totalSearchResultCount + ' hasil ditemukan') : (filteredChats.length + ' percakapan aktif')"></p>
                     </div>
-
-                    <!-- Search -->
-                    <div class="sidebar-search">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fe fe-search" style="font-size:0.85rem;"></i></span>
-                            <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchChats()"
-                                placeholder="Cari nama, kontak, atau pesan..." class="form-control">
-                            <span class="clear-btn" x-show="searchQuery.length > 0 || hasActiveFilter"
-                                @click="clearSearch()" title="Hapus">
-                                <i class="fe fe-x"></i>
-                            </span>
-                        </div>
+                    <div class="sidebar-header-actions">
+                        <button @click="sortBy = sortBy === 'recent' ? 'oldest' : 'recent'; fetchChats()"
+                            :title="sortBy === 'recent' ? 'Urutkan: Terlama' : 'Urutkan: Terbaru'">
+                            <i class="fe" :class="sortBy === 'recent' ? 'fe-arrow-down' : 'fe-arrow-up'"></i>
+                        </button>
+                        <button @click="fetchChats()" title="Refresh">
+                            <i class="fe fe-refresh-cw"></i>
+                        </button>
                     </div>
+                </div>
 
-                    <!-- Content Filter Chips -->
-                    <div class="content-filter-row">
-                        <span class="content-chip" :class="filters.unreadOnly ? 'active' : ''"
-                            @click="toggleUnreadFilter()">
-                            Belum Dibaca
-                        </span>
-                        <span class="content-chip" :class="filters.messageType.includes('image') ? 'active' : ''"
-                            @click="toggleFilter('image')">
-                            Foto
-                        </span>
-                        <span class="content-chip" :class="filters.messageType.includes('video') ? 'active' : ''"
-                            @click="toggleFilter('video')">
-                            Video
-                        </span>
-                        <span class="content-chip" :class="filters.messageType.includes('file') ? 'active' : ''"
-                            @click="toggleFilter('file')">
-                            Dokumen
-                        </span>
-                        <span class="content-chip" :class="filters.messageType.includes('link') ? 'active' : ''"
-                            @click="toggleFilter('link')">
-                            Tautan
-                        </span>
-                        <span class="content-chip" :class="filters.messageType.includes('audio') ? 'active' : ''"
-                            @click="toggleFilter('audio')">
-                            Audio
+                <!-- Search -->
+                <div class="sidebar-search">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fe fe-search" style="font-size:0.85rem;"></i></span>
+                        <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchChats()"
+                            placeholder="Cari nama, kontak, atau pesan..."
+                            class="form-control">
+                        <span class="clear-btn" x-show="searchQuery.length > 0 || hasActiveFilter"
+                            @click="clearSearch()" title="Hapus">
+                            <i class="fe fe-x"></i>
                         </span>
                     </div>
+                </div>
 
-                </div> <!-- /TOP PANEL -->
+                <!-- Content Filter Chips -->
+                <div class="content-filter-row">
+                    <span class="content-chip"
+                        :class="filters.unreadOnly ? 'active' : ''"
+                        @click="toggleUnreadFilter()">
+                        Belum Dibaca
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('image') ? 'active' : ''"
+                        @click="toggleFilter('image')">
+                        Foto
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('video') ? 'active' : ''"
+                        @click="toggleFilter('video')">
+                        Video
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('file') ? 'active' : ''"
+                        @click="toggleFilter('file')">
+                        Dokumen
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('link') ? 'active' : ''"
+                        @click="toggleFilter('link')">
+                        Tautan
+                    </span>
+                    <span class="content-chip"
+                        :class="filters.messageType.includes('audio') ? 'active' : ''"
+                        @click="toggleFilter('audio')">
+                        Audio
+                    </span>
+                </div>
 
-                <!-- ═══════════ CHAT LIST PANEL ═══════════ -->
-                <div class="chat-list-panel flex-grow-1 d-flex flex-column" style="overflow: hidden;">
+            </div> <!-- /TOP PANEL -->
 
-                    <template x-if="!isGlobalSearchMode">
-                        <div class="d-flex flex-column h-100" style="overflow: hidden;">
+            <!-- ═══════════ CHAT LIST PANEL ═══════════ -->
+            <div class="chat-list-panel flex-grow-1 d-flex flex-column" style="overflow: hidden;">
 
-                            <!-- Status Tab Strip -->
-                            <div class="status-tab-strip flex-shrink-0">
-                                <ul class="nav nav-tabs">
-                                    <li class="nav-item">
-                                        <span class="nav-link" :class="statusFilter === 'all' ? 'active' : ''"
-                                            @click="statusFilter = 'all'" style="cursor:pointer;">
-                                            Semua
-                                            <span class="tab-count"
-                                                x-text="filteredChats.filter(c => c.customer.is_online).length"></span>
-                                        </span>
-                                    </li>
-                                    <li class="nav-item">
-                                        <span class="nav-link tab-queue"
-                                            :class="statusFilter === 'queue' ? 'active' : ''"
-                                            @click="statusFilter = 'queue'" style="cursor:pointer;">
-                                            Antrean
-                                            <span class="tab-count"
-                                                x-text="filteredChats.filter(c => ['pending','queued'].includes(c.status) && c.customer.is_online).length"></span>
-                                        </span>
-                                    </li>
-                                    <li class="nav-item">
-                                        <span class="nav-link" :class="statusFilter === 'active' ? 'active' : ''"
-                                            @click="statusFilter = 'active'" style="cursor:pointer;">
-                                            Online
-                                            <span class="tab-count"
-                                                x-text="filteredChats.filter(c => c.status === 'active' && c.customer.is_online).length"></span>
-                                        </span>
-                                    </li>
-                                    <li class="nav-item">
-                                        <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
-                                            @click="statusFilter = 'mine'" style="cursor:pointer;"
-                                            title="Chat yang sedang Anda tangani">
-                                            Milik Saya
-                                            <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
-                                        </span>
-                                    </li>
-                                    <li class="nav-item">
-                                        <span class="nav-link" :class="statusFilter === 'offline' ? 'active' : ''"
-                                            @click="statusFilter = 'offline'" style="cursor:pointer;">
-                                            Offline
-                                            <span class="tab-count"
-                                                x-text="filteredChats.filter(c => !c.customer.is_online || c.status === 'closed').length"></span>
-                                        </span>
-                                    </li>
-                                </ul>
-                            </div>
+                <template x-if="!isGlobalSearchMode">
+                    <div class="d-flex flex-column h-100" style="overflow: hidden;">
 
-                            <!-- Unified Chat List (scrollable) -->
-                            <div style="overflow-y: auto; flex: 1;">
-                                <template
-                                    x-for="chat in filteredChats.filter(c => {
-                                if (statusFilter === 'offline') return !c.customer.is_online || c.status === 'closed';
-                                if (statusFilter === 'mine') return c.status === 'active' && c.admin_id === adminId;
-                                // For other filters, only show ONLINE users
-                                if (!c.customer.is_online && c.status !== 'closed') return false; 
-                                if (statusFilter === 'all') return c.customer.is_online;
-                                if (statusFilter === 'queue') return ['pending','queued'].includes(c.status) && c.customer.is_online;
-                                if (statusFilter === 'active') return c.status === 'active' && c.customer.is_online;
-                                return true;
-                            })"
-                                    :key="chat.id">
-                                    <a href="javascript:void(0);" @click="selectChat(chat)" class="chat-item"
-                                        :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
-                                        style="text-decoration: none;">
-
-                                        <!-- Avatar -->
-                                        <div class="ci-avatar">
-                                            <div class="ci-avatar-circle"
-                                                :class="['pending', 'queued'].includes(chat.status) ? 'queue-bg' : 'active-bg'">
-                                                <span x-text="getInitial(chat.customer.name)"></span>
-                                            </div>
-                                            <span class="ci-status-dot"
-                                                :class="['pending', 'queued'].includes(chat.status) ? 'queue-dot' : (chat
-                                                    .customer.is_online ? 'online' : 'offline')"></span>
-                                        </div>
-
-                                        <!-- Content -->
-                                        <div class="ci-content">
-                                            <div class="ci-row1">
-                                                <span class="ci-name" x-html="highlightText(chat.customer.name)"></span>
-                                                <span class="ci-time" x-text="formatShortDateTime(chat.created_at)"></span>
-                                            </div>
-                                            <div class="ci-row2">
-                                                <span class="ci-badge"
-                                                    :class="{
-                                                        'queue': ['pending', 'queued'].includes(chat.status),
-                                                        'active-mine': chat.status === 'active' && chat.admin_id ===
-                                                            adminId && chat.customer.is_online,
-                                                        'active-other': chat.status === 'active' && chat.admin_id !==
-                                                            adminId && chat.customer.is_online,
-                                                        'offline': chat.status === 'active' && !chat.customer
-                                                            .is_online
-                                                    }"
-                                                    x-text="
-                                                    chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position :
-                                                    (chat.status === 'pending' ? '🔔 Permintaan Baru' :
-                                                    (chat.status === 'active' && !chat.customer.is_online ? '📴 Offline' :
-                                                    (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen'))))
-                                                "></span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                </template>
-
-                                <div x-show="filteredChats.filter(c => {
-                                    if (statusFilter === 'offline') return !c.customer.is_online || c.status === 'closed';
-                                    if (statusFilter === 'mine') return c.status === 'active' && c.admin_id === adminId;
-                                    if (!c.customer.is_online && c.status !== 'closed') return false;
-                                    if (statusFilter === 'all') return c.customer.is_online;
-                                    if (statusFilter === 'queue') return ['pending','queued'].includes(c.status) && c.customer.is_online;
-                                    if (statusFilter === 'active') return c.status === 'active' && c.customer.is_online;
-                                    return true;
-                                }).length === 0"
-                                    class="chat-empty-state">
-                                    <i class="fe fe-message-circle"></i>
-                                    <p
-                                        x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.')))">
-                                    </p>
-                                </div>
-                            </div>
-
+                        <!-- Status Tab Strip -->
+                        <div class="status-tab-strip flex-shrink-0">
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item">
+                                    <span class="nav-link" :class="statusFilter === 'all' ? 'active' : ''"
+                                        @click="statusFilter = 'all'" style="cursor:pointer;">
+                                        Semua
+                                        <span class="tab-count" x-text="filteredChats.length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
+                                    <span class="nav-link tab-queue" :class="statusFilter === 'queue' ? 'active' : ''"
+                                        @click="statusFilter = 'queue'" style="cursor:pointer;">
+                                        Antrean
+                                        <span class="tab-count" x-text="filteredChats.filter(c => ['pending','queued'].includes(c.status)).length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
+                                    <span class="nav-link" :class="statusFilter === 'active' ? 'active' : ''"
+                                        @click="statusFilter = 'active'" style="cursor:pointer;">
+                                        Aktif
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active').length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
+                                    <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
+                                        @click="statusFilter = 'mine'" style="cursor:pointer;"
+                                        title="Chat yang sedang Anda tangani">
+                                        Milik Saya
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
+                                    <span class="nav-link tab-offline" :class="statusFilter === 'offline' ? 'active' : ''"
+                                        @click="statusFilter = 'offline'" style="cursor:pointer;"
+                                        title="User yang sedang offline">
+                                        Offline
+                                        <span class="tab-count" x-text="filteredChats.filter(c => !c.customer.is_online).length"></span>
+                                    </span>
+                                </li>
+                            </ul>
                         </div>
-                    </template>
 
-                    <template x-if="isGlobalSearchMode">
-                        <div>
-                            <div class="search-category">
-                                <h6 class="mb-2">Kontak</h6>
-                                <template x-for="contact in searchResults.contacts" :key="`contact-${contact.id}`">
-                                    <a href="javascript:void(0);" class="media d-flex"
-                                        @click="openContactResult(contact)">
-                                        <div class="media-img-wrap flex-shrink-0">
-                                            <div class="avatar"
-                                                :class="contact.is_online ? 'avatar-online' : 'avatar-away'">
-                                                <div class="avatar-title rounded-circle bg-info text-white">
-                                                    <span x-text="getInitial(contact.name)"></span>
-                                                </div>
-                                            </div>
+                        <!-- Unified Chat List (scrollable) -->
+                        <div style="overflow-y: auto; flex: 1;">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true)))))" :key="chat.id">
+                                <a href="javascript:void(0);" @click="selectChat(chat)"
+                                    class="chat-item"
+                                    :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
+                                    style="text-decoration: none;">
+
+                                    <!-- Avatar -->
+                                    <div class="ci-avatar">
+                                        <div class="ci-avatar-circle"
+                                            :class="['pending','queued'].includes(chat.status) ? 'queue-bg' : (chat.status === 'active' ? 'active-bg' : 'closed-bg')">
+                                            <span x-text="getInitial(chat.customer.name)"></span>
                                         </div>
-                                        <div class="media-body flex-grow-1">
-                                            <div class="user-name" x-html="highlightText(contact.name)"></div>
-                                            <div class="user-last-chat" x-html="highlightText(contact.contact || '')">
-                                            </div>
+                                        <span class="ci-status-dot"
+                                            :class="['pending','queued'].includes(chat.status) ? 'queue-dot' : (chat.customer.is_online ? 'online' : 'offline')"></span>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="ci-content">
+                                        <div class="ci-row1">
+                                            <span class="ci-name" x-html="highlightText(chat.customer.name)"></span>
+                                            <span class="ci-time" x-text="formatShortDateTime(chat.created_at)"></span>
                                         </div>
-                                    </a>
-                                </template>
-                                <div x-show="searchResults.contacts.length === 0" class="text-muted small">Tidak ada
-                                    kontak cocok.</div>
+                                        <div class="ci-row2">
+                                            <span class="ci-badge"
+                                                :class="['pending','queued'].includes(chat.status) ? 'queue' : (chat.status === 'closed' ? 'closed' : (chat.admin_id === adminId ? 'active-mine' : 'active-other'))"
+                                                x-text="chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position : (chat.status === 'pending' ? '🔔 Permintaan Baru' : (chat.status === 'closed' ? '📁 Selesai' : (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen'))))"
+                                            ></span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </template>
+
+                            <!-- Empty state -->
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true))))).length === 0"
+                                class="chat-empty-state">
+                                <i class="fe fe-message-circle"></i>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.')))"></p>
                             </div>
+                        </div>
 
-                            <div class="search-category"
-                                x-show="searchResults.messages && searchResults.messages.length > 0">
-                                <h6 class="mb-2">Pesan</h6>
-                                <template x-for="timeGroup in searchResults.messages"
-                                    :key="`time-${timeGroup.time_group}`">
-                                    <div>
-                                        <div class="search-time-divider" x-text="timeGroup.time_group_label"></div>
-                                        <template x-for="message in timeGroup.messages" :key="`message-${message.id}`">
-                                            <a href="javascript:void(0);" class="media d-flex"
-                                                @click="openMessageResult(message)">
-                                                <div class="media-img-wrap flex-shrink-0">
-                                                    <div class="avatar avatar-away">
-                                                        <div class="avatar-title rounded-circle bg-secondary text-white">
-                                                            <span x-text="getInitial(message.customer_name)"></span>
-                                                        </div>
+                    </div>
+                </template>
+
+                <template x-if="isGlobalSearchMode">
+                    <div>
+                        <div class="search-category">
+                            <h6 class="mb-2">Kontak</h6>
+                            <template x-for="contact in searchResults.contacts" :key="`contact-${contact.id}`">
+                                <a href="javascript:void(0);" class="media d-flex" @click="openContactResult(contact)">
+                                    <div class="media-img-wrap flex-shrink-0">
+                                        <div class="avatar" :class="contact.is_online ? 'avatar-online' : 'avatar-away'">
+                                            <div class="avatar-title rounded-circle bg-info text-white">
+                                                <span x-text="getInitial(contact.name)"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="media-body flex-grow-1">
+                                        <div class="user-name" x-html="highlightText(contact.name)"></div>
+                                        <div class="user-last-chat" x-html="highlightText(contact.contact || '')"></div>
+                                    </div>
+                                </a>
+                            </template>
+                            <div x-show="searchResults.contacts.length === 0" class="text-muted small">Tidak ada kontak cocok.</div>
+                        </div>
+
+                        <div class="search-category" x-show="searchResults.messages && searchResults.messages.length > 0">
+                            <h6 class="mb-2">Pesan</h6>
+                            <template x-for="timeGroup in searchResults.messages" :key="`time-${timeGroup.time_group}`">
+                                <div>
+                                    <div class="search-time-divider" x-text="timeGroup.time_group_label"></div>
+                                    <template x-for="message in timeGroup.messages" :key="`message-${message.id}`">
+                                        <a href="javascript:void(0);" class="media d-flex" @click="openMessageResult(message)">
+                                            <div class="media-img-wrap flex-shrink-0">
+                                                <div class="avatar avatar-away">
+                                                    <div class="avatar-title rounded-circle bg-secondary text-white">
+                                                        <span x-text="getInitial(message.customer_name)"></span>
                                                     </div>
                                                 </div>
-                                                <div class="media-body flex-grow-1">
-                                                    <div class="user-name"
-                                                        x-html="highlightText(message.customer_name || '')"></div>
-                                                    <div class="search-snippet"
-                                                        x-html="highlightText(message.snippet || '')"></div>
-                                                    <div class="user-last-chat text-muted" style="font-size: 0.75em;"
-                                                        x-text="formatShortDateTime(message.created_at)"></div>
-                                                </div>
-                                            </a>
-                                        </template>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <div x-show="totalSearchResultCount === 0" class="text-center p-3 text-muted small"
-                                style="margin-top: 20px;">
-                                Tidak ada hasil pencarian.
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <div class="chat-cont-right transition-all flex-grow-1"
-                :class="{
-                    'col-md-8 col-lg-7 col-xl-8': !sidebarCollapsed,
-                    'col-12': sidebarCollapsed,
-                    'd-none d-md-flex': !selectedChat && !sidebarCollapsed,
-                    'd-flex': selectedChat || sidebarCollapsed
-                }">
-                <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
-                    <div class="h-100 d-flex flex-column">
-                        <div class="card-header msg_head px-3 py-2">
-                            <div class="d-flex bd-highlight align-items-center w-100">
-                                <a href="javascript:void(0)" class="back-user-list me-3 d-lg-none"
-                                    :class="darkMode ? 'text-white' : 'text-dark'" @click="selectedChat = null">
-                                    <i class="fas fa-arrow-left fa-lg"></i>
-                                </a>
-                                <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary"
-                                    @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
-                                    <i class="fas fa-bars fa-lg"></i>
-                                </a>
-                                <div class="img_cont flex-shrink-0">
-                                    <div class="avatar avatar-sm">
-                                        <div class="avatar-title rounded-circle bg-primary text-white">
-                                            <span
-                                                x-text="selectedChat ? selectedChat.customer.name.charAt(0).toUpperCase() : ''"></span>
-                                        </div>
-                                    </div>
+                                            </div>
+                                            <div class="media-body flex-grow-1">
+                                                <div class="user-name" x-html="highlightText(message.customer_name || '')"></div>
+                                                <div class="search-snippet" x-html="highlightText(message.snippet || '')"></div>
+                                                <div class="user-last-chat text-muted" style="font-size: 0.75em;" x-text="formatShortDateTime(message.created_at)"></div>
+                                            </div>
+                                        </a>
+                                    </template>
                                 </div>
-                                <div class="user_info ms-2 flex-grow-1 overflow-hidden">
-                                    <span class="text-truncate d-block"
-                                        x-text="selectedChat ? selectedChat.customer.name : ''"></span>
-                                    <p class="mb-0 small"
-                                        :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'"
-                                        x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'">
-                                    </p>
-                                </div>
-                                <div class="chat-options ms-auto flex-shrink-0">
-                                    <ul class="d-flex align-items-center list-unstyled mb-0">
-                                        <template
-                                            x-if="selectedChat && ['pending', 'queued'].includes(selectedChat.status)">
-                                            <li class="ms-2">
-                                                <button class="btn btn-sm btn-primary px-3"
-                                                    @click="claimChat(selectedChat.id)" :disabled="isClaiming">
-                                                    <span x-text="isClaiming ? 'Mengambil...' : 'Klaim Chat'"></span>
-                                                </button>
-                                            </li>
-                                        </template>
-                                        <template
-                                            x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
-                                            <li class="d-flex ms-2">
-                                                <button class="btn btn-sm btn-outline-info me-1"
-                                                    @click="showHandoverModal = true" title="Oper Chat"><i
-                                                        class="fe fe-repeat"></i></button>
-                                                <button class="btn btn-sm btn-outline-success me-1"
-                                                    @click="confirmCloseChat()" :disabled="isSubmitting"
-                                                    title="Selesaikan"><i class="fe fe-check"></i></button>
-                                                <button class="btn btn-sm btn-outline-danger"
-                                                    @click="blockUser(selectedChat.id)" title="Blokir"><i
-                                                        class="fe fe-slash"></i></button>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                </div>
-                            </div>
+                            </template>
                         </div>
 
-                        <div class="card-body p-0 flex-grow-1 position-relative" style="min-height: 0;">
-                            <!-- Skeleton Loader overlay -->
-                            <div x-show="!iframeLoaded && selectedChat"
-                                class="skeleton-loader-container position-absolute w-100 h-100 bg-white"
-                                style="z-index: 10; padding: 20px; pointer-events: none;">
-                                <div class="skeleton-text w-75 mb-3"></div>
-                                <div class="skeleton-text w-50"></div>
-                            </div>
-                            <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'"
-                                class="w-100 h-100" style="border: none; display: block;"
-                                @load="iframeLoaded = true"></iframe>
+                        <div x-show="totalSearchResultCount === 0" class="text-center p-3 text-muted small" style="margin-top: 20px;">
+                            Tidak ada hasil pencarian.
                         </div>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
 
-        <!-- Modals -->
-        <div class="modal fade" :class="showHandoverModal ? 'show d-block' : ''" tabindex="-1"
-            x-show="showHandoverModal" x-cloak>
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Oper Percakapan</h5>
-                        <button type="button" class="btn-close" @click="showHandoverModal = false"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Pilih Admin</label>
-                            <select x-model="handoverToAdminId" class="form-select">
-                                <option value="">-- Pilih Admin --</option>
-                                @foreach ($otherAdmins as $other)
-                                    <option value="{{ $other->id }}">{{ $other->username }}
-                                        ({{ ucfirst($other->status) }})</option>
-                                @endforeach
-                            </select>
+        <div class="chat-cont-right transition-all flex-grow-1"
+            :class="{
+                     'col-md-8 col-lg-7 col-xl-8': !sidebarCollapsed,
+                     'col-12': sidebarCollapsed,
+                     'd-none d-lg-flex': !selectedChat && !sidebarCollapsed,
+                     'mobile-show d-flex': selectedChat || sidebarCollapsed
+                 }">
+            <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
+            <div class="h-100 d-flex flex-column">
+                <div class="card-header msg_head px-3 py-2">
+                    <div class="d-flex bd-highlight align-items-center w-100">
+                        <a href="javascript:void(0)" class="back-user-list me-3 d-lg-none"
+                            :class="darkMode ? 'text-white' : 'text-dark'"
+                            @click="selectedChat = null">
+                            <i class="fas fa-arrow-left fa-lg"></i>
+                        </a>
+                        <a href="javascript:void(0)" class="me-3 d-none d-lg-block text-secondary" @click="sidebarCollapsed = !sidebarCollapsed" title="Toggle Sidebar">
+                            <i class="fas fa-bars fa-lg"></i>
+                        </a>
+                        <div class="img_cont flex-shrink-0">
+                            <div class="avatar avatar-sm">
+                                <div class="avatar-title rounded-circle bg-primary text-white">
+                                    <span x-text="selectedChat ? selectedChat.customer.name.charAt(0).toUpperCase() : ''"></span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Catatan Internal (Opsional)</label>
-                            <textarea x-model="handoverNote" class="form-control" rows="3" placeholder="Pesan untuk agen selanjutnya..."></textarea>
+                        <div class="user_info ms-2 flex-grow-1 overflow-hidden">
+                            <span class="text-truncate d-block" x-text="selectedChat ? selectedChat.customer.name : ''"></span>
+                            <p class="mb-0 small" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
+                        </div>
+                        <div class="chat-options ms-auto flex-shrink-0">
+                            <ul class="d-flex align-items-center list-unstyled mb-0">
+                                <template x-if="selectedChat && ['pending', 'queued'].includes(selectedChat.status)">
+                                    <li class="ms-2">
+                                        <button class="btn btn-sm btn-primary px-3" @click="claimChat(selectedChat.id)" :disabled="isClaiming">
+                                            <span x-text="isClaiming ? 'Mengambil...' : 'Klaim Chat'"></span>
+                                        </button>
+                                    </li>
+                                </template>
+                                <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
+                                    <li class="d-flex ms-2">
+                                        <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
+                                        <button class="btn btn-sm btn-outline-success me-1" @click="confirmCloseChat()" :disabled="isSubmitting" title="Selesaikan"><i class="fe fe-check"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary"
-                            @click="showHandoverModal = false">Batal</button>
-                        <button type="button" class="btn btn-primary" @click="handoverChat()"
-                            :disabled="!handoverToAdminId || isSubmitting">Oper</button>
+                </div>
+
+                <div class="card-body p-0 flex-grow-1 position-relative" style="min-height: 0;">
+                    <!-- Skeleton Loader overlay -->
+                    <div x-show="!iframeLoaded && selectedChat"
+                        class="skeleton-loader-container position-absolute w-100 h-100 bg-white"
+                        style="z-index: 10; padding: 20px; pointer-events: none;">
+                        <div class="skeleton-text w-75 mb-3"></div>
+                        <div class="skeleton-text w-50"></div>
                     </div>
+                    <iframe :src="selectedChat ? '/admin/conversation/' + selectedChat.id : 'about:blank'"
+                        class="w-100 h-100"
+                        style="border: none; display: block;"
+                        @load="iframeLoaded = true"></iframe>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" :class="showHandoverModal ? 'show d-block' : ''" tabindex="-1" x-show="showHandoverModal" x-cloak>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Oper Percakapan</h5>
+                <button type="button" class="btn-close" @click="showHandoverModal = false"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Pilih Admin</label>
+                    <select x-model="handoverToAdminId" class="form-select">
+                        <option value="">-- Pilih Admin --</option>
+                        @foreach($otherAdmins as $other)
+                        <option value="{{ $other->id }}">{{ $other->username }} ({{ ucfirst($other->status) }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Catatan Internal (Opsional)</label>
+                    <textarea x-model="handoverNote" class="form-control" rows="3" placeholder="Pesan untuk agen selanjutnya..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @click="showHandoverModal = false">Batal</button>
+                <button type="button" class="btn btn-primary" @click="handoverChat()" :disabled="!handoverToAdminId || isSubmitting">Oper</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
 @endsection
 
 @push('scripts')
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('adminChat', (adminId, initPending, initActive, initClosed) => ({
-                adminId: adminId,
-                chats: [...initPending, ...initActive, ...initClosed],
-                currentTime: Date.now(),
-                sidebarCollapsed: false,
-                selectedChat: null,
-                searchQuery: '',
-                sortBy: 'recent',
-                isClaiming: false,
-                isSubmitting: false,
-                showHandoverModal: false,
-                handoverToAdminId: '',
-                handoverNote: '',
-                audioUnlocked: false,
-                notificationSound: null,
-                iframeLoaded: false,
-                searchResults: {
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('adminChat', (adminId, initPending, initActive, initClosed) => ({
+            adminId: adminId,
+            chats: [...(initPending || []), ...(initActive || []), ...(initClosed || [])],
+            currentTime: Date.now(),
+            sidebarCollapsed: false,
+            selectedChat: null,
+            searchQuery: '',
+            sortBy: 'recent',
+            isClaiming: false,
+            isSubmitting: false,
+            showHandoverModal: false,
+            handoverToAdminId: '',
+            handoverNote: '',
+            audioUnlocked: false,
+            notificationSound: null,
+            iframeLoaded: false,
+            searchResults: {
+                contacts: [],
+                groups: [],
+                messages: [],
+            },
+            statusFilter: 'all',
+            filters: {
+                messageType: [],
+                unreadOnly: false,
+            },
+
+            clearSearch() {
+                this.searchQuery = '';
+                this.filters.messageType = [];
+                this.filters.unreadOnly = false;
+                this.statusFilter = 'all';
+                this.fetchChats();
+            },
+
+            toggleFilter(type) {
+                const index = this.filters.messageType.indexOf(type);
+                if (index > -1) {
+                    this.filters.messageType.splice(index, 1);
+                } else {
+                    this.filters.messageType.push(type);
+                }
+                this.fetchChats();
+            },
+
+            toggleUnreadFilter() {
+                this.filters.unreadOnly = !this.filters.unreadOnly;
+                this.fetchChats();
+            },
+
+            emptySearchResults() {
+                return {
                     contacts: [],
                     groups: [],
                     messages: [],
-                },
-                statusFilter: 'all',
-                filters: {
-                    messageType: [],
-                    unreadOnly: false,
-                },
+                };
+            },
 
-                clearSearch() {
-                    this.searchQuery = '';
-                    this.filters.messageType = [];
-                    this.filters.unreadOnly = false;
-                    this.statusFilter = 'all';
-                    this.fetchChats();
-                },
-
-                toggleFilter(type) {
-                    const index = this.filters.messageType.indexOf(type);
-                    if (index > -1) {
-                        this.filters.messageType.splice(index, 1);
-                    } else {
-                        this.filters.messageType.push(type);
-                    }
-                    this.fetchChats();
-                },
-
-                toggleUnreadFilter() {
-                    this.filters.unreadOnly = !this.filters.unreadOnly;
-                    this.fetchChats();
-                },
-
-                emptySearchResults() {
-                    return {
-                        contacts: [],
-                        groups: [],
-                        messages: [],
-                    };
-                },
-
-                escapeHtml(text) {
-                    return String(text ?? '')
+            escapeHtml(text) {
+                if (!text) return '';
+                
+                // Specific fix for BEST AI badge to allow it to render HTML
+                const badgePart = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                
+                if (String(text).includes(badgePart)) {
+                    let parts = String(text).split(badgePart);
+                    let safeParts = parts.map(p => String(p)
                         .replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
                         .replace(/>/g, '&gt;')
                         .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#039;');
-                },
+                        .replace(/'/g, '&#039;')
+                    );
+                    return safeParts.join(badgePart);
+                }
 
-                escapeRegex(str) {
-                    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                },
+                return String(text ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            },
 
-                highlightText(text) {
-                    const safeText = this.escapeHtml(text);
-                    const keyword = this.searchQuery.trim();
+            escapeRegex(str) {
+                return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            },
 
-                    if (!keyword) {
-                        return safeText;
+            highlightText(text) {
+                const safeText = this.escapeHtml(text);
+                const keyword = this.searchQuery.trim();
+
+                if (!keyword) {
+                    return safeText;
+                }
+
+                const regex = new RegExp(`(${this.escapeRegex(keyword)})`, 'gi');
+                return safeText.replace(regex, '<span class="keyword-highlight">$1</span>');
+            },
+
+            getInitial(name) {
+                const normalized = String(name ?? '').trim();
+                return normalized ? normalized.charAt(0).toUpperCase() : '?';
+            },
+
+            async openConversationResult(conversationId) {
+                let chat = this.chats.find(c => c.id === conversationId);
+
+                if (!chat) {
+                    await this.fetchChats();
+                    chat = this.chats.find(c => c.id === conversationId);
+                }
+
+                if (chat) {
+                    this.selectChat(chat);
+                }
+            },
+
+            async openContactResult(contact) {
+                let chat = this.chats.find(c => c.customer && c.customer.id === contact.id);
+
+                if (!chat) {
+                    await this.fetchChats();
+                    chat = this.chats.find(c => c.customer && c.customer.id === contact.id);
+                }
+
+                if (chat) {
+                    this.selectChat(chat);
+                }
+            },
+
+            async openMessageResult(message) {
+                await this.openConversationResult(message.conversation_id);
+            },
+
+            init() {
+                // Update currentTime every minute for relative time reactivity
+                setInterval(() => {
+                    this.currentTime = Date.now();
+                }, 60000);
+
+                // Auto-refresh chat list every 5 seconds
+                setInterval(() => {
+                    console.log('🔄 Auto-refresh chat list...');
+                    this.fetchChats();
+                }, 5000);
+
+                // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
+                const unlockAudio = () => {
+                    if (!this.notificationSound) {
+                        this.notificationSound = new Audio('{{ asset("sounds/notification.mp3") }}');
+                        this.notificationSound.volume = 0; // Mute for dummy play
+                        this.notificationSound.play().then(() => {
+                            this.notificationSound.pause();
+                            this.notificationSound.currentTime = 0;
+                            this.notificationSound.volume = 1;
+                            this.audioUnlocked = true;
+                            console.log("🔊 Audio unlocked");
+                        }).catch(e => console.log(e));
                     }
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('keydown', unlockAudio);
+                };
+                document.addEventListener('click', unlockAudio);
+                document.addEventListener('keydown', unlockAudio);
 
-                    const regex = new RegExp(`(${this.escapeRegex(keyword)})`, 'gi');
-                    return safeText.replace(regex, '<span class="keyword-highlight">$1</span>');
-                },
+                // Menunggu window.Echo siap (Vite memuat secara asinkron)
+                let echoCheckRetry = 0;
+                const maxRetries = 10;
+                const echoCheckInterval = setInterval(() => {
+                    echoCheckRetry++;
+                    if (window.Echo) {
+                        console.log('✅ Connecting to admin.dashboard channel...');
+                        window.Echo.private('admin.dashboard')
+                            .listen('.conversation.status.changed', (e) => {
+                                console.log('🔔 Status Changed Received:', e);
+                                console.log('📝 Conversation ID:', e.conversation_id, 'Status:', e.status);
 
-                getInitial(name) {
-                    const normalized = String(name ?? '').trim();
-                    return normalized ? normalized.charAt(0).toUpperCase() : '?';
-                },
-
-                async openConversationResult(conversationId) {
-                    let chat = this.chats.find(c => c.id === conversationId);
-
-                    if (!chat) {
-                        await this.fetchChats();
-                        chat = this.chats.find(c => c.id === conversationId);
-                    }
-
-                    if (chat) {
-                        this.selectChat(chat);
-                    }
-                },
-
-                async openContactResult(contact) {
-                    let chat = this.chats.find(c => c.customer && c.customer.id === contact.id);
-
-                    if (!chat) {
-                        await this.fetchChats();
-                        chat = this.chats.find(c => c.customer && c.customer.id === contact.id);
-                    }
-
-                    if (chat) {
-                        this.selectChat(chat);
-                    }
-                },
-
-                async openMessageResult(message) {
-                    await this.openConversationResult(message.conversation_id);
-                },
-
-                init() {
-                    // Update currentTime every minute for relative time reactivity
-                    setInterval(() => {
-                        this.currentTime = Date.now();
-                    }, 60000);
-
-                    // Auto-refresh chat list every 5 seconds
-                    setInterval(() => {
-                        console.log('🔄 Auto-refresh chat list...');
-                        this.fetchChats();
-                    }, 5000);
-
-                    // Aktifkan audio saat ada interaksi pertama dari user (diklik/ketik)
-                    const unlockAudio = () => {
-                        if (!this.notificationSound) {
-                            this.notificationSound = new Audio(
-                                '{{ asset('sounds/notification.mp3') }}');
-                            this.notificationSound.volume = 0; // Mute for dummy play
-                            this.notificationSound.play().then(() => {
-                                this.notificationSound.pause();
-                                this.notificationSound.currentTime = 0;
-                                this.notificationSound.volume = 1;
-                                this.audioUnlocked = true;
-                                console.log("🔊 Audio unlocked");
-                            }).catch(e => console.log(e));
-                        }
-                        document.removeEventListener('click', unlockAudio);
-                        document.removeEventListener('keydown', unlockAudio);
-                    };
-                    document.addEventListener('click', unlockAudio);
-                    document.addEventListener('keydown', unlockAudio);
-
-                    // Menunggu window.Echo siap (Vite memuat secara asinkron)
-                    let echoCheckRetry = 0;
-                    const maxRetries = 10;
-                    const echoCheckInterval = setInterval(() => {
-                        echoCheckRetry++;
-                        if (window.Echo) {
-                            console.log('✅ Connecting to admin.dashboard channel...');
-                            window.Echo.private('admin.dashboard')
-                                .listen('.conversation.status.changed', (e) => {
-                                    console.log('🔔 Status Changed Received:', e);
-                                    console.log('📝 Conversation ID:', e.conversation_id,
-                                        'Status:', e.status);
-
-                                    // Update status offline secara reaktif dari data broadcast
-                                    if (e.customer) {
-                                        // 1. Update di chat yang terpilih (Header)
-                                        if (this.selectedChat && this.selectedChat
-                                            .customer && this.selectedChat.customer.id === e
-                                            .customer.id) {
-                                            this.selectedChat.customer.is_online = e
-                                                .customer.is_online;
-                                            // Paksa refresh teks status jika Alpine tidak mendeteksi perubahan properti dalam
-                                            this.$nextTick(() => {
-                                                this.selectedChat = {
-                                                    ...this.selectedChat
-                                                };
-                                            });
-                                        }
-
-                                        // 2. Update di daftar chat di kiri
-                                        this.chats.forEach(c => {
-                                            if (c.customer && c.customer.id === e
-                                                .customer.id) {
-                                                c.customer.is_online = e.customer
-                                                    .is_online;
-                                            }
+                                // Update status offline secara reaktif dari data broadcast
+                                if (e.customer) {
+                                    // 1. Update di chat yang terpilih (Header)
+                                    if (this.selectedChat && this.selectedChat.customer && this.selectedChat.customer.id === e.customer.id) {
+                                        this.selectedChat.customer.is_online = e.customer.is_online;
+                                        // Paksa refresh teks status jika Alpine tidak mendeteksi perubahan properti dalam
+                                        this.$nextTick(() => {
+                                            this.selectedChat = {
+                                                ...this.selectedChat
+                                            };
                                         });
                                     }
 
-                                    if (this.selectedChat && this.selectedChat.id === e
-                                        .conversation_id && e.status === 'closed') {
-                                        this.selectedChat.status = 'closed';
-
-                                        // Refresh list setelah jeda agar chat pindah ke history
-                                        setTimeout(() => {
-                                            this.fetchChats();
-                                        }, 1000);
-                                    } else {
-                                        this.fetchChats();
-                                    }
-
-                                    // Play sound if it's a new or queued request
-                                    if (['pending', 'queued'].includes(e.status)) {
-                                        this.playNotification();
-                                    }
-                                });
-                            clearInterval(echoCheckInterval);
-                        } else if (echoCheckRetry >= maxRetries) {
-                            console.error('❌ Laravel Echo not found after max retries.');
-                            clearInterval(echoCheckInterval);
-                        }
-                    }, 500);
-                },
-
-                playNotification() {
-                    if (this.audioUnlocked && this.notificationSound) {
-                        this.notificationSound.currentTime = 0;
-                        this.notificationSound.play().catch(e => console.log("Playback failed:", e));
-                    } else {
-                        const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
-                        audio.play().catch(e => {
-                            console.log(
-                                "Audio play blocked. Click anywhere on the page first to unlock sound."
-                                );
-                        });
-                    }
-                },
-
-                async fetchChats() {
-                    console.log('🔄 Fetching chats...');
-                    try {
-                        const params = new URLSearchParams({
-                            ajax: '1',
-                            sort: this.sortBy,
-                        });
-
-                        const keyword = this.searchQuery.trim();
-                        if (keyword) {
-                            params.set('search', keyword);
-                        }
-
-                        if (this.filters.messageType.length > 0) {
-                            params.set('quick_filters', this.filters.messageType.join(','));
-                        }
-
-                        if (this.filters.unreadOnly) {
-                            params.set('unread_only', '1');
-                        }
-
-                        const res = await fetch(`/admin/chat?${params.toString()}`);
-                        if (!res.ok) {
-                            throw new Error('Gagal mengambil data pencarian chat');
-                        }
-
-                        const data = await res.json();
-                        this.chats = [...(data.pending || []), ...(data.active || []), ...(data
-                            .closed || [])];
-                        this.searchResults = data.search_results || this.emptySearchResults();
-
-                        if (this.selectedChat) {
-                            const updatedSelected = this.chats.find(chat => chat.id === this
-                                .selectedChat.id);
-                            if (updatedSelected) {
-                                this.selectedChat = {
-                                    ...this.selectedChat,
-                                    ...updatedSelected,
-                                };
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Failed to fetch chats', e);
-                    }
-                },
-
-                get hasActiveFilter() {
-                    return this.filters.messageType.length > 0 || this.filters.unreadOnly;
-                },
-
-                get isGlobalSearchMode() {
-                    return this.searchQuery.trim().length > 0 || this.hasActiveFilter;
-                },
-
-                get totalSearchResultCount() {
-                    const messageCount = (this.searchResults.messages || []).reduce((total,
-                        group) => {
-                            return total + (group.messages ? group.messages.length : 0);
-                        }, 0);
-
-                    return (this.searchResults.contacts || []).length +
-                        (this.searchResults.groups || []).length +
-                        messageCount;
-                },
-
-                get filteredChats() {
-                    let result = this.chats;
-
-                    // Sorting is handled by server now, but keep client-side sorting as fallback
-                    if (this.sortBy === 'recent') {
-                        result = [...result].sort((a, b) => {
-                            const dateA = new Date(a.last_message_at || a.created_at);
-                            const dateB = new Date(b.last_message_at || b.created_at);
-                            return dateB - dateA; // Newest first
-                        });
-                    } else if (this.sortBy === 'oldest') {
-                        result = [...result].sort((a, b) => {
-                            const dateA = new Date(a.last_message_at || a.created_at);
-                            const dateB = new Date(b.last_message_at || b.created_at);
-                            return dateA - dateB; // Oldest first
-                        });
-                    }
-
-                    return result;
-                },
-
-                formatTime(datetimeString) {
-                    if (!datetimeString) return '';
-                    const date = new Date(datetimeString);
-                    const options = {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'Asia/Jakarta'
-                    };
-                    return date.toLocaleString('id-ID', options);
-                },
-
-                isLongWaiting(datetimeString) {
-                    if (!datetimeString) return false;
-                    // Force reactivity by referencing this.currentTime
-                    const now = this.currentTime;
-                    // Safely parse ISO string
-                    const diff = now - new Date(datetimeString.replace(/-/g, '/')).getTime();
-                    return diff > 3 * 60 * 1000; // 3 minutes
-                },
-
-                formatShortDateTime(datetimeString) {
-                    if (!datetimeString) return '';
-                    const date = new Date(datetimeString);
-                    const options = {
-                        year: '2-digit',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'Asia/Jakarta'
-                    };
-                    return date.toLocaleString('id-ID', options);
-                },
-
-                formatFullDateTime(datetimeString) {
-                    if (!datetimeString) return '';
-                    const date = new Date(datetimeString);
-                    const options = {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'Asia/Jakarta'
-                    };
-                    // Using 'id-ID' for Indonesian locale. Ensure the browser supports it.
-                    return date.toLocaleString('id-ID', options);
-                },
-                selectChat(chat) {
-                    if (!this.selectedChat || this.selectedChat.id !== chat.id) {
-                        this.iframeLoaded = false;
-                    }
-                    this.selectedChat = chat;
-                },
-
-                async claimChat(conversationId) {
-                    this.isClaiming = true;
-                    try {
-                        const res = await fetch(`/admin/conversation/${conversationId}/claim`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json'
-                            }
-                        });
-                        if (!res.ok) {
-                            const errData = await res.json().catch(() => ({}));
-                            throw new Error(errData.error || errData.message ||
-                                `Gagal mengambil chat (HTTP ${res.status})`);
-                        }
-
-                        // Update lists without reload
-                        await this.fetchChats();
-
-                        // Switch to active tab so the admin can see their new chat
-                        this.statusFilter = 'active';
-
-                        // If we just claimed it, find it in the new list and select it
-                        const claimed = this.chats.find(c => c.id === conversationId);
-                        if (claimed) {
-                            this.selectChat(claimed);
-                        }
-
-                        Toast.fire({
-                            icon: 'success',
-                            title: 'Chat berhasil diambil'
-                        });
-                    } catch (error) {
-                        Toast.fire({
-                            icon: 'error',
-                            title: error.message
-                        });
-                    } finally {
-                        this.isClaiming = false;
-                    }
-                },
-
-                async confirmCloseChat() {
-                    Swal.fire({
-                        title: 'Selesaikan Percakapan?',
-                        text: 'Percakapan ini akan ditutup dan dipindahkan ke riwayat.',
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonColor: '#28a745',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: 'Ya, Selesaikan',
-                        cancelButtonText: 'Batal'
-                    }).then(async (result) => {
-                        if (result.isConfirmed) {
-                            await this.closeChat();
-                        }
-                    });
-                },
-
-                async closeChat() {
-                    this.isSubmitting = true;
-                    try {
-                        const res = await fetch(
-                        `/admin/conversation/${this.selectedChat.id}/close`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json'
-                            }
-                        });
-                        if (!res.ok) throw new Error('Gagal menyelesaikan chat');
-
-                        Toast.fire({
-                            icon: 'success',
-                            title: 'Percakapan diselesaikan'
-                        });
-
-                        // Reset selection and refresh list
-                        this.selectedChat = null;
-                        await this.fetchChats();
-                    } catch (e) {
-                        Toast.fire({
-                            icon: 'error',
-                            title: e.message
-                        });
-                    } finally {
-                        this.isSubmitting = false;
-                    }
-                },
-
-                async handoverChat() {
-                    this.isSubmitting = true;
-                    try {
-                        const res = await fetch(
-                            `/admin/conversation/${this.selectedChat.id}/handover`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                },
-                                body: JSON.stringify({
-                                    to_admin_id: this.handoverToAdminId,
-                                    internal_note: this.handoverNote
-                                })
-                            });
-                        if (!res.ok) throw new Error('Gagal mengoper chat');
-                        window.location.reload();
-                    } catch (e) {
-                        Toast.fire({
-                            icon: 'error',
-                            title: e.message
-                        });
-                    } finally {
-                        this.isSubmitting = false;
-                    }
-                },
-
-                async blockUser(conversationId) {
-                    Swal.fire({
-                        title: 'Blokir pelanggan?',
-                        text: 'Anda yakin ingin memblokir pelanggan ini?',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: 'Ya, Blokir!',
-                        cancelButtonText: 'Batal'
-                    }).then(async (result) => {
-                        if (result.isConfirmed) {
-                            try {
-                                const res = await fetch(
-                                    `/admin/conversation/${conversationId}/block`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                    // 2. Update di daftar chat di kiri
+                                    this.chats.forEach(c => {
+                                        if (c.customer && c.customer.id === e.customer.id) {
+                                            c.customer.is_online = e.customer.is_online;
                                         }
                                     });
-                                if (!res.ok) throw new Error('Gagal blokir pelanggan');
-                                window.location.reload();
-                            } catch (e) {
-                                Toast.fire({
-                                    icon: 'error',
-                                    title: e.message
-                                });
-                            }
-                        }
+                                }
+
+                                if (this.selectedChat && this.selectedChat.id === e.conversation_id && e.status === 'closed') {
+                                    this.selectedChat.status = 'closed';
+
+                                    // Refresh list setelah jeda agar chat pindah ke history
+                                    setTimeout(() => {
+                                        this.fetchChats();
+                                    }, 1000);
+                                } else {
+                                    this.fetchChats();
+                                }
+
+                                // Play sound if it's a new or queued request
+                                if (['pending', 'queued'].includes(e.status)) {
+                                    this.playNotification();
+                                }
+                            });
+                        clearInterval(echoCheckInterval);
+                    } else if (echoCheckRetry >= maxRetries) {
+                        console.error('❌ Laravel Echo not found after max retries.');
+                        clearInterval(echoCheckInterval);
+                    }
+                }, 500);
+            },
+
+            playNotification() {
+                if (this.audioUnlocked && this.notificationSound) {
+                    this.notificationSound.currentTime = 0;
+                    this.notificationSound.play().catch(e => console.log("Playback failed:", e));
+                } else {
+                    const audio = new Audio('{{ asset("sounds/notification.mp3") }}');
+                    audio.play().catch(e => {
+                        console.log("Audio play blocked. Click anywhere on the page first to unlock sound.");
                     });
                 }
-            }));
-        });
-    </script>
+            },
+
+            async fetchChats() {
+                console.log('🔄 Fetching chats...');
+                try {
+                    const params = new URLSearchParams({
+                        ajax: '1',
+                        sort: this.sortBy,
+                    });
+
+                    const keyword = this.searchQuery.trim();
+                    if (keyword) {
+                        params.set('search', keyword);
+                    }
+
+                    if (this.filters.messageType.length > 0) {
+                        params.set('quick_filters', this.filters.messageType.join(','));
+                    }
+
+                    if (this.filters.unreadOnly) {
+                        params.set('unread_only', '1');
+                    }
+
+                    const res = await fetch(`/admin/chat?${params.toString()}`);
+                    if (!res.ok) {
+                        throw new Error('Gagal mengambil data pencarian chat');
+                    }
+
+                    const data = await res.json();
+                    this.chats = [...(data.pending || []), ...(data.active || []), ...(data.closed || [])];
+                    this.searchResults = data.search_results || this.emptySearchResults();
+
+                    if (this.selectedChat) {
+                        const updatedSelected = this.chats.find(chat => chat.id === this.selectedChat.id);
+                        if (updatedSelected) {
+                            this.selectedChat = {
+                                ...this.selectedChat,
+                                ...updatedSelected,
+                            };
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch chats', e);
+                }
+            },
+
+            get hasActiveFilter() {
+                return this.filters.messageType.length > 0 || this.filters.unreadOnly;
+            },
+
+            get isGlobalSearchMode() {
+                return this.searchQuery.trim().length > 0 || this.hasActiveFilter;
+            },
+
+            get totalSearchResultCount() {
+                const messageCount = (this.searchResults.messages || []).reduce((total, group) => {
+                    return total + (group.messages ? group.messages.length : 0);
+                }, 0);
+
+                return (this.searchResults.contacts || []).length +
+                    (this.searchResults.groups || []).length +
+                    messageCount;
+            },
+
+            get filteredChats() {
+                let result = this.chats;
+
+                // Sorting is handled by server now, but keep client-side sorting as fallback
+                if (this.sortBy === 'recent') {
+                    result = [...result].sort((a, b) => {
+                        const dateA = new Date(a.last_message_at || a.created_at);
+                        const dateB = new Date(b.last_message_at || b.created_at);
+                        return dateB - dateA; // Newest first
+                    });
+                } else if (this.sortBy === 'oldest') {
+                    result = [...result].sort((a, b) => {
+                        const dateA = new Date(a.last_message_at || a.created_at);
+                        const dateB = new Date(b.last_message_at || b.created_at);
+                        return dateA - dateB; // Oldest first
+                    });
+                }
+
+                return result;
+            },
+
+            formatTime(datetimeString) {
+                if (!datetimeString) return '';
+                const date = new Date(datetimeString);
+                const options = {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta'
+                };
+                return date.toLocaleString('id-ID', options);
+            },
+
+            isLongWaiting(datetimeString) {
+                if (!datetimeString) return false;
+                // Force reactivity by referencing this.currentTime
+                const now = this.currentTime;
+                // Safely parse ISO string
+                const diff = now - new Date(datetimeString.replace(/-/g, '/')).getTime();
+                return diff > 3 * 60 * 1000; // 3 minutes
+            },
+
+            formatShortDateTime(datetimeString) {
+                if (!datetimeString) return '';
+                const date = new Date(datetimeString);
+                const options = {
+                    year: '2-digit',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta'
+                };
+                return date.toLocaleString('id-ID', options);
+            },
+
+            formatFullDateTime(datetimeString) {
+                if (!datetimeString) return '';
+                const date = new Date(datetimeString);
+                const options = {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta'
+                };
+                // Using 'id-ID' for Indonesian locale. Ensure the browser supports it.
+                return date.toLocaleString('id-ID', options);
+            },
+            selectChat(chat) {
+                if (!this.selectedChat || this.selectedChat.id !== chat.id) {
+                    this.iframeLoaded = false;
+                }
+                this.selectedChat = chat;
+            },
+
+            async claimChat(conversationId) {
+                this.isClaiming = true;
+                try {
+                    const res = await fetch(`/admin/conversation/${conversationId}/claim`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.error || errData.message || `Gagal mengambil chat (HTTP ${res.status})`);
+                    }
+
+                    // Update lists without reload
+                    await this.fetchChats();
+
+                    // Switch to active tab so the admin can see their new chat
+                    this.statusFilter = 'active';
+
+                    // If we just claimed it, find it in the new list and select it
+                    const claimed = this.chats.find(c => c.id === conversationId);
+                    if (claimed) {
+                        this.selectChat(claimed);
+                    }
+
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Chat berhasil diambil'
+                    });
+                } catch (error) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: error.message
+                    });
+                } finally {
+                    this.isClaiming = false;
+                }
+            },
+
+            async confirmCloseChat() {
+                Swal.fire({
+                    title: 'Selesaikan Percakapan?',
+                    text: 'Percakapan ini akan ditutup dan dipindahkan ke riwayat.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Selesaikan',
+                    cancelButtonText: 'Batal'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await this.closeChat();
+                    }
+                });
+            },
+
+            async closeChat() {
+                this.isSubmitting = true;
+                try {
+                    const res = await fetch(`/admin/conversation/${this.selectedChat.id}/close`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!res.ok) throw new Error('Gagal menyelesaikan chat');
+
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Percakapan diselesaikan'
+                    });
+
+                    // Reset selection and refresh list
+                    this.selectedChat = null;
+                    await this.fetchChats();
+                } catch (e) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: e.message
+                    });
+                } finally {
+                    this.isSubmitting = false;
+                }
+            },
+
+            async handoverChat() {
+                this.isSubmitting = true;
+                try {
+                    const res = await fetch(`/admin/conversation/${this.selectedChat.id}/handover`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            to_admin_id: this.handoverToAdminId,
+                            internal_note: this.handoverNote
+                        })
+                    });
+                    if (!res.ok) throw new Error('Gagal mengoper chat');
+                    window.location.reload();
+                } catch (e) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: e.message
+                    });
+                } finally {
+                    this.isSubmitting = false;
+                }
+            },
+
+            async blockUser(conversationId) {
+                Swal.fire({
+                    title: 'Blokir pelanggan?',
+                    text: 'Anda yakin ingin memblokir pelanggan ini?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Blokir!',
+                    cancelButtonText: 'Batal'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch(`/admin/conversation/${conversationId}/block`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                }
+                            });
+                            if (!res.ok) throw new Error('Gagal blokir pelanggan');
+                            window.location.reload();
+                        } catch (e) {
+                            Toast.fire({
+                                icon: 'error',
+                                title: e.message
+                              });
+                        }
+                    }
+                });
+            }
+        }));
+    });
+</script>
 @endpush
