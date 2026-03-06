@@ -852,16 +852,11 @@
             'wamena': 'PAPUA PEGUNUNGAN',
         };
 
-        // Normalize a GeoJSON province name to uppercase for matching
         function normalizeProvince(name) {
             if (!name) return '';
-            return name.toUpperCase()
-                .replace(/KEPULAUAN\s+/g, 'KEPULAUAN ')
-                .replace(/\s+/g, ' ')
-                .trim();
+            return name.toUpperCase().replace(/\s+/g, ' ').trim();
         }
 
-        // Color scale function
         function getColor(d) {
             return d > 10 ? '#084594' :
                    d > 7  ? '#2171b5' :
@@ -871,7 +866,11 @@
                             '#f0f0f0';
         }
 
-        const map = L.map('indonesia-map', {
+        // Wait for map container to be visible (handle animation delay)
+        var mapContainer = document.getElementById('indonesia-map');
+        if (!mapContainer) return;
+
+        var map = L.map('indonesia-map', {
             center: [-2.5, 118],
             zoom: 5,
             minZoom: 4,
@@ -880,16 +879,17 @@
             attributionControl: false
         });
 
-        // Tile layer — light clean style
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(map);
 
-        // Info control (hover tooltip)
-        const info = L.control({ position: 'topright' });
+        // Info control
+        var info = L.control({ position: 'topright' });
         info.onAdd = function() {
             this._div = L.DomUtil.create('div', 'map-info-tooltip');
+            L.DomEvent.disableClickPropagation(this._div);
+            L.DomEvent.disableScrollPropagation(this._div);
             this.update();
             return this._div;
         };
@@ -898,9 +898,9 @@
                 this._div.innerHTML = '<div style="color:var(--gray-500);font-size:12px;">Arahkan kursor<br>ke area provinsi</div>';
                 return;
             }
-            let html = '<div class="province-name">' + props.provinceName + '</div>';
+            var html = '<div class="province-name">' + props.provinceName + '</div>';
             if (props.cities && props.cities.length > 0) {
-                props.cities.forEach(c => {
+                props.cities.forEach(function(c) {
                     html += '<div class="city-row"><span>' + c.name + '</span><span class="city-count">' + c.count + '</span></div>';
                 });
             }
@@ -910,35 +910,89 @@
         info.addTo(map);
 
         // Legend
-        const legend = L.control({ position: 'bottomleft' });
+        var legend = L.control({ position: 'bottomleft' });
         legend.onAdd = function() {
-            const div = L.DomUtil.create('div', 'map-legend');
-            const grades = [0, 1, 3, 5, 8, 11];
-            const labels = ['0', '1-2', '3-4', '5-7', '8-10', '11+'];
+            var div = L.DomUtil.create('div', 'map-legend');
+            var grades = [0, 1, 3, 5, 8, 11];
+            var labels = ['0', '1-2', '3-4', '5-7', '8-10', '11+'];
             div.innerHTML = '<div class="legend-title">Jumlah Pelanggan</div>';
-            for (let i = 0; i < grades.length; i++) {
+            for (var i = 0; i < grades.length; i++) {
                 div.innerHTML += '<i style="background:' + getColor(grades[i] || 0.5) + '"></i> ' + labels[i] + '<br>';
             }
             return div;
         };
         legend.addTo(map);
 
-        // Fetch map data and GeoJSON
-        let provinceData = {}; // { 'JAWA BARAT': { total: 9, cities: [{name:'Bekasi',count:5},...] } }
+        // Province data aggregated from origins
+        var provinceData = {};
+        var geojsonLayer = null;
 
+        function findProvinceData(normalizedName) {
+            if (provinceData[normalizedName]) return provinceData[normalizedName];
+            for (var key in provinceData) {
+                if (normalizedName.indexOf(key) !== -1 || key.indexOf(normalizedName) !== -1) {
+                    return provinceData[key];
+                }
+            }
+            return null;
+        }
+
+        function highlightFeature(e) {
+            var layer = e.target;
+            layer.setStyle({
+                weight: 3,
+                color: '#4f46e5',
+                fillOpacity: 0.9
+            });
+            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                layer.bringToFront();
+            }
+            var provName = layer.feature.properties.PROVINSI || layer.feature.properties.Propinsi || '';
+            var data = findProvinceData(normalizeProvince(provName));
+            info.update({
+                provinceName: provName,
+                cities: data ? data.cities : [],
+                total: data ? data.total : 0
+            });
+        }
+
+        function resetHighlight(e) {
+            if (geojsonLayer) {
+                geojsonLayer.resetStyle(e.target);
+            }
+            info.update();
+        }
+
+        function onEachFeature(feature, layer) {
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight
+            });
+        }
+
+        function styleFeature(feature) {
+            var provName = normalizeProvince(feature.properties.PROVINSI || feature.properties.Propinsi || '');
+            var data = findProvinceData(provName);
+            var total = data ? data.total : 0;
+            return {
+                fillColor: getColor(total),
+                weight: 1.5,
+                opacity: 1,
+                color: '#ffffff',
+                fillOpacity: 0.8
+            };
+        }
+
+        // Fetch data then GeoJSON
         fetch('{{ route("admin.map.data") }}')
-            .then(r => r.json())
-            .then(origins => {
-                // Aggregate city data into provinces
-                origins.forEach(item => {
-                    const originLower = (item.origin || '').toLowerCase().trim();
-                    let province = CITY_TO_PROVINCE[originLower];
-
-                    // If not in mapping, try direct match (maybe it's already a province name)
+            .then(function(r) { return r.json(); })
+            .then(function(origins) {
+                origins.forEach(function(item) {
+                    var originLower = (item.origin || '').toLowerCase().trim();
+                    var province = CITY_TO_PROVINCE[originLower];
                     if (!province) {
                         province = originLower.toUpperCase();
                     }
-
                     if (!provinceData[province]) {
                         provinceData[province] = { total: 0, cities: [] };
                     }
@@ -946,63 +1000,20 @@
                     provinceData[province].cities.push({ name: item.origin, count: item.count });
                 });
 
-                // Load GeoJSON — 38 provinsi terbaru (termasuk pemekaran Papua)
                 return fetch('https://raw.githubusercontent.com/denyherianto/indonesia-geojson-topojson-maps-with-38-provinces/main/GeoJSON/indonesia-38-provinces.geojson');
             })
-            .then(r => r.json())
-            .then(geojson => {
-                var geojsonLayer = L.geoJSON(geojson, {
-                    style: function(feature) {
-                        const provName = normalizeProvince(feature.properties.PROVINSI || feature.properties.Propinsi || feature.properties.NAME_1 || feature.properties.name || '');
-                        const data = findProvinceData(provName);
-                        const total = data ? data.total : 0;
-                        return {
-                            fillColor: getColor(total),
-                            weight: 1.5,
-                            opacity: 1,
-                            color: '#ffffff',
-                            fillOpacity: 0.8
-                        };
-                    },
-                    onEachFeature: function(feature, layer) {
-                        const provName = normalizeProvince(feature.properties.PROVINSI || feature.properties.Propinsi || feature.properties.NAME_1 || feature.properties.name || '');
-                        const displayName = (feature.properties.PROVINSI || feature.properties.Propinsi || feature.properties.NAME_1 || feature.properties.name || 'Unknown');
-                        const data = findProvinceData(provName);
-
-                        layer.on({
-                            mouseover: function(e) {
-                                const l = e.target;
-                                l.setStyle({ weight: 3, color: '#4f46e5', fillOpacity: 0.9 });
-                                l.bringToFront();
-                                info.update({
-                                    provinceName: displayName,
-                                    cities: data ? data.cities : [],
-                                    total: data ? data.total : 0
-                                });
-                            },
-                            mouseout: function(e) {
-                                geojsonLayer.resetStyle(e.target);
-                                info.update();
-                            }
-                        });
-                    }
+            .then(function(r) { return r.json(); })
+            .then(function(geojson) {
+                geojsonLayer = L.geoJSON(geojson, {
+                    style: styleFeature,
+                    onEachFeature: onEachFeature,
+                    interactive: true
                 }).addTo(map);
+
+                // Force map to invalidate size after animation completes
+                setTimeout(function() { map.invalidateSize(); }, 1000);
             })
-            .catch(err => console.error('Map error:', err));
-
-        // Helper to find province data with fuzzy matching
-        function findProvinceData(normalizedName) {
-            // Direct match first
-            if (provinceData[normalizedName]) return provinceData[normalizedName];
-
-            // Fuzzy: try partial matching
-            for (const key in provinceData) {
-                if (normalizedName.includes(key) || key.includes(normalizedName)) {
-                    return provinceData[key];
-                }
-            }
-            return null;
-        }
+            .catch(function(err) { console.error('Map error:', err); });
     })();
 
     // ==================== ORIGINAL DASHBOARD CHARTS ====================
