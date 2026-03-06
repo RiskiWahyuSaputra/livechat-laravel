@@ -34,7 +34,8 @@ class GeminiService
         1. Hanya jawab pertanyaan yang berkaitan dengan profil, produk, layanan, pendaftaran, dan informasi seputar PT BEST CORPORATION SYARIAH.
         2. Jika pertanyaan di luar topik tersebut (seperti politik, agama umum, tips masak, teknologi lain, dll), tolak dengan sopan dan arahkan pelanggan untuk bertanya seputar PT BEST CORP.
         3. Jika memberikan jawaban dalam bentuk daftar atau list, wajib gunakan format angka (1, 2, 3, dst).
-        4. Jawab dengan singkat, padat, dan sangat profesional dalam bahasa Indonesia.";
+        4. Jawab dengan singkat, padat, dan sangat profesional dalam bahasa Indonesia.
+        5. jangan gunakan ** untuk membuat teks menjadi bold.";
         $fullInstruction = $baseInstruction . " " . $additionalInstruction;
 
         foreach ($models as $model) {
