@@ -97,6 +97,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ]);
             });
 
+            // --- Map Data API ---
+            Route::get('/map/data', [App\Http\Controllers\Admin\MapController::class, 'getMapData'])->name('map.data');
+
             // --- Menu 7: Analytics & Analysis ---
             Route::get('/analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
             Route::get('/analytics/filter', [App\Http\Controllers\Admin\AnalyticsController::class, 'filter'])->name('analytics.filter');
