@@ -977,6 +977,23 @@
             },
 
             escapeHtml(text) {
+                if (!text) return '';
+                
+                // Specific fix for BEST AI badge to allow it to render HTML
+                const badgePart = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                
+                if (String(text).includes(badgePart)) {
+                    let parts = String(text).split(badgePart);
+                    let safeParts = parts.map(p => String(p)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;')
+                    );
+                    return safeParts.join(badgePart);
+                }
+
                 return String(text ?? '')
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
