@@ -46,7 +46,7 @@
         }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col relative overflow-x-hidden">
+<body x-data="chatWidget()" x-init="initWidget()" class="bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col relative overflow-x-hidden">
 
     <!-- Blobs Background -->
     <div class="blob top-[-10%] left-[-10%] animate-pulse"></div>
@@ -83,17 +83,16 @@
                 </a>
             </div>
 
-            <!-- Guest Profile (Only show if logged in) -->
-            @auth
-            <div class="flex items-center gap-4 relative">
+            <!-- Guest Profile (Reactive with Alpine) -->
+            <div x-show="isAuthenticated" x-cloak class="flex items-center gap-4 relative">
                 <div class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent">
                     <div class="relative">
                         <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                            <span x-text="user.initial"></span>
                         </div>
                     </div>
                     <div class="text-left hidden sm:block">
-                        <p class="text-xs font-bold text-slate-900 leading-none mb-1">{{ Auth::user()->name }}</p>
+                        <p class="text-xs font-bold text-slate-900 leading-none mb-1" x-text="user.name"></p>
                         <div class="flex items-center gap-1">
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                             <p class="text-[9px] md:text-[10px] text-slate-500 font-bold leading-none uppercase tracking-tighter">Online</p>
@@ -101,7 +100,6 @@
                     </div>
                 </div>
             </div>
-            @endauth
         </div>
     </header>
 
@@ -233,7 +231,7 @@
     </script>
 
     <!-- Chat Widget Container -->
-    <div x-data="chatWidget()" x-init="initWidget()" class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
+    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
         
         <!-- Chat Popup Window -->
         <div x-show="isOpen" x-cloak
@@ -456,6 +454,10 @@
                 isInitialized: false,
                 isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
                 csrfToken: '{{ csrf_token() }}',
+                user: {
+                    name: '{{ Auth::check() ? Auth::user()->name : "" }}',
+                    initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : "" }}'
+                },
                 
                 // Form Data
                 regForm: {
@@ -576,6 +578,13 @@
                         if (response.ok && data.success) {
                             if (data.csrf_token) this.csrfToken = data.csrf_token;
                             this.isAuthenticated = true;
+                            
+                            // Update User Data reaktif
+                            if (data.user) {
+                                this.user.name = data.user.name;
+                                this.user.initial = data.user.name.charAt(0).toUpperCase();
+                            }
+                            
                             this.regForm = { name: '', contact: '', origin: '' };
                             await this.fetchChatData();
                         } else {
@@ -611,6 +620,12 @@
                         this.userId = data.user_id;
                         this.status = data.status;
                         this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+
+                        // Update User Data jika ada dalam response
+                        if (data.user) {
+                            this.user.name = data.user.name;
+                            this.user.initial = data.user.name.charAt(0).toUpperCase();
+                        }
                         
                         this.messages = data.messages.map(m => ({
                             id: m.id,

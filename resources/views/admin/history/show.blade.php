@@ -50,10 +50,13 @@
                                     {{ $msg->content }}
                                 </div>
                             @else
-                                <div class="mb-1">
+                                <div class="mb-1 d-flex align-items-center">
                                     <small class="text-muted font-weight-bold">
-                                        {{ $msg->sender_type === 'admin' ? ($msg->message_type === 'whisper' ? 'NOTE INTERNAL' : 'Agen') : 'Pelanggan' }}
+                                        {{ $msg->sender_type === 'admin' ? ($msg->message_type === 'whisper' ? 'NOTE INTERNAL' : ($msg->sender_id == 0 ? 'Bot Assistant' : 'Anda')) : 'Pelanggan' }}
                                     </small>
+                                    @if($msg->sender_id == 0 && $msg->sender_type === 'admin')
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 ml-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>
+                                    @endif
                                 </div>
                                 <div class="px-3 py-2 rounded-lg shadow-sm {{ $msg->message_type === 'whisper' ? 'bg-amber-100 text-amber-900 border-dashed border border-amber-300' : ($msg->sender_type === 'admin' ? 'bg-primary text-white' : 'bg-light border') }}" style="max-width: 80%; word-wrap: break-word;">
                                     {!! nl2br(e($msg->content)) !!}
