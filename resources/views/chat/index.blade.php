@@ -90,7 +90,8 @@
                     <template x-if="msg.sender_type !== 'system'">
                         <div class="max-w-[90%] md:max-w-[85%] flex flex-col" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                             <!-- Nama Pengirim -->
-                            <span x-show="msg.sender_type !== 'user'" class="text-[9px] md:text-[11px] text-slate-400 font-medium mb-1 ml-1">Live Support</span>
+                            <span x-show="msg.sender_type !== 'user'" class="text-[9px] md:text-[11px] text-slate-400 font-medium mb-1 ml-1" 
+                                  x-text="msg.sender_id == 0 ? 'Live Support' : 'Live Support Agent'"></span>
                             <span x-show="msg.sender_type === 'user'" class="text-[9px] md:text-[11px] text-slate-400 font-medium mb-1 mr-1">Anda</span>
                             
                             <div class="px-3.5 py-2 md:px-5 md:py-3 rounded-2xl text-[13px] md:text-[15px] leading-relaxed relative break-words overflow-hidden shadow-sm"
@@ -248,6 +249,15 @@
 
                 formatMessage(text) {
                     if (!text) return '';
+                    
+                    const badge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                    
+                    if (String(text).includes(badge)) {
+                        let parts = String(text).split(badge);
+                        let safeParts = parts.map(p => String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                        return safeParts.join(badge).replace(/\n/g, '<br>');
+                    }
+
                     let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                     return safeText.replace(/\n/g, '<br>');
                 },
@@ -341,8 +351,17 @@
                             this.messages[msgIndex].content = data.message.content;
                             this.messages[msgIndex].created_at = data.message.created_at;
                             
-                            // Re-fetch chat data to update botPhase if needed, or we can wait for broadcast
-                            // But usually server response is faster for current user
+                            // Tambahkan balasan bot jika ada (biasanya untuk fase bot)
+                            if (data.bot_replies && data.bot_replies.length > 0) {
+                                data.bot_replies.forEach(botMsg => {
+                                    // Hindari duplikat jika Echo sudah menambahkannya
+                                    if (!this.messages.find(m => m.id === botMsg.id)) {
+                                        this.messages.push(botMsg);
+                                    }
+                                });
+                                this.scrollToBottom();
+                            }
+
                             if (this.botPhase === 'awaiting_explanation') {
                                 this.botPhase = 'off';
                             }

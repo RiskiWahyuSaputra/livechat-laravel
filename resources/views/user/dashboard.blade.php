@@ -46,7 +46,7 @@
         }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col relative overflow-x-hidden">
+<body x-data="chatWidget()" x-init="initWidget()" class="bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col relative overflow-x-hidden">
 
     <!-- Blobs Background -->
     <div class="blob top-[-10%] left-[-10%] animate-pulse"></div>
@@ -83,24 +83,20 @@
                 </a>
             </div>
 
-            <!-- Guest Profile (Reactive) -->
-            <div x-data="{ 
-                    isLoggedIn: {{ $isAuthenticated ? 'true' : 'false' }}, 
-                    userName: '{{ $isAuthenticated ? Auth::user()->name : '' }}',
-                    open: false 
-                 }" 
-                 @login-success.window="isLoggedIn = true; userName = $event.detail.name"
-                 x-show="isLoggedIn" 
+            <!-- Profile Section (Reactive) -->
+            <div x-show="isAuthenticated" 
                  x-cloak 
-                 class="flex items-center gap-4 relative">
+                 @login-success.window="isAuthenticated = true; user.name = $event.detail.name; user.initial = $event.detail.name.charAt(0).toUpperCase()"
+                 class="flex items-center gap-4 relative"
+                 x-data="{ open: false }">
                 <div @click="open = !open" class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer">
                     <div class="relative">
                         <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
-                            <span x-text="userName.charAt(0).toUpperCase()"></span>
+                            <span x-text="user.initial"></span>
                         </div>
                     </div>
                     <div class="text-left hidden sm:block">
-                        <p class="text-xs font-bold text-slate-900 leading-none mb-1" x-text="userName"></p>
+                        <p class="text-xs font-bold text-slate-900 leading-none mb-1" x-text="user.name"></p>
                         <div class="flex items-center gap-1">
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                             <p class="text-[9px] md:text-[10px] text-slate-500 font-bold leading-none uppercase tracking-tighter">Online</p>
@@ -194,7 +190,7 @@
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="space-y-4 p-6 rounded-3xl hover:bg-slate-50 transition-colors group" data-aos="fade-up" data-aos-delay="100">
                     <div class="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 012-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
                     </div>
                     <h4 class="text-lg font-bold text-[#0a1d37]">Dashboard Digital</h4>
                     <p class="text-sm text-slate-500 leading-relaxed">Kelola poin, reward, dan jaringan Anda melalui sistem dashboard yang canggih dan transparan.</p>
@@ -265,7 +261,7 @@
     </script>
 
     <!-- Chat Widget Container -->
-    <div x-data="chatWidget()" x-init="initWidget()" class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
+    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
         
         <!-- Chat Popup Window -->
         <div x-show="isOpen" x-cloak
@@ -491,6 +487,10 @@
                 isInitialized: false,
                 isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
                 csrfToken: '{{ csrf_token() }}',
+                user: {
+                    name: '{{ Auth::check() ? Auth::user()->name : "" }}',
+                    initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : "" }}'
+                },
                 
                 // Form Data
                 regForm: {
@@ -604,9 +604,15 @@
                             if (data.csrf_token) this.csrfToken = data.csrf_token;
                             this.isAuthenticated = true;
                             
-                            // Dispatch event to update header profile immediately
-                            window.dispatchEvent(new CustomEvent('login-success', { detail: data.user }));
-
+                            // Update User Data reaktif
+                            if (data.user) {
+                                this.user.name = data.user.name;
+                                this.user.initial = data.user.name.charAt(0).toUpperCase();
+                                
+                                // Dispatch event to update header profile immediately if it's listening
+                                window.dispatchEvent(new CustomEvent('login-success', { detail: data.user }));
+                            }
+                            
                             this.regForm = { name: '', contact: '', origin: '' };
                             await this.fetchChatData();
                         } else {
@@ -642,6 +648,12 @@
                         this.userId = data.user_id;
                         this.status = data.status;
                         this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+
+                        // Update User Data jika ada dalam response
+                        if (data.user) {
+                            this.user.name = data.user.name;
+                            this.user.initial = data.user.name.charAt(0).toUpperCase();
+                        }
                         
                         this.messages = data.messages.map(m => ({
                             id: m.id,
