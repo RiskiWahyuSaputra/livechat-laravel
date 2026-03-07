@@ -184,8 +184,12 @@ class ChatController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return response()->json(['success' => true])
-            ->withoutCookie('guest_chat_token');
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true])
+                ->withoutCookie('guest_chat_token');
+        }
+
+        return redirect()->route('user.home')->withoutCookie('guest_chat_token');
     }
 
     /**
