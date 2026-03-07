@@ -22,7 +22,7 @@
     </style>
 </head>
     <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
-      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}')">
+      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() ?: 'null' }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}', {{ Js::from($botCategories) }})">
 
     <!-- Header Navbar Minimalist -->
     <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
@@ -55,7 +55,7 @@
             </div>
         </div>
         
-        <form method="POST" action="{{ route('user.logout') }}" class="shrink-0">
+        <form id="logout-form" method="POST" action="{{ route('chat.logout') }}" class="shrink-0">
             @csrf
             <button type="submit" class="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-200 text-[10px] md:text-sm font-black px-3 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl transition-all hover:scale-105 active:scale-95 whitespace-nowrap">
                 <span class="hidden xs:inline">Akhiri Percakapan</span>
@@ -204,7 +204,7 @@
     <!-- Logic Alpine JS Tetap Sama, Tidak Diubah -->
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase) => ({
+            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase, botCategories) => ({
                 conversationId: conversationId,
                 userId: userId,
                 status: initialStatus,
@@ -215,7 +215,7 @@
                 isTyping: false,
                 typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
-                botCategories: ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'],
+                botCategories: botCategories,
 
                 init() {
                     this.scrollToBottom();
@@ -247,6 +247,15 @@
                 listenForEvents() {
                     if (typeof window.Echo === 'undefined') return;
 
+                    if (this.userId) {
+                        window.Echo.private(`user.${this.userId}`)
+                            .listen('.user.logged.out', (e) => {
+                                setTimeout(() => {
+                                    document.getElementById('logout-form').submit();
+                                }, 2000);
+                            });
+                    }
+
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
                             if (e.sender_id == this.userId && e.sender_type === 'user') return;
@@ -265,6 +274,12 @@
                         .listen('.conversation.status.changed', (e) => {
                             this.status = e.status;
                             if (e.bot_phase) this.botPhase = e.bot_phase;
+                            
+                            if (e.status === 'closed') {
+                                setTimeout(() => {
+                                    window.location.href = '{{ route('chat.logout') }}';
+                                }, 3000);
+                            }
                         })
                         .listen('.typing', (e) => {
                             if (e.sender_type === 'admin') {
