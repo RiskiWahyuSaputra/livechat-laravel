@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Events\ConversationStatusChanged;
 use App\Events\MessageSent;
 use App\Events\TypingIndicator;
+use App\Events\UserShouldBeLoggedOut;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -456,6 +457,10 @@ class DashboardController extends Controller
         broadcast(new MessageSent($sysMessage));
         broadcast(new ConversationStatusChanged($conversation, $admin->username));
 
+        if ($conversation->customer) {
+            event(new UserShouldBeLoggedOut($conversation->customer));
+        }
+
         return response()->json(['success' => true]);
     }
 
@@ -480,6 +485,10 @@ class DashboardController extends Controller
         ]);
 
         broadcast(new ConversationStatusChanged($conversation, $admin->username));
+
+        if ($conversation->customer) {
+            event(new UserShouldBeLoggedOut($conversation->customer));
+        }
 
         return response()->json(['success' => true]);
     }
