@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Events\ConversationStatusChanged;
 use App\Events\MessageSent;
 use App\Events\TypingIndicator;
+use App\Events\UserShouldBeLoggedOut;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -247,15 +248,23 @@ class DashboardController extends Controller
     {
         $admin = Auth::guard('admin')->user();
 
+        // Proaktif: Jika admin sedang offline tapi mencoba claim, set jadi online
+        if ($admin->status === 'offline') {
+            $admin->update(['status' => 'online']);
+        }
+
         // Cek kapasitas admin
         if (!$admin->canTakeNewChat()) {
             return response()->json(['error' => 'Anda sudah mencapai batas maksimum chat aktif.'], 422);
         }
 
-        // Optimistic Locking: hanya update jika status masih pending/queued dan belum diklaim
+        // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)
         $updated = Conversation::where('id', $conversation->id)
             ->whereIn('status', ['pending', 'queued'])
-            ->whereNull('admin_id')
+            ->where(function($q) use ($admin) {
+                $q->whereNull('admin_id')
+                  ->orWhere('admin_id', $admin->id);
+            })
             ->update([
                 'admin_id'       => $admin->id,
                 'status'         => 'active',
@@ -279,10 +288,13 @@ class DashboardController extends Controller
             'content'         => "Chat Anda sedang diproses oleh {$admin->username}. Silakan mulai berbicara.",
         ]);
 
-        broadcast(new MessageSent($sysMessage));
-
-        // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
-        broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        try {
+            broadcast(new MessageSent($sysMessage));
+            // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
+            broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        } catch (\Exception $e) {
+            \Log::error('Broadcast failed during claimConversation: ' . $e->getMessage());
+        }
 
         // Update posisi antrian untuk conversation lain yang masih queued
         $this->reorderQueue();
@@ -445,6 +457,10 @@ class DashboardController extends Controller
         broadcast(new MessageSent($sysMessage));
         broadcast(new ConversationStatusChanged($conversation, $admin->username));
 
+        if ($conversation->customer) {
+            event(new UserShouldBeLoggedOut($conversation->customer));
+        }
+
         return response()->json(['success' => true]);
     }
 
@@ -469,6 +485,10 @@ class DashboardController extends Controller
         ]);
 
         broadcast(new ConversationStatusChanged($conversation, $admin->username));
+
+        if ($conversation->customer) {
+            event(new UserShouldBeLoggedOut($conversation->customer));
+        }
 
         return response()->json(['success' => true]);
     }
