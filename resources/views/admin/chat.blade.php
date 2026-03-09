@@ -607,7 +607,7 @@
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
             :class="{
-                 'd-none': (selectedChat && window.innerWidth < 768),
+                 'mobile-hide d-none d-lg-flex': selectedChat,
                  'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
              }">
             <!-- ═══════════ TOP PANEL (Header + Search + Content Filters) ═══════════ -->
@@ -817,8 +817,8 @@
             :class="{
                      'col-md-8 col-lg-7 col-xl-8': !sidebarCollapsed,
                      'col-12': sidebarCollapsed,
-                     'd-none d-md-flex': !selectedChat && !sidebarCollapsed,
-                     'd-flex': selectedChat || sidebarCollapsed
+                     'd-none d-lg-flex': !selectedChat && !sidebarCollapsed,
+                     'mobile-show d-flex': selectedChat || sidebarCollapsed
                  }">
             <div class="card mb-0 w-100 h-100" x-show="selectedChat" x-cloak>
             <div class="h-100 d-flex flex-column">
@@ -977,6 +977,23 @@
             },
 
             escapeHtml(text) {
+                if (!text) return '';
+                
+                // Specific fix for BEST AI badge to allow it to render HTML
+                const badgePart = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                
+                if (String(text).includes(badgePart)) {
+                    let parts = String(text).split(badgePart);
+                    let safeParts = parts.map(p => String(p)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;')
+                    );
+                    return safeParts.join(badgePart);
+                }
+
                 return String(text ?? '')
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
