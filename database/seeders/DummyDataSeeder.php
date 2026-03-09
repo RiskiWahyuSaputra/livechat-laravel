@@ -16,361 +16,285 @@ class DummyDataSeeder extends Seeder
 {
     use WithoutModelEvents;
 
+    private $categories = [
+        'Pertanyaan Umum', 'Dukungan Teknis', 'Pembayaran', 'Penjualan', 
+        'Keluhan', 'Akun'
+    ];
+
+    private $chatFlows = [
+        'Pertanyaan Umum' => [
+            [
+                ['user', 'text', 'Halo min, untuk jam operasional layanan dari jam berapa ya?'],
+                ['admin', 'text', 'Halo kak! Layanan kami beroperasi dari Senin-Jumat pukul 08:00 - 17:00 WIB, dan Sabtu pukul 08:00 - 13:00 WIB ya.'],
+                ['user', 'text', 'Oh gitu, kalau tanggal merah libur tidak?'],
+                ['admin', 'text', 'Iya kak, untuk tanggal merah nasional kami libur operasional.'],
+                ['user', 'text', 'Oke min, terima kasih ya infonya.'],
+                ['admin', 'text', 'Sama-sama kak! Ada lagi yang bisa kami bantu?']
+            ],
+            [
+                ['user', 'text', 'Siang, mau tanya alamat tokonya di mana ya?'],
+                ['admin', 'text', 'Halo kak, selamat siang. Untuk lokasi toko kami ada di Jl. Sudirman No 123, Jakarta Selatan ya.'],
+                ['user', 'text', 'Oke, kira-kira patokannya apa min?'],
+                ['admin', 'text', 'Patokannya di seberang gedung BCA cabang Sudirman kak.']
+            ]
+        ],
+        'Dukungan Teknis' => [
+            [
+                ['user', 'text', 'Permisi, saya tidak bisa login ke aplikasi nih.'],
+                ['admin', 'text', 'Halo kak, mohon maaf atas ketidaknyamanannya. Boleh diinfokan pesan error yang muncul seperti apa?'],
+                ['user', 'text', 'Muncul tulisan "Invalid credentials" padahal password sudah benar.'],
+                ['admin', 'text', 'Baik kak, apakah kakak sudah mencoba fitur lupa password untuk mengatur ulang kata sandi?'],
+                ['user', 'text', 'Belum kak, saya coba dulu deh.'],
+                ['admin', 'text', 'Silakan kak, jika masih terkendala jangan ragu untuk menghubungi kami kembali ya.']
+            ],
+            [
+                ['user', 'text', 'Aplikasinya kok tiba-tiba force close ya pas buka menu profile?'],
+                ['admin', 'text', 'Halo kak, mohon maaf atas kendalanya. Boleh diinfokan kakak menggunakan HP tipe apa dan OS versi berapa?'],
+                ['user', 'text', 'Saya pakai Samsung A52, Android 13.'],
+                ['admin', 'text', 'Baik kak, kami sarankan untuk melakukan clear cache pada aplikasi atau update ke versi terbaru di Play Store ya.'],
+                ['user', 'text', 'Oke saya coba update dulu ya min.']
+            ]
+        ],
+        'Pembayaran' => [
+            [
+                ['user', 'text', 'Halo, saya tadi sudah transfer untuk pesanan INV-12345 tapi statusnya kok belum berubah?'],
+                ['admin', 'text', 'Halo kak, mohon maaf. Boleh dibantu kirimkan bukti transfernya agar kami bantu cek ke tim finance?'],
+                ['user', 'image', 'bukti_transfer.jpg'],
+                ['admin', 'text', 'Terima kasih kak. Kami akan segera lakukan pengecekan, mohon ditunggu sebentar ya.'],
+                ['admin', 'text', 'Halo kak, pembayaran untuk pesanan INV-12345 sudah berhasil kami verifikasi. Status pesanan kakak sekarang sudah diproses ya.'],
+                ['user', 'text', 'Syukurlah, terima kasih banyak min!']
+            ]
+        ],
+        'Penjualan' => [
+            [
+                ['user', 'text', 'Halo min, produk sepatu seri X ukuran 42 warna hitam masih ready?'],
+                ['admin', 'text', 'Halo kak! Untuk seri X ukuran 42 warna hitam saat ini sisa 2 pasang saja kak. Silakan bisa langsung diorder sebelum kehabisan.'],
+                ['user', 'text', 'Kalau pesen sekarang bisa langsung dikirim hari ini pakai GOSEND?'],
+                ['admin', 'text', 'Bisa banget kak! Untuk pesanan dengan GOSEND sebelum jam 15:00 akan kami proses hari ini juga.'],
+                ['user', 'text', 'Siapp, saya checkout sekarang ya.'],
+                ['admin', 'text', 'Baik kak, kami tunggu pesanannya!']
+            ]
+        ],
+        'Keluhan' => [
+            [
+                ['user', 'text', 'Halo team, barang saya kok lama banget ya sampainya? Padahal estimasi kemarin.'],
+                ['admin', 'text', 'Halo kak, mohon maaf sebelumnya. Boleh dibantu informasikan nomor resi atau nomor pesanannya?'],
+                ['user', 'text', 'Pesanan nomor TRX-998877'],
+                ['admin', 'text', 'Baik kak, kami bantu tracking ya. Ternyata ada keterlambatan dari pihak ekspedisi karena cuaca buruk di area tujuan.'],
+                ['admin', 'text', 'Kami akan bantu follow up ke pihak ekspedisi agar barang kakak bisa diprioritaskan.'],
+                ['user', 'text', 'Hmm ya sudah, tolong dibantu pantau terus ya min.'],
+                ['admin', 'text', 'Pasti kak, kami akan usahakan yang terbaik. Mohon kesediaannya menunggu ya.']
+            ]
+        ],
+        'Akun' => [
+            [
+                ['user', 'text', 'Min, saya mau ganti nomor HP di akun saya gimana caranya ya? Nomor lama sudah hangus.'],
+                ['admin', 'text', 'Halo kak, untuk pergantian nomor HP yang sudah tidak aktif, kakak perlu mengirimkan foto KTP dan selfie dengan KTP untuk verifikasi keamanan.'],
+                ['user', 'text', 'Waduh agak repot juga ya.'],
+                ['admin', 'text', 'Betul kak, ini untuk memastikan keamanan akun kakak dari pihak yang tidak bertanggung jawab.'],
+                ['user', 'file', 'ktp_dan_selfie.pdf'],
+                ['admin', 'text', 'Data sudah kami terima, mohon tunggu maksimal 1x24 jam untuk proses verifikasi tim kami ya kak.']
+            ]
+        ]
+    ];
+
     public function run(): void
     {
-        $this->command->info('Creating dummy data...');
+        $this->command->info('Creating realistic dummy data...');
 
         // ============================================
-        // ADMINS (Agents) - Table: admins
-        // Columns: id, username, email, password, role, is_superadmin, permissions, status, max_active_chats, remember_token, created_at, updated_at
+        // ADMINS (Agents)
         // ============================================
-        
-        // Check if agents already exist
         $existingAgents = Admin::where('role', 'agent')->count();
         
-        if ($existingAgents === 0) {
-            // Create agents if none exist
-            $agents = collect([
-                Admin::create([
-                    'username' => 'agent1',
-                    'email' => 'agent1@example.com',
-                    'password' => Hash::make('password'),
-                    'role' => 'agent',
-                    'is_superadmin' => false,
-                    'permissions' => null,
-                    'status' => 'online',
-                    'max_active_chats' => 5,
-                ]),
-                Admin::create([
-                    'username' => 'agent2',
-                    'email' => 'agent2@example.com',
-                    'password' => Hash::make('password'),
-                    'role' => 'agent',
-                    'is_superadmin' => false,
-                    'permissions' => null,
-                    'status' => 'busy',
-                    'max_active_chats' => 4,
-                ]),
-                Admin::create([
-                    'username' => 'agent3',
-                    'email' => 'agent3@example.com',
-                    'password' => Hash::make('password'),
-                    'role' => 'agent',
-                    'is_superadmin' => false,
-                    'permissions' => null,
-                    'status' => 'offline',
-                    'max_active_chats' => 6,
-                ]),
-                Admin::create([
-                    'username' => 'agent4',
-                    'email' => 'agent4@example.com',
-                    'password' => Hash::make('password'),
-                    'role' => 'agent',
-                    'is_superadmin' => false,
-                    'permissions' => null,
-                    'status' => 'online',
-                    'max_active_chats' => 3,
-                ]),
-                Admin::create([
-                    'username' => 'agent5',
-                    'email' => 'agent5@example.com',
-                    'password' => Hash::make('password'),
-                    'role' => 'agent',
-                    'is_superadmin' => false,
-                    'permissions' => null,
-                    'status' => 'offline',
-                    'max_active_chats' => 5,
-                ]),
-            ]);
-            $this->command->info('Created ' . $agents->count() . ' agents');
-        } else {
-            $agents = Admin::where('role', 'agent')->get();
-            $this->command->info('Agents already exist (' . $agents->count() . ' found), using existing data');
+        if ($existingAgents < 10) {
+            $agentsToAdd = [
+                ['username' => 'sarah_agent', 'email' => 'sarah@example.com', 'status' => 'online'],
+                ['username' => 'budi_support', 'email' => 'budi@example.com', 'status' => 'busy'],
+                ['username' => 'dian_cs', 'email' => 'dian@example.com', 'status' => 'offline'],
+                ['username' => 'andi_help', 'email' => 'andi@example.com', 'status' => 'online'],
+                ['username' => 'rini_care', 'email' => 'rini@example.com', 'status' => 'online'],
+                ['username' => 'tony_tech', 'email' => 'tony@example.com', 'status' => 'busy'],
+                ['username' => 'lisa_cs', 'email' => 'lisa@example.com', 'status' => 'offline'],
+                ['username' => 'kevin_agent', 'email' => 'kevin@example.com', 'status' => 'online'],
+                ['username' => 'maya_support', 'email' => 'maya@example.com', 'status' => 'busy'],
+                ['username' => 'indra_help', 'email' => 'indra@example.com', 'status' => 'offline'],
+            ];
+            foreach ($agentsToAdd as $agent) {
+                Admin::firstOrCreate(
+                    ['email' => $agent['email']],
+                    [
+                        'username' => $agent['username'],
+                        'password' => Hash::make('password'),
+                        'role' => 'agent',
+                        'is_superadmin' => false,
+                        'status' => $agent['status'],
+                        'max_active_chats' => 5,
+                    ]
+                );
+            }
+            $this->command->info('Ditambahkan agen tambahan agar simulasi lebih real.');
         }
 
+        $agents = Admin::where('role', 'agent')->get();
+        $this->command->info('Menggunakan ' . $agents->count() . ' agen.');
+
         // ============================================
-        // CUSTOMERS (Users) - Table: users
-        // Columns: id, name, email, email_verified_at, password, is_online, is_blocked, remember_token, created_at, updated_at, contact, origin
+        // CUSTOMERS (Users) 
         // ============================================
-        
         $origins = [
             'Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang', 
             'Makassar', 'Tangerang', 'Bekasi', 'Depok', 'Yogyakarta', 
-            'Bali', 'Lampung', 'Kalimantan', 'Sulawesi', 'Papua', 'Unknown'
+            'Bali', 'Lampung', 'Kalimantan', 'Sulawesi', 'Papua'
         ];
         
-        $firstNames = [
-            'Budi', 'Ani', 'Dedi', 'Siti', 'Joko', 'Rina', 'Ahmad', 'Dewi', 
-            'Hendra', 'Lina', 'Wahyu', 'Putri', 'Rizal', 'Yuni', 'Fajar', 
-            'Nisa', 'Bayu', 'Sari', 'Doni', 'Mega', 'Tono', 'Maya', 'Ivan', 
-            'Grace', 'Dimas', 'Annisa', 'Reza', 'Cantika', 'Feri', 'Sindy'
+        $names = [
+            'Ahmad Setiawan', 'Budi Santoso', 'Citra Lestari', 'Dewi Anggraini', 
+            'Eko Prasetyo', 'Fajar Nugroho', 'Gita Gutawa', 'Hendra Wijaya', 
+            'Indah Permatasari', 'Joko Susilo', 'Kartika Putri', 'Lukman Hakim', 
+            'Maya Sari', 'Nita Thalia', 'Oki Setiana', 'Putra Pratama',
+            'Rangga Azof', 'Sari Nila', 'Tariq Halilintar', 'Umar Syarief',
+            'Vina Panduwinata', 'Wira Setianagara', 'Xena Aprilia', 'Yayan Ruhian',
+            'Zaskia Sungkar', 'Aditya Roy', 'Bagas Kaffa', 'Cynthia Bella',
+            'Dion Wiyoko', 'El Rumi', 'Fandy Christian', 'Gisel Anastasia',
+            'Hesti Purwadinata', 'Iqbaal Ramadhan', 'Jessica Mila', 'Kevin Julio',
+            'Luna Maya', 'Mikha Tambayong', 'Nadine Chandrawinata', 'Oka Antara'
         ];
 
         $customers = [];
-        for ($i = 1; $i <= 50; $i++) {
-            $firstName = $firstNames[array_rand($firstNames)];
-            $customer = User::create([
-                'name' => $firstName . ' ' . chr(65 + ($i % 26)) . chr(65 + (($i + 5) % 26)),
-                'email' => 'customer' . $i . '@example.com',
-                'email_verified_at' => Carbon::now()->subDays(rand(1, 30)),
+        for ($i = 0; $i < count($names); $i++) {
+            $customers[] = User::create([
+                'name' => $names[$i],
+                'email' => strtolower(str_replace(' ', '.', $names[$i])) . '@gmail.com',
+                'email_verified_at' => Carbon::now()->subDays(rand(1, 7)), // 7 days backwards
                 'password' => Hash::make('password'),
-                'is_online' => $i <= 15, // 15 online users
-                'is_blocked' => rand(0, 10) > 9, // ~10% blocked
+                'is_online' => $i < 15, // 15 online users
+                'is_blocked' => rand(1, 100) > 95, // 5% blocked
                 'contact' => '+6281' . rand(10000000, 99999999),
                 'origin' => $origins[array_rand($origins)],
             ]);
-            $customers[] = $customer;
         }
-
-        $this->command->info('Created ' . count($customers) . ' customers (users)');
+        $this->command->info('Created ' . count($customers) . ' real-sounding customers');
 
         // ============================================
-        // CONVERSATIONS - Table: conversations
-        // Columns: id, user_id (FK), admin_id (FK nullable), status, queue_position, problem_category, bot_phase, last_message_at, created_at, updated_at, deleted_at
+        // CONVERSATIONS & MESSAGES
         // ============================================
-        
-        $statuses = [
-            'closed' => 60,   // 60% closed
-            'active' => 20,   // 20% active
-            'pending' => 10,   // 10% pending
-            'queued' => 10    // 10% queued
-        ];
-        
-        $categories = [
-            'Pertanyaan Umum', 'Dukungan Teknis', 'Pembayaran', 'Penjualan', 
-            'Keluhan', 'Umpan Balik', 'Akun', 'Produk', 'Layanan', 'Lainnya'
-        ];
-
-        $conversations = [];
-        $conversationCount = 60;
+        $conversationCount = 150; // Higher volume for 7 days span (around 20-30 chats/day)
+        $totalMessages = 0;
 
         for ($i = 1; $i <= $conversationCount; $i++) {
-            // Determine status based on weighted random
-            $rand = rand(1, 100);
-            if ($rand <= 60) $status = 'closed';
-            elseif ($rand <= 80) $status = 'active';
-            elseif ($rand <= 90) $status = 'pending';
-            else $status = 'queued';
+            $statusOptions = ['closed', 'closed', 'closed', 'closed', 'active', 'active', 'pending', 'queued'];
+            $status = $statusOptions[array_rand($statusOptions)]; // Most are closed
 
-            // Random date within last 30 days
-            $daysAgo = rand(0, 30);
+            // Distributed over the last 7 days
+            $daysAgo = rand(0, 7);
             $hoursAgo = rand(0, 23);
             $minutesAgo = rand(0, 59);
-            $createdAt = Carbon::now()->subDays($daysAgo)->subHours($hoursAgo)->subMinutes($minutesAgo);
+            $startedAt = Carbon::now()->subDays($daysAgo)->subHours($hoursAgo)->subMinutes($minutesAgo);
+            
+            // Random category and its flow
+            $category = $this->categories[array_rand($this->categories)];
+            $flowOptions = $this->chatFlows[$category];
+            $flow = $flowOptions[array_rand($flowOptions)];
 
-            // 85% have admin assigned
-            $hasAdmin = rand(1, 100) <= 85;
+            $hasAdmin = in_array($status, ['closed', 'active']);
             $admin = $hasAdmin ? $agents->random() : null;
+            if ($status === 'closed') $admin = $agents->random();
 
-            // For closed conversations, admin must be assigned
-            if ($status === 'closed' && !$admin) {
-                $admin = $agents->random();
-            }
-
-            // For closed conversations, bot should be disabled
-            // For active/pending/queued, bot should start fresh
-            $botPhase = null;
-            if ($status === 'closed') {
-                $botPhase = 'off'; // Disable bot for closed conversations
-            } elseif ($status === 'active') {
-                // If active and has admin, bot might be off or awaiting_category
-                $botPhase = $admin ? 'off' : 'awaiting_category';
-            } elseif ($status === 'pending' || $status === 'queued') {
-                $botPhase = 'awaiting_category'; // Bot waiting for category
-            }
+            $botPhase = ($status === 'closed' || $status === 'active') ? 'off' : 'awaiting_category';
 
             $conversation = Conversation::create([
                 'user_id' => $customers[array_rand($customers)]->id,
                 'admin_id' => $admin ? $admin->id : null,
                 'status' => $status,
-                'queue_position' => $status === 'queued' ? rand(1, 5) : null,
-                'problem_category' => $status === 'closed' ? $categories[array_rand($categories)] : null,
+                'queue_position' => $status === 'queued' ? rand(1, 4) : null,
+                'problem_category' => $category,
                 'bot_phase' => $botPhase,
-                'created_at' => $createdAt,
-                'updated_at' => $status === 'closed' 
-                    ? $createdAt->copy()->addMinutes(rand(5, 120)) 
-                    : $createdAt->copy()->addMinutes(rand(1, 30)),
-                'last_message_at' => $createdAt->copy()->addMinutes(rand(1, 60)),
+                'created_at' => $startedAt,
+                'updated_at' => $startedAt,
+                'last_message_at' => $startedAt,
+                'deleted_at' => $status === 'closed' ? $startedAt : null,
             ]);
 
-            $conversations[] = $conversation;
-        }
+            // Determine how many messages from the flow to insert based on status
+            if ($status === 'closed') {
+                $messagesToInsert = count($flow); // All messages
+            } elseif ($status === 'active') {
+                $messagesToInsert = rand(2, count($flow)); // Partial or all
+            } else { // queued, pending
+                $messagesToInsert = 1; // Only user's first message
+            }
 
-        $this->command->info('Created ' . count($conversations) . ' conversations');
+            $msgTime = $startedAt->copy();
+            for ($k = 0; $k < $messagesToInsert; $k++) {
+                $msgData = $flow[$k];
+                $senderRole = $msgData[0];
+                $msgType = $msgData[1];
+                $msgContent = $msgData[2];
 
-        // ============================================
-        // MESSAGES - Table: messages
-        // Columns: id, conversation_id (FK), sender_id, sender_type (user/admin/system), message_type, content, is_read, created_at, updated_at
-        // ============================================
-        
-        $messageId = 1;
-        $totalMessages = 0;
-
-        foreach ($conversations as $conversation) {
-            // Random number of messages per conversation (2-12)
-            $messageCount = rand(2, 12);
-            $conversationTime = $conversation->created_at;
-            
-            // If admin exists, they reply after first user message
-            $adminReplied = false;
-            
-            for ($j = 1; $j <= $messageCount; $j++) {
-                // First message always from user
-                if ($j === 1) {
-                    $senderType = 'user';
-                    $senderId = $conversation->user_id;
-                } elseif (!$adminReplied && $conversation->admin_id) {
-                    // Second message from admin if exists
-                    $senderType = 'admin';
-                    $senderId = $conversation->admin_id;
-                    $adminReplied = true;
-                } else {
-                    // Alternate between user and admin
-                    $senderType = $j % 2 == 0 ? 'admin' : 'user';
-                    $senderId = $senderType === 'admin' ? $conversation->admin_id : $conversation->user_id;
+                if ($senderRole === 'admin' && !$admin) {
+                    break; // stop inserting admin messages if no admin assigned yet
                 }
 
-                // Skip if no admin for admin messages
-                if ($senderType === 'admin' && !$conversation->admin_id) {
-                    $senderType = 'user';
-                    $senderId = $conversation->user_id;
-                }
-
-                $messageTypes = ['text', 'text', 'text', 'text', 'image', 'file'];
-                $content = $this->generateMessageContent($senderType, $j, $messageCount);
+                $senderId = $senderRole === 'admin' ? $admin->id : $conversation->user_id;
 
                 Message::create([
                     'conversation_id' => $conversation->id,
-                    'sender_id' => (int) $senderId,
-                    'sender_type' => $senderType,
-                    'message_type' => $messageTypes[array_rand($messageTypes)],
-                    'content' => $content,
-                    'is_read' => $j < $messageCount || $conversation->status === 'closed',
-                    'created_at' => $conversationTime,
-                    'updated_at' => $conversationTime,
+                    'sender_id' => $senderId,
+                    'sender_type' => $senderRole,
+                    'message_type' => $msgType,
+                    'content' => $msgContent,
+                    'is_read' => $status === 'closed' || $k < ($messagesToInsert - 1),
+                    'created_at' => $msgTime,
+                    'updated_at' => $msgTime,
                 ]);
 
-                // Add 1-8 minutes between messages
-                $conversationTime = $conversationTime->copy()->addMinutes(rand(1, 8));
+                $msgTime->addMinutes(rand(1, 5));
                 $totalMessages++;
             }
 
-            // Update last_message_at
-            $conversation->update(['last_message_at' => $conversationTime]);
+            $updateData = [
+                'last_message_at' => $msgTime,
+                'updated_at' => $msgTime
+            ];
+            
+            if ($status === 'closed') {
+                $updateData['deleted_at'] = $msgTime;
+            }
+
+            $conversation->update($updateData);
         }
-
-        $this->command->info('Created ' . $totalMessages . ' messages');
+        $this->command->info("Created $conversationCount conversations with $totalMessages messages.");
 
         // ============================================
-        // QUICK REPLIES - Table: quick_replies
-        // Columns: id, title, content, created_at, updated_at
+        // QUICK REPLIES
         // ============================================
-        
         $quickReplies = [
             ['title' => 'Salam Utama', 'content' => 'Halo! Terima kasih telah menghubungi kami. Ada yang bisa saya bantu hari ini?'],
-            ['title' => 'Penutup', 'content' => 'Apakah ada hal lain yang bisa saya bantu? Jika tidak, terima kasih telah menghubungi kami!'],
-            ['title' => 'Eskalasi', 'content' => 'Saya mengerti kendala Anda. Izinkan saya meneruskan ini ke tim spesialis kami yang dapat membantu Anda dengan lebih baik.'],
-            ['title' => 'Mohon Tunggu', 'content' => 'Mohon tunggu sebentar, saya akan memeriksa data tersebut untuk Anda.'],
-            ['title' => 'Tindak Lanjut', 'content' => 'Kami akan menindaklanjuti permintaan Anda melalui email dalam waktu 24 jam.'],
-            ['title' => 'Masalah Teknis', 'content' => "Saya melihat Anda mengalami kendala teknis. Bisa jelaskan lebih detail mengenai pesan error yang muncul?"],
-            ['title' => 'Pertanyaan Pembayaran', 'content' => 'Untuk pertanyaan pembayaran, saya bisa membantu memeriksa akun Anda. Bisa konfirmasi alamat email akun Anda?'],
-            ['title' => 'Terima Kasih', 'content' => 'Terima kasih atas kesabaran Anda. Kami sangat menghargai pengertiannya.'],
-            ['title' => 'Bantuan Akun', 'content' => 'Saya bisa membantu masalah akun Anda. Kendala spesifik apa yang sedang Anda hadapi?'],
-            ['title' => 'Info Produk', 'content' => 'Tim kami akan segera memberikan informasi detail produk yang Anda butuhkan.'],
+            ['title' => 'Sapaan Pagi', 'content' => 'Selamat Pagi! Ada yang bisa kami bantu?'],
+            ['title' => 'Mohon Tunggu', 'content' => 'Mohon tunggu sebentar ya kak, kami sedang melakukan pengecekan data.'],
+            ['title' => 'Tanya Resi', 'content' => 'Boleh dibantu informasikan nomor resi atau ID Pesanannya kak?'],
+            ['title' => 'Kirim BuktiTF', 'content' => 'Mohon bantuannya untuk mengirimkan bukti transfer agar bisa kami verifikasi.'],
+            ['title' => 'Masalah Teknis', 'content' => "Bisa jelaskan lebih detail kendala teknis yang dialami? Apakah ada pesan error yang muncul?"],
+            ['title' => 'Tindak Lanjut', 'content' => 'Kendala kakak sudah kami teruskan ke tim terkait. Mohon kesediaannya menunggu.'],
+            ['title' => 'Penutup', 'content' => 'Apakah ada hal lain yang bisa kami bantu kak?'],
+            ['title' => 'Terima Kasih', 'content' => 'Terima kasih telah menghubungi kami. Semoga harinya menyenangkan!']
         ];
 
         foreach ($quickReplies as $reply) {
-            QuickReply::create([
-                'title' => $reply['title'],
-                'content' => $reply['content'],
-            ]);
+            QuickReply::firstOrCreate(
+                ['title' => $reply['title']],
+                ['content' => $reply['content']]
+            );
         }
 
-        $this->command->info('Created ' . QuickReply::count() . ' quick replies');
+        $this->command->info('Created ' . count($quickReplies) . ' quick replies');
 
-        // ============================================
-        // SUMMARY
-        // ============================================
-        
-        $this->command->info('');
-        $this->command->info('=== Ringkasan Data Dummy ===');
+        $this->command->info('=== Ringkasan Data Dummy Realistic ===');
         $this->command->info('Admin/Agen: ' . Admin::count());
-        $this->command->info('  - Super Admin: 1');
-        $this->command->info('  - Agen: ' . ($agents->count()));
         $this->command->info('Pelanggan (User): ' . User::count());
-        $this->command->info('  - Online: ' . User::where('is_online', true)->count());
-        $this->command->info('  - Diblokir: ' . User::where('is_blocked', true)->count());
         $this->command->info('Percakapan: ' . Conversation::count());
-        $this->command->info('  - Selesai: ' . Conversation::where('status', 'closed')->count());
-        $this->command->info('  - Aktif: ' . Conversation::where('status', 'active')->count());
-        $this->command->info('  - Pending: ' . Conversation::where('status', 'pending')->count());
-        $this->command->info('  - Antrean: ' . Conversation::where('status', 'queued')->count());
         $this->command->info('Pesan: ' . Message::count());
-        $this->command->info('Balasan Cepat: ' . QuickReply::count());
-        $this->command->info('=========================');
         $this->command->info('Pembuatan data dummy selesai!');
-    }
-
-    private function generateMessageContent($senderType, $index, $total)
-    {
-        $userMessages = [
-            "Halo, saya butuh bantuan dengan akun saya",
-            "Hai, saya punya pertanyaan mengenai layanan Anda",
-            "Apakah ada orang di sini?",
-            "Saya butuh dukungan teknis, tolong",
-            "Bisakah Anda membantu saya?",
-            "Saya ingin tahu lebih banyak tentang produk Anda",
-            "Saya ada masalah dengan pesanan saya",
-            "Bagaimana cara reset kata sandi saya?",
-            "Kapan jam operasional kantor?",
-            "Saya ingin mengajukan komplain mengenai pembayaran",
-            "Terima kasih atas bantuannya!",
-            "Bagus sekali, terima kasih banyak!",
-            "Saya akan mencoba solusi tersebut",
-            "Satu pertanyaan lagi, tolong",
-            "Apakah ada cara untuk upgrade akun saya?",
-            "Bisakah saya mendapatkan pengembalian dana?",
-            "Kapan pesanan saya akan dikirim?",
-            "Saya butuh bantuan untuk instalasi",
-            "Aplikasinya tidak berjalan dengan benar",
-            "Saya ingin membatalkan langganan saya"
-        ];
-
-        $adminMessages = [
-            "Halo! Selamat datang di layanan chat kami. Ada yang bisa saya bantu hari ini?",
-            "Terima kasih telah menghubungi kami. Saya akan dengan senang hati membantu Anda.",
-            "Saya mengerti kendala Anda. Izinkan saya memeriksanya terlebih dahulu.",
-            "Tentu, saya bisa langsung membantu Anda untuk hal tersebut.",
-            "Mohon tunggu sebentar, saya sedang memeriksa detailnya.",
-            "Apakah ada hal lain yang bisa saya bantu?",
-            "Masalah Anda telah diselesaikan. Beritahu saya jika butuh bantuan lebih lanjut.",
-            "Saya telah melakukan perubahan pada akun Anda sesuai permintaan.",
-            "Bisakah Anda memberikan detail lebih lanjut mengenai kendalanya?",
-            "Saya mengerti. Izinkan saya menyelidiki hal ini lebih lanjut.",
-            "Bagus! Apakah ada hal lain yang Anda perlukan?",
-            "Sama-sama! Semoga hari Anda menyenangkan!",
-            "Saya telah meneruskan permintaan Anda ke tim teknis kami.",
-            "Mohon berikan saya waktu beberapa menit untuk memproses ini.",
-            "Permintaan Anda sedang diproses. Kami akan memberi tahu Anda melalui email."
-        ];
-
-        if ($senderType === 'user') {
-            return $userMessages[array_rand($userMessages)];
-        } elseif ($senderType === 'admin') {
-            // First admin message should be greeting
-            if ($index === 2 || $index === 1) {
-                return "Halo! Selamat datang. Ada yang bisa saya bantu hari ini?";
-            }
-            return $adminMessages[array_rand($adminMessages)];
-        } else {
-            // System message
-            $systemMessages = [
-                "Percakapan dimulai",
-                "Agen bergabung ke percakapan",
-                "Percakapan dialihkan",
-                "Chat ditutup oleh agen"
-            ];
-            return $systemMessages[array_rand($systemMessages)];
-        }
     }
 }

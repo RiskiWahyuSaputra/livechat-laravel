@@ -101,12 +101,6 @@ class AnalyticsService
 
         foreach ($agents as $agent) {
             $closedChats = $agent->conversations->count();
-            
-            // Calculate average response time (first message from agent)
-            $avgResponseTime = $this->calculateAvgResponseTime($agent->id);
-
-            // Calculate average chat duration
-            $avgDuration = $this->calculateAvgChatDuration($agent->id);
 
             $performance[] = [
                 'id' => $agent->id,
@@ -114,8 +108,8 @@ class AnalyticsService
                 'role' => $agent->role,
                 'status' => $agent->status,
                 'closed_chats' => $closedChats,
-                'avg_response_time' => $avgResponseTime,
-                'avg_duration' => $avgDuration,
+                'avg_response_time' => $closedChats > 0 ? $this->calculateAvgResponseTime($agent->id) : 0,
+                'avg_duration' => $closedChats > 0 ? $this->calculateAvgChatDuration($agent->id) : 0,
                 'is_superadmin' => $agent->is_superadmin,
             ];
         }
@@ -139,8 +133,8 @@ class AnalyticsService
 
         foreach ($agents as $agent) {
             $closedChats = $agent->conversations->count();
-            $avgResponseTime = $this->calculateAvgResponseTime($agent->id);
-            $avgDuration = $this->calculateAvgChatDuration($agent->id);
+            $avgResponseTime = $closedChats > 0 ? $this->calculateAvgResponseTime($agent->id) : 0;
+            $avgDuration = $closedChats > 0 ? $this->calculateAvgChatDuration($agent->id) : 0;
 
             // Calculate performance score (higher is better)
             // Score = (chats * 10) + (faster response = higher score)
@@ -267,25 +261,22 @@ class AnalyticsService
      */
     private function calculateAvgResponseTime($adminId)
     {
-        $conversations = Conversation::withTrashed()->where('admin_id', $adminId)
+        $responseTimes = Conversation::withTrashed()->where('admin_id', $adminId)
             ->where('status', 'closed')
-            ->with('messages')
+            ->join('messages', 'conversations.id', '=', 'messages.conversation_id')
+            ->select('conversations.id', 'conversations.created_at')
+            ->selectRaw('MIN(messages.created_at) as first_reply')
+            ->where('messages.sender_type', 'admin')
+            ->groupBy('conversations.id', 'conversations.created_at')
             ->get();
 
         $totalResponseTime = 0;
         $count = 0;
 
-        foreach ($conversations as $conv) {
-            $firstAdminMessage = $conv->messages()
-                ->where('sender_type', 'admin')
-                ->orderBy('created_at')
-                ->first();
-
-            if ($firstAdminMessage) {
-                $responseTime = $firstAdminMessage->created_at->diffInSeconds($conv->created_at);
-                $totalResponseTime += $responseTime;
-                $count++;
-            }
+        foreach ($responseTimes as $rt) {
+            $firstReply = Carbon::parse($rt->first_reply);
+            $totalResponseTime += $firstReply->diffInSeconds($rt->created_at);
+            $count++;
         }
 
         return $count > 0 ? round($totalResponseTime / $count) : 0;
