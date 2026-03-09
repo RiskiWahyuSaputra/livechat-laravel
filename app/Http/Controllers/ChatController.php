@@ -238,6 +238,10 @@ class ChatController extends Controller
 
             return response()->json([
                 'csrf_token'   => csrf_token(),
+                'user'         => [
+                    'id'   => $user->id,
+                    'name' => $user->name,
+                ],
                 'conversation' => $activeConversation,
                 'messages'     => $messages,
                 'user_id'      => $user->id,
