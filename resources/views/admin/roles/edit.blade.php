@@ -10,7 +10,7 @@
                 <h4 class="card-title">Edit Role</h4>
             </div>
             <div class="card-body">
-                <form action="{{ route('admin.roles.update', $role->id) }}" method="POST">
+                <form action="{{ route('roles.update', ['role' => $role->id]) }}" method="POST">
                     @csrf
                     @method('PUT')
                     <div class="form-group mb-3">

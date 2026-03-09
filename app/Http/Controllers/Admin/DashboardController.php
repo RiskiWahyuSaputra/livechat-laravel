@@ -262,6 +262,11 @@ class DashboardController extends Controller
             ]);
 
         if (!$updated) {
+            // Cek apakah admin ini sebenarnya sudah berhasil klaim sebelumnya (misal klik berulang)
+            if (Conversation::where('id', $conversation->id)->where('admin_id', $admin->id)->exists()) {
+                return response()->json(['success' => true, 'conversation_id' => $conversation->id]);
+            }
+
             return response()->json([
                 'error' => 'Chat ini sudah diambil oleh admin lain.',
             ], 409); // 409 Conflict

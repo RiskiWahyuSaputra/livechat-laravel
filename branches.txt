@@ -1,0 +1,14 @@
+* latar-belakang
+  main
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/bela
+  remotes/origin/latar-belakang
+  remotes/origin/main
+  remotes/origin/main2
+  remotes/origin/main3
+  remotes/origin/main4
+  remotes/origin/riski
+  remotes/origin/riski3
+  remotes/origin/wisnu
+  remotes/origin/wisnu2
+  remotes/origin/wisnubaru

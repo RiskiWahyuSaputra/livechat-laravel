@@ -491,8 +491,10 @@
             <h5 class="card-title-custom"><i class="fe fe-pie-chart me-2"></i>Distribusi Status</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
-            <div class="chart-wrapper" style="height: 200px; display: flex; justify-content: center;">
-                <canvas id="statusDonutChart"></canvas>
+            <div class="chart-wrapper" style="display: flex; align-items: center; justify-content: center;">
+                <div style="position: relative; height: 230px; width: 100%;">
+                    <canvas id="statusDonutChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -500,8 +502,17 @@
 
 <!-- Agent Performance -->
 <div class="dashboard-card">
-    <div class="card-header-custom">
+    <div class="card-header-custom" style="display:flex;justify-content:space-between;align-items:center;">
         <h5 class="card-title-custom">Performa Agen</h5>
+        <div style="display: flex; align-items: center;">
+            <label for="agentPerfSelect" style="font-size: 12px; color: var(--gray-500); margin: 0 8px 0 0;">Tampilkan:</label>
+            <select id="agentPerfSelect" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 12px; color: var(--dark); background: white; cursor: pointer; height: 28px;">
+                <option value="5">5 Agent</option>
+                <option value="10">10 Agent</option>
+                <option value="15">15 Agent</option>
+                <option value="all" selected>Semua Agent</option>
+            </select>
+        </div>
     </div>
     <div class="card-body-custom" style="padding: 0; overflow-x: auto;">
         <table class="performance-table" style="width: 100%; border-collapse: collapse;">
@@ -517,7 +528,7 @@
             </thead>
             <tbody>
                 @forelse($topPerformers['all'] as $index => $agent)
-                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                <tr class="agent-perf-row" style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                     <td style="padding: 16px; vertical-align: middle;">
                         <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 6px; font-size: 12px; font-weight: 700; @if($index == 0) background: #fef3c7; color: #b45309; @elseif($index == 1) background: #f3f4f6; color: #6b7280; @elseif($index == 2) background: #fed7aa; color: #c2410c; @else background: #f1f5f9; color: #94a3b8; @endif">
                             {{ $index + 1 }}
@@ -569,13 +580,15 @@
         <div class="card-header-custom">
             <h5 class="card-title-custom"><i class="fe fe-alert-circle me-2"></i>Kategori Komplen</h5>
         </div>
-        <div class="card-body-custom" style="padding: 20px;">
+        <div class="card-body-custom" style="padding: 20px; height: 444px; display: flex; align-items: center;">
             @if(count($complaintCategories['categories']) > 0)
-                <div class="chart-wrapper" style="height: 300px; display: flex; justify-content: center;">
-                    <canvas id="complaintCategoriesChart"></canvas>
+                <div class="chart-wrapper" style="display: flex; align-items: center; justify-content: center; width: 100%;">
+                    <div style="position: relative; height: 350px; width: 100%;">
+                        <canvas id="complaintCategoriesChart"></canvas>
+                    </div>
                 </div>
             @else
-                <p style="color: var(--gray-500); text-align: center; padding: 20px;">No data available</p>
+                <p style="color: var(--gray-500); text-align: center; padding: 20px; width: 100%;">No data available</p>
             @endif
         </div>
     </div>
@@ -754,11 +767,16 @@
             responsive: true,
             maintainAspectRatio: false,
             cutout: '65%',
+            layout: {
+                padding: {
+                    bottom: 10
+                }
+            },
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 15,
+                        padding: 24,
                         usePointStyle: true,
                         pointStyle: 'circle'
                     }
@@ -768,8 +786,9 @@
     });
 
     // Complaint Categories Donut Chart
-    const complaintCategories = {!! json_encode($complaintCategories['categories']) !!};
-    if (complaintCategories.length > 0) {
+    const complaintCategoriesRaw = {!! json_encode($complaintCategories['categories']) !!};
+    if (complaintCategoriesRaw && (Array.isArray(complaintCategoriesRaw) ? complaintCategoriesRaw.length > 0 : Object.keys(complaintCategoriesRaw).length > 0)) {
+        const complaintCategories = Array.isArray(complaintCategoriesRaw) ? complaintCategoriesRaw : Object.values(complaintCategoriesRaw);
         const complaintLabels = complaintCategories.map(c => c.category);
         const complaintData = complaintCategories.map(c => c.count);
         
@@ -805,11 +824,16 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '65%',
+                layout: {
+                    padding: {
+                        bottom: 15
+                    }
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            padding: 15,
+                            padding: 24,
                             usePointStyle: true,
                             pointStyle: 'circle'
                         }
@@ -818,6 +842,36 @@
             }
         });
     }
+
+    // ==================== AGENT PERFORMANCE LOGIC ====================
+    document.addEventListener('DOMContentLoaded', function() {
+        const select = document.getElementById('agentPerfSelect');
+        const rows = document.querySelectorAll('.agent-perf-row');
+        
+        function updateRowsVisibility(val) {
+            rows.forEach((row, index) => {
+                if (val === 'all') {
+                    row.style.display = '';
+                } else {
+                    const limit = parseInt(val);
+                    if (index < limit) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        if(select) {
+            select.addEventListener('change', function() {
+                updateRowsVisibility(this.value);
+            });
+            
+            // Initialize display based on current value
+            updateRowsVisibility(select.value);
+        }
+    });
 
     // ==================== CHOROPLETH MAP ====================
     (function() {
@@ -1029,43 +1083,5 @@
             })
             .catch(function(err) { console.error('Map error:', err); });
     })();
-
-    // ==================== ORIGINAL DASHBOARD CHARTS ====================
-    // User Growth Chart
-    const ctx = document.getElementById('userGrowthChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: {!! json_encode($stats['chart_labels']) !!},
-            datasets: [{
-                label: 'Pelanggan Baru',
-                data: {!! json_encode($stats['chart_data']) !!},
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 5,
-                pointBackgroundColor: '#667eea'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            }
-        }
-    });
 </script>
 @endpush
