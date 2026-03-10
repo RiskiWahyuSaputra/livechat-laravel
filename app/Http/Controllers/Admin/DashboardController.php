@@ -263,6 +263,11 @@ class DashboardController extends Controller
             ]);
 
         if (!$updated) {
+            // Cek apakah admin ini sebenarnya sudah berhasil klaim sebelumnya (misal klik berulang)
+            if (Conversation::where('id', $conversation->id)->where('admin_id', $admin->id)->exists()) {
+                return response()->json(['success' => true, 'conversation_id' => $conversation->id]);
+            }
+
             return response()->json([
                 'error' => 'Chat ini sudah diambil oleh admin lain.',
             ], 409); // 409 Conflict
@@ -279,10 +284,13 @@ class DashboardController extends Controller
             'content'         => "Chat Anda sedang diproses oleh {$admin->username}. Silakan mulai berbicara.",
         ]);
 
-        broadcast(new MessageSent($sysMessage));
-
-        // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
-        broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        try {
+            broadcast(new MessageSent($sysMessage));
+            // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
+            broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        } catch (\Exception $e) {
+            \Log::error('Broadcast error claiming chat', ['error' => $e->getMessage()]);
+        }
 
         // Update posisi antrian untuk conversation lain yang masih queued
         $this->reorderQueue();
@@ -393,7 +401,9 @@ class DashboardController extends Controller
                 'message_type'    => 'whisper',
                 'content'         => "Catatan Handover: " . $request->internal_note,
             ]);
-            broadcast(new MessageSent($note));
+            try {
+                broadcast(new MessageSent($note));
+            } catch (\Exception $e) {}
         }
 
         $conversation->update(['admin_id' => $toAdmin->id]);
@@ -407,8 +417,12 @@ class DashboardController extends Controller
             'content'         => "Chat diteruskan dari {$fromAdmin->username} ke {$toAdmin->username}.",
         ]);
 
-        broadcast(new MessageSent($sysMessage));
-        broadcast(new ConversationStatusChanged($conversation, $fromAdmin->username));
+        try {
+            broadcast(new MessageSent($sysMessage));
+            broadcast(new ConversationStatusChanged($conversation, $fromAdmin->username));
+        } catch (\Exception $e) {
+            \Log::error('Broadcast error handover', ['error' => $e->getMessage()]);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -442,8 +456,12 @@ class DashboardController extends Controller
             'content'         => 'Chat telah ditutup. Terima kasih telah menghubungi kami!',
         ]);
 
-        broadcast(new MessageSent($sysMessage));
-        broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        try {
+            broadcast(new MessageSent($sysMessage));
+            broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        } catch (\Exception $e) {
+            \Log::error('Broadcast error close chat', ['error' => $e->getMessage()]);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -468,7 +486,9 @@ class DashboardController extends Controller
             'content'         => 'Akun Anda telah diblokir oleh administrator.',
         ]);
 
-        broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        try {
+            broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        } catch (\Exception $e) {}
 
         return response()->json(['success' => true]);
     }
@@ -499,14 +519,16 @@ class DashboardController extends Controller
 
         $admin = Auth::guard('admin')->user();
 
-        broadcast(new TypingIndicator(
-            conversationId: $request->conversation_id,
-            senderId: $admin->id,
-            senderType: 'admin',
-            senderRole: $admin->role,
-            senderName: $admin->username,
-            isTyping: $request->boolean('is_typing')
-        ))->toOthers();
+        try {
+            broadcast(new TypingIndicator(
+                conversationId: $request->conversation_id,
+                senderId: $admin->id,
+                senderType: 'admin',
+                senderRole: $admin->role,
+                senderName: $admin->username,
+                isTyping: $request->boolean('is_typing')
+            ))->toOthers();
+        } catch (\Exception $e) {}
 
         return response()->json(['success' => true]);
     }

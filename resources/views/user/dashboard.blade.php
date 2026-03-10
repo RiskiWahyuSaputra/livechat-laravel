@@ -46,7 +46,7 @@
         }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col relative overflow-x-hidden">
+<body x-data="chatWidget()" x-init="initWidget()" class="bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col relative overflow-x-hidden">
 
     <!-- Blobs Background -->
     <div class="blob top-[-10%] left-[-10%] animate-pulse"></div>
@@ -83,17 +83,16 @@
                 </a>
             </div>
 
-            <!-- Guest Profile (Only show if logged in) -->
-            @auth
-            <div class="flex items-center gap-4 relative">
+            <!-- Guest Profile (Reactive with Alpine) -->
+            <div x-show="isAuthenticated" x-cloak class="flex items-center gap-4 relative">
                 <div class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent">
                     <div class="relative">
                         <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                            <span x-text="user.initial"></span>
                         </div>
                     </div>
                     <div class="text-left hidden sm:block">
-                        <p class="text-xs font-bold text-slate-900 leading-none mb-1">{{ Auth::user()->name }}</p>
+                        <p class="text-xs font-bold text-slate-900 leading-none mb-1" x-text="user.name"></p>
                         <div class="flex items-center gap-1">
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                             <p class="text-[9px] md:text-[10px] text-slate-500 font-bold leading-none uppercase tracking-tighter">Online</p>
@@ -101,7 +100,6 @@
                     </div>
                 </div>
             </div>
-            @endauth
         </div>
     </header>
 
@@ -233,7 +231,7 @@
     </script>
 
     <!-- Chat Widget Container -->
-    <div x-data="chatWidget()" x-init="initWidget()" class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
+    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
         
         <!-- Chat Popup Window -->
         <div x-show="isOpen" x-cloak
@@ -309,35 +307,41 @@
                                         : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'">
 
                                     <!-- Pesan Teks -->
-                                    <div x-show="!msg.message_type || msg.message_type === 'text'" class="break-words">
-                                        <div x-html="msg.content"></div>
-                                    </div>
+                                    <template x-if="!msg.message_type || msg.message_type === 'text'">
+                                        <div class="break-words">
+                                            <div x-html="msg.content"></div>
+                                        </div>
+                                    </template>
 
                                     <!-- Pesan Gambar -->
-                                    <div x-show="msg.message_type === 'image'" class="max-w-full">
-                                        <div class="space-y-2">
-                                            <img :src="msg.content" 
-                                                 class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
-                                                 @click="window.open(msg.content, '_blank')"
-                                                 x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                    <template x-if="msg.message_type === 'image'">
+                                        <div class="max-w-full">
+                                            <div class="space-y-2">
+                                                <img :src="msg.content" 
+                                                     class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
+                                                     @click="window.open(msg.content, '_blank')"
+                                                     x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                            </div>
                                         </div>
-                                    </div>
+                                    </template>
 
                                     <!-- Pesan File -->
-                                    <div x-show="msg.message_type === 'file'" class="w-full min-w-0">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-white/10">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-[11px] font-bold truncate leading-tight mb-1" x-text="msg.content.split('/').pop()"></p>
-                                                <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:opacity-80" :class="msg.sender_type === 'user' ? 'text-white underline' : 'text-blue-600 underline'">
-                                                    <span>Unduh</span>
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                                </a>
+                                    <template x-if="msg.message_type === 'file'">
+                                        <div class="w-full min-w-0">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-white/10">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-[11px] font-bold truncate leading-tight mb-1" x-text="msg.content.split('/').pop()"></p>
+                                                    <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:opacity-80" :class="msg.sender_type === 'user' ? 'text-white underline' : 'text-blue-600 underline'">
+                                                        <span>Unduh</span>
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </template>
                                 </div>
                                 <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
 
@@ -456,6 +460,10 @@
                 isInitialized: false,
                 isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
                 csrfToken: '{{ csrf_token() }}',
+                user: {
+                    name: '{{ Auth::check() ? Auth::user()->name : "" }}',
+                    initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : "" }}'
+                },
                 
                 // Form Data
                 regForm: {
@@ -576,6 +584,13 @@
                         if (response.ok && data.success) {
                             if (data.csrf_token) this.csrfToken = data.csrf_token;
                             this.isAuthenticated = true;
+                            
+                            // Update User Data reaktif
+                            if (data.user) {
+                                this.user.name = data.user.name;
+                                this.user.initial = data.user.name.charAt(0).toUpperCase();
+                            }
+                            
                             this.regForm = { name: '', contact: '', origin: '' };
                             await this.fetchChatData();
                         } else {
@@ -611,6 +626,12 @@
                         this.userId = data.user_id;
                         this.status = data.status;
                         this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+
+                        // Update User Data jika ada dalam response
+                        if (data.user) {
+                            this.user.name = data.user.name;
+                            this.user.initial = data.user.name.charAt(0).toUpperCase();
+                        }
                         
                         this.messages = data.messages.map(m => ({
                             id: m.id,
@@ -633,43 +654,58 @@
                 },
 
                 listenForEvents() {
-                    if (typeof window.Echo === 'undefined' || !this.conversationId) return;
+                    if (!this.conversationId) return;
 
-                    window.Echo.private(`conversation.${this.conversationId}`)
-                        .listen('.message.sent', (e) => {
-                            this.lastActivity = Date.now();
-                            const alreadyExists = this.messages.some(m => m.id === e.id);
-                            if (alreadyExists) return;
+                    let retries = 0;
+                    const maxRetries = 20; // 10 seconds max
 
-                            if (e.sender_id == this.userId && e.sender_type === 'user') return;
-                            if (e.is_whisper) return;
-
-                            this.messages.push({
-                                id: e.id,
-                                sender_id: e.sender_id,
-                                sender_type: e.sender_type,
-                                message_type: e.message_type,
-                                content: e.content,
-                                created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                            });
+                    const checkEcho = setInterval(() => {
+                        if (typeof window.Echo !== 'undefined') {
+                            clearInterval(checkEcho);
                             
-                            if (this.isOpen) this.scrollToBottom();
-                            else this.unreadCount++;
-                        })
-                        .listen('.conversation.status.changed', (e) => {
-                            this.status = e.status;
-                            if (e.bot_phase) this.botPhase = e.bot_phase;
-                        })
-                        .listen('.typing', (e) => {
-                            if (e.sender_type === 'admin') {
-                                this.isTyping = e.is_typing;
-                                this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
-                                clearTimeout(this.typingTimeout);
-                                if (this.isTyping) {
-                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
-                                }
+                            window.Echo.private(`conversation.${this.conversationId}`)
+                                .listen('.message.sent', (e) => {
+                                    this.lastActivity = Date.now();
+                                    const alreadyExists = this.messages.some(m => m.id === e.id);
+                                    if (alreadyExists) return;
+
+                                    if (e.sender_id == this.userId && e.sender_type === 'user') return;
+                                    if (e.is_whisper) return;
+
+                                    this.messages.push({
+                                        id: e.id,
+                                        sender_id: e.sender_id,
+                                        sender_type: e.sender_type,
+                                        message_type: e.message_type,
+                                        content: e.content,
+                                        created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                    });
+                                    
+                                    if (this.isOpen) this.scrollToBottom();
+                                    else this.unreadCount++;
+                                })
+                                .listen('.conversation.status.changed', (e) => {
+                                    this.status = e.status;
+                                    if (e.bot_phase) this.botPhase = e.bot_phase;
+                                })
+                                .listen('.typing', (e) => {
+                                    if (e.sender_type === 'admin') {
+                                        this.isTyping = e.is_typing;
+                                        this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
+                                        clearTimeout(this.typingTimeout);
+                                        if (this.isTyping) {
+                                            this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                        }
+                                    }
+                                });
+                        } else {
+                            retries++;
+                            if (retries >= maxRetries) {
+                                clearInterval(checkEcho);
+                                console.warn('Echo initialization timed out.');
                             }
-                        });
+                        }
+                    }, 500);
                 },
 
                 async sendMessage() {

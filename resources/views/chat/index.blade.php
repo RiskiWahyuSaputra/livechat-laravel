@@ -93,7 +93,8 @@
                     <template x-if="msg.sender_type !== 'system'">
                         <div class="max-w-[90%] md:max-w-[85%] flex flex-col" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                             <!-- Nama Pengirim -->
-                            <span x-show="msg.sender_type !== 'user'" class="text-[9px] md:text-[11px] text-slate-400 font-medium mb-1 ml-1">Live Support</span>
+                            <span x-show="msg.sender_type !== 'user'" class="text-[9px] md:text-[11px] text-slate-400 font-medium mb-1 ml-1" 
+                                  x-text="msg.sender_id == 0 ? 'Live Support' : 'Live Support Agent'"></span>
                             <span x-show="msg.sender_type === 'user'" class="text-[9px] md:text-[11px] text-slate-400 font-medium mb-1 mr-1">Anda</span>
                             
                             <div class="px-3.5 py-2 md:px-5 md:py-3 rounded-2xl text-[13px] md:text-[15px] leading-relaxed relative break-words overflow-hidden shadow-sm"
@@ -102,35 +103,39 @@
                                     : 'bg-white text-slate-800 rounded-br-sm border border-slate-200'">
                                 
                                 <!-- Pesan Teks -->
-                                <div x-show="!msg.message_type || msg.message_type === 'text'">
-                                    <span x-html="formatMessage(msg.content)"></span>
-                                </div>
+                                <template x-if="!msg.message_type || msg.message_type === 'text'">
+                                    <div>
+                                        <span x-html="formatMessage(msg.content)"></span>
+                                    </div>
+                                </template>
 
                                 <!-- Pesan Gambar -->
-                                <div x-show="msg.message_type === 'image'">
+                                <template x-if="msg.message_type === 'image'">
                                     <div class="space-y-2">
                                         <img :src="msg.content" 
                                              class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
                                              @click="window.open(msg.content, '_blank')"
                                              x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
                                     </div>
-                                </div>
+                                </template>
 
                                 <!-- Pesan File -->
-                                <div x-show="msg.message_type === 'file'" class="w-full">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                        </div>
-                                        <div class="flex-1 min-w-0 overflow-hidden text-left">
-                                            <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
-                                            <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
-                                                <span>Unduh Dokumen</span>
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                            </a>
+                                <template x-if="msg.message_type === 'file'">
+                                    <div class="w-full">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0 overflow-hidden text-left">
+                                                <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
+                                                <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
+                                                    <span>Unduh Dokumen</span>
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                </template>
                             </div>
                             
                             <!-- Timestamp -->
@@ -230,42 +235,66 @@
 
                 formatMessage(text) {
                     if (!text) return '';
+                    
+                    const badge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                    
+                    if (String(text).includes(badge)) {
+                        let parts = String(text).split(badge);
+                        let safeParts = parts.map(p => String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                        return safeParts.join(badge).replace(/\n/g, '<br>');
+                    }
+
                     let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                     return safeText.replace(/\n/g, '<br>');
                 },
 
                 listenForEvents() {
-                    if (typeof window.Echo === 'undefined') return;
+                    if (!this.conversationId) return;
 
-                    window.Echo.private(`conversation.${this.conversationId}`)
-                        .listen('.message.sent', (e) => {
-                            if (e.sender_id == this.userId && e.sender_type === 'user') return;
-                            if (e.is_whisper) return;
+                    let retries = 0;
+                    const maxRetries = 20;
 
-                            this.messages.push({
-                                id: e.id,
-                                sender_id: e.sender_id,
-                                sender_type: e.sender_type,
-                                message_type: e.message_type,
-                                content: e.content,
-                                created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                            });
-                            this.scrollToBottom();
-                        })
-                        .listen('.conversation.status.changed', (e) => {
-                            this.status = e.status;
-                            if (e.bot_phase) this.botPhase = e.bot_phase;
-                        })
-                        .listen('.typing', (e) => {
-                            if (e.sender_type === 'admin') {
-                                this.isTyping = e.is_typing;
-                                this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
-                                clearTimeout(this.typingTimeout);
-                                if (this.isTyping) {
-                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
-                                }
+                    const checkEcho = setInterval(() => {
+                        if (typeof window.Echo !== 'undefined') {
+                            clearInterval(checkEcho);
+
+                            window.Echo.private(`conversation.${this.conversationId}`)
+                                .listen('.message.sent', (e) => {
+                                    if (e.sender_id == this.userId && e.sender_type === 'user') return;
+                                    if (e.is_whisper) return;
+
+                                    this.messages.push({
+                                        id: e.id,
+                                        sender_id: e.sender_id,
+                                        sender_type: e.sender_type,
+                                        message_type: e.message_type,
+                                        content: e.content,
+                                        created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                    });
+                                    this.scrollToBottom();
+                                })
+                                .listen('.conversation.status.changed', (e) => {
+                                    this.status = e.status;
+                                    if (e.bot_phase) this.botPhase = e.bot_phase;
+                                })
+                                .listen('.typing', (e) => {
+                                    if (e.sender_type === 'admin') {
+                                        this.isTyping = e.is_typing;
+                                        this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
+                                        clearTimeout(this.typingTimeout);
+                                        if (this.isTyping) {
+                                            this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                        }
+                                    }
+                                });
+                        } else {
+                            retries++;
+                            if (retries >= maxRetries) {
+                                clearInterval(checkEcho);
+                                console.warn('Echo initialization timed out.');
                             }
-                        });
+                        }
+                    }, 500);
                 },
 
                 async sendMessage() {
@@ -308,8 +337,17 @@
                             this.messages[msgIndex].content = data.message.content;
                             this.messages[msgIndex].created_at = data.message.created_at;
                             
-                            // Re-fetch chat data to update botPhase if needed, or we can wait for broadcast
-                            // But usually server response is faster for current user
+                            // Tambahkan balasan bot jika ada (biasanya untuk fase bot)
+                            if (data.bot_replies && data.bot_replies.length > 0) {
+                                data.bot_replies.forEach(botMsg => {
+                                    // Hindari duplikat jika Echo sudah menambahkannya
+                                    if (!this.messages.find(m => m.id === botMsg.id)) {
+                                        this.messages.push(botMsg);
+                                    }
+                                });
+                                this.scrollToBottom();
+                            }
+
                             if (this.botPhase === 'awaiting_explanation') {
                                 this.botPhase = 'off';
                             }
