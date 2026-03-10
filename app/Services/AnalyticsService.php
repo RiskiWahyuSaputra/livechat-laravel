@@ -21,10 +21,10 @@ class AnalyticsService
         $last30Days = Carbon::now()->subDays(30);
 
         return [
-            'total_conversations' => Conversation::count(),
-            'today_conversations' => Conversation::whereDate('created_at', $today)->count(),
+            'total_conversations' => Conversation::withTrashed()->count(),
+            'today_conversations' => Conversation::withTrashed()->whereDate('created_at', $today)->count(),
             'active_conversations' => Conversation::whereIn('status', ['active', 'pending', 'queued'])->count(),
-            'closed_conversations' => Conversation::where('status', 'closed')->count(),
+            'closed_conversations' => Conversation::withTrashed()->where('status', 'closed')->count(),
             'total_customers' => User::count(),
             'new_customers_today' => User::whereDate('created_at', $today)->count(),
             'new_customers_7days' => User::where('created_at', '>=', $last7Days)->count(),
@@ -38,7 +38,7 @@ class AnalyticsService
      */
     public function getStatusDistribution()
     {
-        $statuses = Conversation::select('status', DB::raw('count(*) as count'))
+        $statuses = Conversation::withTrashed()->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
@@ -60,7 +60,7 @@ class AnalyticsService
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
             $labels[] = $date->format('d M');
-            $data[] = Conversation::whereDate('created_at', $date)->count();
+            $data[] = Conversation::withTrashed()->whereDate('created_at', $date)->count();
         }
 
         return ['labels' => $labels, 'data' => $data];
@@ -71,7 +71,7 @@ class AnalyticsService
      */
     public function getPeakHours()
     {
-        $hourlyData = Conversation::select(DB::raw('HOUR(created_at) as hour'), DB::raw('count(*) as count'))
+        $hourlyData = Conversation::withTrashed()->select(DB::raw('HOUR(created_at) as hour'), DB::raw('count(*) as count'))
             ->where('created_at', '>=', Carbon::now()->subDays(30))
             ->groupBy('hour')
             ->orderBy('hour')
@@ -94,19 +94,13 @@ class AnalyticsService
     public function getAgentPerformance()
     {
         $agents = Admin::with(['conversations' => function ($q) {
-            $q->where('status', 'closed');
+            $q->withTrashed()->where('status', 'closed');
         }])->get();
 
         $performance = [];
 
         foreach ($agents as $agent) {
             $closedChats = $agent->conversations->count();
-            
-            // Calculate average response time (first message from agent)
-            $avgResponseTime = $this->calculateAvgResponseTime($agent->id);
-
-            // Calculate average chat duration
-            $avgDuration = $this->calculateAvgChatDuration($agent->id);
 
             $performance[] = [
                 'id' => $agent->id,
@@ -114,8 +108,8 @@ class AnalyticsService
                 'role' => $agent->role,
                 'status' => $agent->status,
                 'closed_chats' => $closedChats,
-                'avg_response_time' => $avgResponseTime,
-                'avg_duration' => $avgDuration,
+                'avg_response_time' => $closedChats > 0 ? $this->calculateAvgResponseTime($agent->id) : 0,
+                'avg_duration' => $closedChats > 0 ? $this->calculateAvgChatDuration($agent->id) : 0,
                 'is_superadmin' => $agent->is_superadmin,
             ];
         }
@@ -132,15 +126,15 @@ class AnalyticsService
     public function getTopPerformers()
     {
         $agents = Admin::with(['conversations' => function ($q) {
-            $q->where('status', 'closed');
+            $q->withTrashed()->where('status', 'closed');
         }])->where('is_superadmin', false)->get();
 
         $performance = [];
 
         foreach ($agents as $agent) {
             $closedChats = $agent->conversations->count();
-            $avgResponseTime = $this->calculateAvgResponseTime($agent->id);
-            $avgDuration = $this->calculateAvgChatDuration($agent->id);
+            $avgResponseTime = $closedChats > 0 ? $this->calculateAvgResponseTime($agent->id) : 0;
+            $avgDuration = $closedChats > 0 ? $this->calculateAvgChatDuration($agent->id) : 0;
 
             // Calculate performance score (higher is better)
             // Score = (chats * 10) + (faster response = higher score)
@@ -173,7 +167,7 @@ class AnalyticsService
      */
     public function getComplaintCategories()
     {
-        $categories = Conversation::select('problem_category', DB::raw('count(*) as count'))
+        $categories = Conversation::withTrashed()->select('problem_category', DB::raw('count(*) as count'))
             ->whereNotNull('problem_category')
             ->where('problem_category', '!=', '')
             ->groupBy('problem_category')
@@ -239,12 +233,12 @@ class AnalyticsService
         $agents = Admin::where('is_superadmin', false)->get();
         
         $workload = [];
-        $totalChats = Conversation::count();
+        $totalChats = Conversation::withTrashed()->count();
 
         foreach ($agents as $agent) {
-            $handledChats = Conversation::where('admin_id', $agent->id)->count();
+            $handledChats = Conversation::withTrashed()->where('admin_id', $agent->id)->count();
             $activeChats = Conversation::where('admin_id', $agent->id)->whereIn('status', ['active', 'pending', 'queued'])->count();
-            $closedChats = Conversation::where('admin_id', $agent->id)->where('status', 'closed')->count();
+            $closedChats = Conversation::withTrashed()->where('admin_id', $agent->id)->where('status', 'closed')->count();
 
             $workload[] = [
                 'id' => $agent->id,
@@ -267,25 +261,22 @@ class AnalyticsService
      */
     private function calculateAvgResponseTime($adminId)
     {
-        $conversations = Conversation::where('admin_id', $adminId)
+        $responseTimes = Conversation::withTrashed()->where('admin_id', $adminId)
             ->where('status', 'closed')
-            ->with('messages')
+            ->join('messages', 'conversations.id', '=', 'messages.conversation_id')
+            ->select('conversations.id', 'conversations.created_at')
+            ->selectRaw('MIN(messages.created_at) as first_reply')
+            ->where('messages.sender_type', 'admin')
+            ->groupBy('conversations.id', 'conversations.created_at')
             ->get();
 
         $totalResponseTime = 0;
         $count = 0;
 
-        foreach ($conversations as $conv) {
-            $firstAdminMessage = $conv->messages()
-                ->where('sender_type', 'admin')
-                ->orderBy('created_at')
-                ->first();
-
-            if ($firstAdminMessage) {
-                $responseTime = $firstAdminMessage->created_at->diffInSeconds($conv->created_at);
-                $totalResponseTime += $responseTime;
-                $count++;
-            }
+        foreach ($responseTimes as $rt) {
+            $firstReply = Carbon::parse($rt->first_reply);
+            $totalResponseTime += $firstReply->diffInSeconds($rt->created_at);
+            $count++;
         }
 
         return $count > 0 ? round($totalResponseTime / $count) : 0;
@@ -296,7 +287,7 @@ class AnalyticsService
      */
     private function calculateAvgChatDuration($adminId)
     {
-        $avgDuration = Conversation::where('admin_id', $adminId)
+        $avgDuration = Conversation::withTrashed()->where('admin_id', $adminId)
             ->where('status', 'closed')
             ->select(DB::raw('AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) as avg_duration'))
             ->value('avg_duration');
@@ -345,18 +336,18 @@ class AnalyticsService
      */
     public function getConversationMetrics()
     {
-        $total = Conversation::count();
-        $closed = Conversation::where('status', 'closed')->count();
+        $total = Conversation::withTrashed()->count();
+        $closed = Conversation::withTrashed()->where('status', 'closed')->count();
         
         $completionRate = $total > 0 ? round(($closed / $total) * 100, 1) : 0;
 
         // Average duration for closed conversations
-        $avgDuration = Conversation::where('status', 'closed')
+        $avgDuration = Conversation::withTrashed()->where('status', 'closed')
             ->select(DB::raw('AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) as avg_duration'))
             ->value('avg_duration');
 
         // Status distribution
-        $statusDistribution = Conversation::select('status', DB::raw('count(*) as count'))
+        $statusDistribution = Conversation::withTrashed()->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->get()
             ->pluck('count', 'status')
@@ -376,7 +367,7 @@ class AnalyticsService
      */
     public function getFilteredData($startDate, $endDate)
     {
-        $conversations = Conversation::whereBetween('created_at', [$startDate, $endDate])->get();
+        $conversations = Conversation::withTrashed()->whereBetween('created_at', [$startDate, $endDate])->get();
         $users = User::whereBetween('created_at', [$startDate, $endDate])->get();
 
         return [

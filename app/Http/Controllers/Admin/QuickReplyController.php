@@ -10,7 +10,7 @@ class QuickReplyController extends Controller
 {
     public function index()
     {
-        $replies = QuickReply::orderBy('created_at', 'desc')->get();
+        $replies = QuickReply::orderBy('created_at', 'desc')->paginate(10);
         return view('admin.quick-replies.index', compact('replies'));
     }
 
