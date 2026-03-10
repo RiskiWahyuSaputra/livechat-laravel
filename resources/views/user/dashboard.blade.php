@@ -654,43 +654,58 @@
                 },
 
                 listenForEvents() {
-                    if (typeof window.Echo === 'undefined' || !this.conversationId) return;
+                    if (!this.conversationId) return;
 
-                    window.Echo.private(`conversation.${this.conversationId}`)
-                        .listen('.message.sent', (e) => {
-                            this.lastActivity = Date.now();
-                            const alreadyExists = this.messages.some(m => m.id === e.id);
-                            if (alreadyExists) return;
+                    let retries = 0;
+                    const maxRetries = 20; // 10 seconds max
 
-                            if (e.sender_id == this.userId && e.sender_type === 'user') return;
-                            if (e.is_whisper) return;
-
-                            this.messages.push({
-                                id: e.id,
-                                sender_id: e.sender_id,
-                                sender_type: e.sender_type,
-                                message_type: e.message_type,
-                                content: e.content,
-                                created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                            });
+                    const checkEcho = setInterval(() => {
+                        if (typeof window.Echo !== 'undefined') {
+                            clearInterval(checkEcho);
                             
-                            if (this.isOpen) this.scrollToBottom();
-                            else this.unreadCount++;
-                        })
-                        .listen('.conversation.status.changed', (e) => {
-                            this.status = e.status;
-                            if (e.bot_phase) this.botPhase = e.bot_phase;
-                        })
-                        .listen('.typing', (e) => {
-                            if (e.sender_type === 'admin') {
-                                this.isTyping = e.is_typing;
-                                this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
-                                clearTimeout(this.typingTimeout);
-                                if (this.isTyping) {
-                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
-                                }
+                            window.Echo.private(`conversation.${this.conversationId}`)
+                                .listen('.message.sent', (e) => {
+                                    this.lastActivity = Date.now();
+                                    const alreadyExists = this.messages.some(m => m.id === e.id);
+                                    if (alreadyExists) return;
+
+                                    if (e.sender_id == this.userId && e.sender_type === 'user') return;
+                                    if (e.is_whisper) return;
+
+                                    this.messages.push({
+                                        id: e.id,
+                                        sender_id: e.sender_id,
+                                        sender_type: e.sender_type,
+                                        message_type: e.message_type,
+                                        content: e.content,
+                                        created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                    });
+                                    
+                                    if (this.isOpen) this.scrollToBottom();
+                                    else this.unreadCount++;
+                                })
+                                .listen('.conversation.status.changed', (e) => {
+                                    this.status = e.status;
+                                    if (e.bot_phase) this.botPhase = e.bot_phase;
+                                })
+                                .listen('.typing', (e) => {
+                                    if (e.sender_type === 'admin') {
+                                        this.isTyping = e.is_typing;
+                                        this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
+                                        clearTimeout(this.typingTimeout);
+                                        if (this.isTyping) {
+                                            this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                        }
+                                    }
+                                });
+                        } else {
+                            retries++;
+                            if (retries >= maxRetries) {
+                                clearInterval(checkEcho);
+                                console.warn('Echo initialization timed out.');
                             }
-                        });
+                        }
+                    }, 500);
                 },
 
                 async sendMessage() {
