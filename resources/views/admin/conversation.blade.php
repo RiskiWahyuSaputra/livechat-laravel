@@ -582,37 +582,52 @@
                 },
 
                 listenForEvents() {
-                    if (!window.Echo) return;
+                    if (!this.conversationId) return;
 
-                    window.Echo.private(`conversation.${this.conversationId}`)
-                        .listen('.message.sent', (e) => {
-                            const alreadyExists = this.messages.some(m => m.id === e.id);
-                            if (alreadyExists) return;
+                    let retries = 0;
+                    const maxRetries = 20;
 
-                            if (e.sender_id == this.adminId && e.sender_type === 'admin') return;
+                    const checkEcho = setInterval(() => {
+                        if (typeof window.Echo !== 'undefined') {
+                            clearInterval(checkEcho);
 
-                            this.messages.push({
-                                id: e.id,
-                                sender_type: e.sender_type,
-                                message_type: e.message_type,
-                                content: e.content,
-                                created_at: e.created_at // Store raw ISO string
-                            });
-                            this.scrollToBottom();
-                        })
-                        .listen('.conversation.status.changed', (e) => {
-                            this.status = e.status;
-                            this.sessionAdminId = e.admin_id;
-                        })
-                        .listen('.typing', (e) => {
-                            if (e.sender_type === 'user') {
-                                this.isTyping = e.is_typing;
-                                clearTimeout(this.typingTimeout);
-                                if (this.isTyping) {
-                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
-                                }
+                            window.Echo.private(`conversation.${this.conversationId}`)
+                                .listen('.message.sent', (e) => {
+                                    const alreadyExists = this.messages.some(m => m.id === e.id);
+                                    if (alreadyExists) return;
+
+                                    if (e.sender_id == this.adminId && e.sender_type === 'admin') return;
+
+                                    this.messages.push({
+                                        id: e.id,
+                                        sender_type: e.sender_type,
+                                        message_type: e.message_type,
+                                        content: e.content,
+                                        created_at: e.created_at // Store raw ISO string
+                                    });
+                                    this.scrollToBottom();
+                                })
+                                .listen('.conversation.status.changed', (e) => {
+                                    this.status = e.status;
+                                    this.sessionAdminId = e.admin_id;
+                                })
+                                .listen('.typing', (e) => {
+                                    if (e.sender_type === 'user') {
+                                        this.isTyping = e.is_typing;
+                                        clearTimeout(this.typingTimeout);
+                                        if (this.isTyping) {
+                                            this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                        }
+                                    }
+                                });
+                        } else {
+                            retries++;
+                            if (retries >= maxRetries) {
+                                clearInterval(checkEcho);
+                                console.warn('Echo initialization timed out.');
                             }
-                        });
+                        }
+                    }, 500);
                 },
 
                 async sendMessage() {
