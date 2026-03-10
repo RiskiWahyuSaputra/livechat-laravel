@@ -325,26 +325,36 @@
 
     /* ── Status Tab Strip ── */
     .status-tab-strip {
-        padding: 10px 12px 0;
+        padding: 8px 8px 0;
         border-bottom: 1px solid #f3f4f6;
     }
     .status-tab-strip .nav-tabs {
         border: none;
-        gap: 4px;
+        gap: 0;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        width: 100%;
+    }
+    .status-tab-strip .nav-tabs::-webkit-scrollbar { display: none; }
+    .status-tab-strip .nav-item {
+        flex: 1;
     }
     .status-tab-strip .nav-link {
-        padding: 6px 14px;
+        padding: 5px 4px;
         border: none;
         border-radius: 8px 8px 0 0;
-        font-size: 0.82rem;
+        font-size: 0.76rem;
         font-weight: 500;
         color: #6b7280;
         background: transparent;
         display: flex;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        gap: 4px;
         cursor: pointer;
         transition: all 0.15s;
+        white-space: nowrap;
+        width: 100%;
     }
     .status-tab-strip .nav-link:hover {
         color: #374151;
@@ -359,11 +369,11 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 20px;
-        height: 18px;
-        padding: 0 5px;
+        min-width: 18px;
+        height: 16px;
+        padding: 0 4px;
         border-radius: 10px;
-        font-size: 0.72rem;
+        font-size: 0.68rem;
         font-weight: 700;
         background: #e5e7eb;
         color: #374151;
@@ -371,6 +381,14 @@
     }
     .status-tab-strip .nav-link.active .tab-count {
         background: #6366f1;
+        color: #fff;
+    }
+    .status-tab-strip .nav-link.tab-mine.active {
+        color: #0369a1;
+        background: #e0f2fe;
+    }
+    .status-tab-strip .nav-link.tab-mine.active .tab-count {
+        background: #0284c7;
         color: #fff;
     }
     .status-tab-strip .nav-link.tab-queue.active {
@@ -710,12 +728,20 @@
                                         <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active').length"></span>
                                     </span>
                                 </li>
+                                <li class="nav-item">
+                                    <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
+                                        @click="statusFilter = 'mine'" style="cursor:pointer;"
+                                        title="Chat yang sedang Anda tangani">
+                                        Milik Saya
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
+                                    </span>
+                                </li>
                             </ul>
                         </div>
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active'))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : c.status === 'active')))" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
@@ -748,10 +774,10 @@
                             </template>
 
                             <!-- Empty state -->
-                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active')).length === 0"
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : c.status === 'active'))).length === 0"
                                 class="chat-empty-state">
                                 <i class="fe fe-message-circle"></i>
-                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : 'Belum ada percakapan.')"></p>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : 'Belum ada percakapan.'))"></p>
                             </div>
                         </div>
 
