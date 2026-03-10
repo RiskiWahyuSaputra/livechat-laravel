@@ -376,6 +376,27 @@ class ChatController extends Controller
         $newBotMessages = [];
         $botCategories = config('chat.complaint_categories');
 
+        // Fitur Kembali ke Menu Utama
+        if (strtolower(trim($userMessage)) === 'menu') {
+            $conversation->update([
+                'bot_phase' => 'awaiting_category',
+                'problem_category' => null
+            ]);
+
+            $categoryButtons = "";
+            foreach ($botCategories as $cat) { $categoryButtons .= "- {$cat}\n"; }
+
+            $newBotMessages[] = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "🔄 Kembali ke Menu Utama.\n\nSilakan pilih kembali kategori kendala Anda:\n\n" . $categoryButtons,
+            ]);
+
+            return $this->formatBotReplies($newBotMessages, $conversation);
+        }
+
         if ($conversation->bot_phase === 'awaiting_category') {
             if (in_array($userMessage, $botCategories)) {
                 $conversation->update(['problem_category' => $userMessage, 'bot_phase' => 'awaiting_explanation']);
@@ -426,8 +447,13 @@ class ChatController extends Controller
             }
         }
 
+        return $this->formatBotReplies($newBotMessages, $conversation);
+    }
+
+    private function formatBotReplies($messages, $conversation)
+    {
         $formatted = [];
-        foreach ($newBotMessages as $m) {
+        foreach ($messages as $m) {
             $msgData = [
                 'id' => $m->id,
                 'sender_id' => $m->sender_id,
