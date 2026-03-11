@@ -187,10 +187,13 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 16px 10px;
+        padding: 16px 16px 8px; /* Adjusted bottom padding */
     }
     .sidebar-header h6 {
         font-size: 1.1rem;
+    }
+    .ci-badge.offline { background: #e5e7eb; color: #6b7280; } /* New style for offline badge */
+
         font-weight: 700;
         color: #111827;
         margin: 0;
@@ -739,8 +742,18 @@
                                         </div>
                                         <div class="ci-row2">
                                             <span class="ci-badge"
-                                                :class="['pending','queued'].includes(chat.status) ? 'queue' : (chat.admin_id === adminId ? 'active-mine' : 'active-other')"
-                                                x-text="chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position : (chat.status === 'pending' ? '🔔 Permintaan Baru' : (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen')))"
+                                                :class="{
+                                                    'queue': ['pending','queued'].includes(chat.status),
+                                                    'active-mine': chat.status === 'active' && chat.admin_id === adminId && chat.customer.is_online,
+                                                    'active-other': chat.status === 'active' && chat.admin_id !== adminId && chat.customer.is_online,
+                                                    'offline': chat.status === 'active' && !chat.customer.is_online
+                                                }"
+                                                x-text="
+                                                    chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position :
+                                                    (chat.status === 'pending' ? '🔔 Permintaan Baru' :
+                                                    (chat.status === 'active' && !chat.customer.is_online ? '📴 Offline' :
+                                                    (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen'))))
+                                                "
                                             ></span>
                                         </div>
                                     </div>
