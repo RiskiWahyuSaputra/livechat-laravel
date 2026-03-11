@@ -199,13 +199,13 @@ class DashboardController extends Controller
             return response()->json([
                 'pending' => $pendingConversations,
                 'active' => $activeConversations,
-                'closed' => $closedConversations, // New
+                'closed' => $closedConversations,
                 'search_results' => $searchResults,
                 'search_summary' => [
                     'query' => $search,
                     'total_pending' => $pendingConversations->count(),
                     'total_active' => $activeConversations->count(),
-                    'total_closed' => $closedConversations->count(), // New
+                    'total_closed' => $closedConversations->count(),
                 ],
             ]);
         }
@@ -248,7 +248,7 @@ class DashboardController extends Controller
             return response()->json(['error' => 'Anda sudah mencapai batas maksimum chat aktif.'], 422);
         }
 
-        // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)
+        // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)  
         $updated = Conversation::where('id', $conversation->id)
             ->whereIn('status', ['pending', 'queued'])
             ->where(function($q) use ($admin) {
@@ -312,9 +312,19 @@ class DashboardController extends Controller
         $admin        = Auth::guard('admin')->user();
         $conversation = Conversation::withTrashed()->findOrFail($request->conversation_id);
 
-        // Jangan izinkan kirim pesan (kecuali whisper) jika status sudah closed
+        // Logic to handle re-opening closed conversations
         if ($conversation->status === 'closed' && $request->message_type !== 'whisper') {
-            return response()->json(['error' => 'Sesi obrolan ini sudah ditutup.'], 403);
+            $conversation->update([
+                'status'   => 'active',
+                'admin_id' => $admin->id,
+                'deleted_at' => null, // Restore the conversation if soft-deleted
+            ]);
+            // Broadcast status change
+            try {
+                broadcast(new ConversationStatusChanged($conversation, $admin->username));
+            } catch (\Exception $e) {
+                \Log::error('Broadcast error re-opening chat', ['error' => $e->getMessage()]);
+            }
         }
 
         // Pastikan admin ini yang menangani conversation ini (kecuali whisper bisa semua admin)
@@ -448,10 +458,8 @@ class DashboardController extends Controller
         $conversation->update([
             'status'           => 'closed',
             'problem_category' => $category,
-            'deleted_at'       => null, // Ensure it's not soft-deleted when setting status to closed
+            'deleted_at'       => null,
         ]);
-
-        // $conversation->delete(); // Soft delete memindahkannya ke arsip - REMOVED
 
         $sysMessage = Message::create([
             'conversation_id' => $conversation->id,
@@ -486,9 +494,8 @@ class DashboardController extends Controller
 
         $conversation->update([
             'status'     => 'closed',
-            'deleted_at' => null, // Ensure it's not soft-deleted
+            'deleted_at' => null,
         ]);
-        // $conversation->delete(); // REMOVED
 
         Message::create([
             'conversation_id' => $conversation->id,
@@ -500,7 +507,9 @@ class DashboardController extends Controller
 
         try {
             broadcast(new ConversationStatusChanged($conversation, $admin->username));
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            \Log::error('Broadcast error blocking user', ['error' => $e->getMessage()]);
+        }
 
         if ($conversation->customer) {
             event(new UserShouldBeLoggedOut($conversation->customer));
@@ -508,7 +517,6 @@ class DashboardController extends Controller
 
         return response()->json(['success' => true]);
     }
-
     /**
      * Update status admin (online/busy/offline).
      */
