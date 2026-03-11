@@ -229,7 +229,7 @@
 
     /* Search box */
     .sidebar-search {
-        padding: 0 12px 10px;
+        padding: 0 16px 12px;
     }
     .sidebar-search .input-group {
         background: #f3f4f6;
@@ -278,7 +278,7 @@
 
     /* Content filter chips */
     .content-filter-row {
-        padding: 0 12px 12px;
+        padding: 0 16px 12px;
         display: flex;
         gap: 6px;
         overflow-x: auto;
@@ -325,57 +325,79 @@
 
     /* ── Status Tab Strip ── */
     .status-tab-strip {
-        padding: 10px 12px 0;
+        padding: 0 12px;
         border-bottom: 1px solid #f3f4f6;
+        background: #fff;
+    }
+    body.dark-mode .status-tab-strip {
+        background: #1e1e2d;
+        border-color: #2a2a3d;
     }
     .status-tab-strip .nav-tabs {
         border: none;
-        gap: 4px;
+        display: flex;
+        width: 100%;
+        flex-wrap: nowrap;
+    }
+    .status-tab-strip .nav-item {
+        flex: 1;
+        display: flex;
     }
     .status-tab-strip .nav-link {
-        padding: 6px 14px;
+        width: 100%;
+        padding: 12px 2px;
         border: none;
-        border-radius: 8px 8px 0 0;
-        font-size: 0.82rem;
-        font-weight: 500;
+        border-bottom: 3px solid transparent;
+        border-radius: 0;
+        font-size: 0.68rem;
+        font-weight: 700;
         color: #6b7280;
         background: transparent;
         display: flex;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        gap: 3px;
         cursor: pointer;
-        transition: all 0.15s;
+        transition: all 0.2s;
+        white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0;
     }
     .status-tab-strip .nav-link:hover {
         color: #374151;
-        background: #f3f4f6;
+        background: rgba(0,0,0,0.02);
     }
     .status-tab-strip .nav-link.active {
         color: #4338ca;
-        background: #eef2ff;
-        font-weight: 600;
+        border-bottom-color: #6366f1;
+        background: transparent;
+    }
+    body.dark-mode .status-tab-strip .nav-link.active {
+        color: #818cf8;
+        border-bottom-color: #818cf8;
     }
     .status-tab-strip .tab-count {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 20px;
+        min-width: 18px;
         height: 18px;
         padding: 0 5px;
-        border-radius: 10px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        background: #e5e7eb;
-        color: #374151;
+        border-radius: 6px;
+        font-size: 0.68rem;
+        font-weight: 800;
+        background: #eef2ff;
+        color: #6366f1;
         line-height: 1;
+        transition: all 0.2s;
     }
     .status-tab-strip .nav-link.active .tab-count {
         background: #6366f1;
         color: #fff;
     }
     .status-tab-strip .nav-link.tab-queue.active {
-        color: #b91c1c;
-        background: #fef2f2;
+        color: #dc2626;
+        border-bottom-color: #ef4444;
     }
     .status-tab-strip .nav-link.tab-queue.active .tab-count {
         background: #ef4444;
@@ -598,11 +620,12 @@
         z-index: 20;
         background: inherit;
     }
+    .ci-badge.offline { background: #e5e7eb; color: #6b7280; } /* New style for offline badge */
 </style>
 @endpush
 
 @section('content')
-<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }})">
+<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }}, {{ Js::from($closedConversations) }})">
     <div class="row chat-window">
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
@@ -710,12 +733,19 @@
                                         <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active').length"></span>
                                     </span>
                                 </li>
+                                <li class="nav-item">
+                                    <span class="nav-link" :class="statusFilter === 'offline' ? 'active' : ''"
+                                        @click="statusFilter = 'offline'" style="cursor:pointer;">
+                                        Offline
+                                        <span class="tab-count" x-text="filteredChats.filter(c => !c.customer.is_online).length"></span>
+                                    </span>
+                                </li>
                             </ul>
                         </div>
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active'))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true))))" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
@@ -739,8 +769,18 @@
                                         </div>
                                         <div class="ci-row2">
                                             <span class="ci-badge"
-                                                :class="['pending','queued'].includes(chat.status) ? 'queue' : (chat.admin_id === adminId ? 'active-mine' : 'active-other')"
-                                                x-text="chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position : (chat.status === 'pending' ? '🔔 Permintaan Baru' : (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen')))"
+                                                :class="{
+                                                    'queue': ['pending','queued'].includes(chat.status),
+                                                    'active-mine': chat.status === 'active' && chat.admin_id === adminId && chat.customer.is_online,
+                                                    'active-other': chat.status === 'active' && chat.admin_id !== adminId && chat.customer.is_online,
+                                                    'offline': chat.status === 'active' && !chat.customer.is_online
+                                                }"
+                                                x-text="
+                                                    chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position :
+                                                    (chat.status === 'pending' ? '🔔 Permintaan Baru' :
+                                                    (chat.status === 'active' && !chat.customer.is_online ? '📴 Offline' :
+                                                    (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen'))))
+                                                "
                                             ></span>
                                         </div>
                                     </div>
@@ -748,10 +788,10 @@
                             </template>
 
                             <!-- Empty state -->
-                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active')).length === 0"
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true)))).length === 0"
                                 class="chat-empty-state">
                                 <i class="fe fe-message-circle"></i>
-                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : 'Belum ada percakapan.')"></p>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.'))"></p>
                             </div>
                         </div>
 
@@ -918,9 +958,9 @@
 @push('scripts')
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('adminChat', (adminId, initPending, initActive) => ({
+        Alpine.data('adminChat', (adminId, initPending, initActive, initClosed) => ({
             adminId: adminId,
-            chats: [...initPending, ...initActive],
+            chats: [...initPending, ...initActive, ...initClosed],
             currentTime: Date.now(),
             sidebarCollapsed: false,
             selectedChat: null,
@@ -1163,7 +1203,7 @@
                     }
 
                     const data = await res.json();
-                    this.chats = [...(data.pending || []), ...(data.active || [])];
+                    this.chats = [...(data.pending || []), ...(data.active || []), ...(data.closed || [])];
                     this.searchResults = data.search_results || this.emptySearchResults();
 
                     if (this.selectedChat) {

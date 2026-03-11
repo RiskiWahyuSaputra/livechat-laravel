@@ -157,14 +157,17 @@ class ChatController extends Controller
                 ->first();
 
             if ($conversation) {
-                $conversation->update(['status' => 'closed']);
+                $conversation->update([
+                    'status' => 'closed',
+                    'deleted_at' => null // Ensure not soft-deleted
+                ]);
                 
                 $sysMessage = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id'       => 0,
                     'sender_type'     => 'system',
                     'message_type'    => 'text',
-                    'content'         => 'Sesi berakhir karena pelanggan tidak aktif.',
+                    'content'         => 'Sesi berakhir karena pelanggan logout atau tidak aktif.',
                 ]);
 
                 $conversation->load('customer');
@@ -176,7 +179,7 @@ class ChatController extends Controller
                     \Log::warning('Broadcast failed during logout: ' . $e->getMessage());
                 }
 
-                $conversation->delete();
+                // $conversation->delete(); // REMOVED to allow admin to still reply
             }
         }
 
