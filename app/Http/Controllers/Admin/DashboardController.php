@@ -7,6 +7,7 @@ use App\Events\MessageSent;
 use App\Events\TypingIndicator;
 use App\Events\UserShouldBeLoggedOut;
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessAdminMessage;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
@@ -353,20 +354,13 @@ class DashboardController extends Controller
             broadcast(new MessageSent($message));
             \Log::info('Admin Broadcast MessageSent success');
 
-            // --- WHAPI NOTIFICATION START ---
-            // Kirim ke WhatsApp user jika bukan pesan internal (whisper)
-            if ($messageType !== 'whisper' && $conversation->customer) {
-                $to = $conversation->customer->contact;
-                if ($messageType === 'text') {
-                    $this->whatsappService->sendMessage($to, "👩‍💼 *Admin:* " . $content);
-                } else {
-                    $this->whatsappService->sendMedia($to, $content, "👩‍💼 *Admin:* [Kirim Media]", $messageType);
-                }
+            // --- WHAPI NOTIFICATION (MOVED TO BACKGROUND JOB) ---
+            if ($messageType !== 'whisper') {
+                ProcessAdminMessage::dispatch($message);
             }
-            // --- WHAPI NOTIFICATION END ---
 
         } catch (\Exception $e) {
-            \Log::error('Admin Broadcast/Whapi MessageSent failed', ['error' => $e->getMessage()]);
+            \Log::error('Admin Broadcast/Job dispatch MessageSent failed', ['error' => $e->getMessage()]);
         }
 
         return response()->json([
