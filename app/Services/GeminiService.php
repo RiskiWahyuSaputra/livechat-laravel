@@ -69,6 +69,7 @@ class GeminiService
 
         try {
             $response = Http::withoutVerifying()
+                ->timeout(5)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post($url, [
                     'contents' => [['parts' => [['text' => "Instruksi: $fullInstruction\n\nUser: $prompt"]]]]

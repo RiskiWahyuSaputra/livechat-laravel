@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Services\WhatsappService;
 use App\Services\GeminiService;
+use App\Jobs\ProcessUserMessage;
 
 class ChatController extends Controller
 {
@@ -308,28 +309,12 @@ class ChatController extends Controller
         try {
             broadcast(new MessageSent($message));
             
-            if (!$conversation->bot_phase || $conversation->bot_phase === 'off') {
-                $adminText = "💬 Pesan baru!\nDari: {$user->name} ({$user->origin})\nIsi: " . ($messageType === 'text' ? $message->content : "[Media]");
-                try {
-                    $this->whatsappService->notifyAdmin($adminText);
-                    if ($messageType !== 'text') {
-                        $this->whatsappService->sendMedia(env('WHAPI_ADMIN_NUMBER'), $message->content, "Media dari {$user->name}", $messageType);
-                    }
-                } catch (\Exception $waEx) {}
+            // Dispatch background processing (WhatsApp & Gemini)
+            ProcessUserMessage::dispatch($message);
 
-                if (!$conversation->admin_id && $messageType === 'text') {
-                    $aiAutoResponse = $this->geminiService->askGemini($message->content, "Berikan jawaban singkat:");
-                    $aiMessage = Message::create([
-                        'conversation_id' => $conversation->id,
-                        'sender_id'       => 0,
-                        'sender_type'     => 'admin',
-                        'message_type'    => 'text',
-                        'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiAutoResponse,
-                    ]);
-                    try { broadcast(new MessageSent($aiMessage)); } catch (\Exception $bcEx) {}
-                }
-            }
-        } catch (\Exception $e) { \Log::error('Broadcast failed', ['error' => $e->getMessage()]); }
+        } catch (\Exception $e) { 
+            \Log::error('Broadcast/Job dispatch failed', ['error' => $e->getMessage()]); 
+        }
 
         // Tangani Bot Response dan kumpulkan untuk dikirim di JSON
         $botReplies = [];

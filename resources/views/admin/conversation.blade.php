@@ -348,6 +348,7 @@
 
         <!-- Input Form -->
         <form class="input-form"
+              method="POST" action="{{ route('admin.chat.send') }}"
               :class="(!canReply) ? 'opacity-50 pointer-events-none' : ''"
               @submit.prevent="sendMessage"
               x-show="status === 'pending' || status === 'queued' || canReply" x-cloak>
