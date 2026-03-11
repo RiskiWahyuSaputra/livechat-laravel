@@ -620,7 +620,7 @@
 @endpush
 
 @section('content')
-<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }})">
+<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }}, {{ Js::from($closedConversations) }})">
     <div class="row chat-window">
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
@@ -736,12 +736,20 @@
                                         <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
                                     </span>
                                 </li>
+                                <li class="nav-item">
+                                    <span class="nav-link tab-offline" :class="statusFilter === 'offline' ? 'active' : ''"
+                                        @click="statusFilter = 'offline'" style="cursor:pointer;"
+                                        title="User yang sedang offline">
+                                        Offline
+                                        <span class="tab-count" x-text="filteredChats.filter(c => !c.customer.is_online).length"></span>
+                                    </span>
+                                </li>
                             </ul>
                         </div>
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : c.status === 'active')))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true)))))" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
@@ -750,7 +758,7 @@
                                     <!-- Avatar -->
                                     <div class="ci-avatar">
                                         <div class="ci-avatar-circle"
-                                            :class="['pending','queued'].includes(chat.status) ? 'queue-bg' : 'active-bg'">
+                                            :class="['pending','queued'].includes(chat.status) ? 'queue-bg' : (chat.status === 'active' ? 'active-bg' : 'closed-bg')">
                                             <span x-text="getInitial(chat.customer.name)"></span>
                                         </div>
                                         <span class="ci-status-dot"
@@ -765,8 +773,8 @@
                                         </div>
                                         <div class="ci-row2">
                                             <span class="ci-badge"
-                                                :class="['pending','queued'].includes(chat.status) ? 'queue' : (chat.admin_id === adminId ? 'active-mine' : 'active-other')"
-                                                x-text="chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position : (chat.status === 'pending' ? '🔔 Permintaan Baru' : (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen')))"
+                                                :class="['pending','queued'].includes(chat.status) ? 'queue' : (chat.status === 'closed' ? 'closed' : (chat.admin_id === adminId ? 'active-mine' : 'active-other'))"
+                                                x-text="chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position : (chat.status === 'pending' ? '🔔 Permintaan Baru' : (chat.status === 'closed' ? '📁 Selesai' : (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen'))))"
                                             ></span>
                                         </div>
                                     </div>
@@ -774,10 +782,10 @@
                             </template>
 
                             <!-- Empty state -->
-                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : c.status === 'active'))).length === 0"
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true))))).length === 0"
                                 class="chat-empty-state">
                                 <i class="fe fe-message-circle"></i>
-                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : 'Belum ada percakapan.'))"></p>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.')))"></p>
                             </div>
                         </div>
 
@@ -944,9 +952,9 @@
 @push('scripts')
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('adminChat', (adminId, initPending, initActive) => ({
+        Alpine.data('adminChat', (adminId, initPending, initActive, initClosed) => ({
             adminId: adminId,
-            chats: [...initPending, ...initActive],
+            chats: [...(initPending || []), ...(initActive || []), ...(initClosed || [])],
             currentTime: Date.now(),
             sidebarCollapsed: false,
             selectedChat: null,
@@ -1206,7 +1214,7 @@
                     }
 
                     const data = await res.json();
-                    this.chats = [...(data.pending || []), ...(data.active || [])];
+                    this.chats = [...(data.pending || []), ...(data.active || []), ...(data.closed || [])];
                     this.searchResults = data.search_results || this.emptySearchResults();
 
                     if (this.selectedChat) {
