@@ -449,6 +449,7 @@
     }
     .ci-avatar-circle.queue-bg { background: linear-gradient(135deg, #ef4444, #f97316); }
     .ci-avatar-circle.active-bg { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .ci-avatar-circle.closed-bg { background: #9ca3af; }
     .ci-status-dot {
         position: absolute;
         bottom: 1px;
@@ -504,6 +505,7 @@
     .ci-badge.queue { background: #fef2f2; color: #b91c1c; }
     .ci-badge.active-mine { background: #eef2ff; color: #4338ca; }
     .ci-badge.active-other { background: #f0fdf4; color: #166534; }
+    .ci-badge.closed { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
 
     /* Empty state */
     .chat-empty-state {
