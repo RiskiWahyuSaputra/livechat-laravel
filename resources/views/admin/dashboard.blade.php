@@ -572,10 +572,8 @@
             <h5 class="card-title-custom"><i class="fe fe-pie-chart me-2"></i>Distribusi Status</h5>
         </div>
         <div class="card-body-custom" style="padding: 20px;">
-            <div class="chart-wrapper" style="display: flex; align-items: center; justify-content: center;">
-                <div style="position: relative; height: 230px; width: 100%;">
-                    <canvas id="statusDonutChart"></canvas>
-                </div>
+            <div class="chart-wrapper" style="height: 200px; display: flex; justify-content: center;">
+                <canvas id="statusDonutChart"></canvas>
             </div>
         </div>
     </div>
@@ -583,17 +581,8 @@
 
 <!-- Agent Performance -->
 <div class="dashboard-card">
-    <div class="card-header-custom" style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="card-header-custom">
         <h5 class="card-title-custom">Performa Agen</h5>
-        <div style="display: flex; align-items: center;">
-            <label for="agentPerfSelect" style="font-size: 12px; color: var(--gray-500); margin: 0 8px 0 0;">Tampilkan:</label>
-            <select id="agentPerfSelect" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 12px; color: var(--dark); background: white; cursor: pointer; height: 28px;">
-                <option value="5">5 Agent</option>
-                <option value="10">10 Agent</option>
-                <option value="15">15 Agent</option>
-                <option value="all" selected>Semua Agent</option>
-            </select>
-        </div>
     </div>
     <div class="card-body-custom" style="padding: 0; overflow-x: auto;">
         <table class="performance-table" style="width: 100%; border-collapse: collapse;">
@@ -609,7 +598,7 @@
             </thead>
             <tbody>
                 @forelse($topPerformers['all'] as $index => $agent)
-                <tr class="agent-perf-row" style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                     <td style="padding: 16px; vertical-align: middle;">
                         <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 6px; font-size: 12px; font-weight: 700; @if($index == 0) background: #fef3c7; color: #b45309; @elseif($index == 1) background: #f3f4f6; color: #6b7280; @elseif($index == 2) background: #fed7aa; color: #c2410c; @else background: #f1f5f9; color: #94a3b8; @endif">
                             {{ $index + 1 }}
@@ -696,12 +685,10 @@
         <div class="card-header-custom">
             <h5 class="card-title-custom"><i class="fe fe-alert-circle me-2"></i>Kategori Komplen</h5>
         </div>
-        <div class="card-body-custom" style="padding: 20px; height: 444px; display: flex; align-items: center;">
-            @if($complaintCategories['categories']->count() > 0)
-                <div class="chart-wrapper" style="display: flex; align-items: center; justify-content: center; width: 100%;">
-                    <div style="position: relative; height: 350px; width: 100%;">
-                        <canvas id="complaintCategoriesChart"></canvas>
-                    </div>
+        <div class="card-body-custom" style="padding: 20px;">
+            @if(count($complaintCategories['categories']) > 0)
+                <div class="chart-wrapper" style="height: 300px; display: flex; justify-content: center;">
+                    <canvas id="complaintCategoriesChart"></canvas>
                 </div>
             @else
                 <p style="color: var(--gray-500); text-align: center; padding: 20px;">No data available</p>
@@ -809,16 +796,11 @@
             responsive: true,
             maintainAspectRatio: false,
             cutout: '65%',
-            layout: {
-                padding: {
-                    bottom: 10
-                }
-            },
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 24,
+                        padding: 15,
                         usePointStyle: true,
                         pointStyle: 'circle'
                     }
@@ -832,9 +814,23 @@
     if (complaintCategories.length > 0) {
         const complaintLabels = complaintCategories.map(c => c.category);
         const complaintData = complaintCategories.map(c => c.count);
-        const complaintColors = [
-            '#4f46e5', '#7c3aed', '#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#6b7280'
-        ].slice(0, complaintLabels.length);
+        
+        // Map specific colors to specific categories, with a fallback palette for "many" categories
+        const categoryColorMap = {
+            'Pendaftaran & Aktivasi': '#4f46e5',
+            'Dukungan Teknis': '#10b981',
+            'Masalah Pembayaran': '#f59e0b',
+            'Komplain / Keluhan': '#ef4444',
+            'Lain-lain': '#6b7280'
+        };
+        
+        const fallbackPalette = [
+            '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#3b82f6', '#06b6d4', '#14b8a6'
+        ];
+        
+        const complaintColors = complaintLabels.map((label, i) => {
+            return categoryColorMap[label] || fallbackPalette[i % fallbackPalette.length];
+        });
 
         new Chart(document.getElementById('complaintCategoriesChart').getContext('2d'), {
             type: 'doughnut',
@@ -851,16 +847,11 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '65%',
-                layout: {
-                    padding: {
-                        bottom: 15
-                    }
-                },
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            padding: 24,
+                            padding: 15,
                             usePointStyle: true,
                             pointStyle: 'circle'
                         }
@@ -900,7 +891,7 @@
         }
     });
 
-    // ==================== SVG INTERACTIVE MAP ====================
+    // ==================== CHOROPLETH MAP ====================
     (function() {
         const svgElement = document.getElementById('indonesia-svg-map');
         const tooltip = document.getElementById('map-tooltip');

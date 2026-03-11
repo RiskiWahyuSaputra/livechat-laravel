@@ -22,7 +22,7 @@
     </style>
 </head>
     <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
-      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}')">
+      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() ?: 'null' }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}', {{ Js::from($botCategories) }})">
 
     <!-- Header Navbar Minimalist -->
     <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
@@ -55,7 +55,7 @@
             </div>
         </div>
         
-        <form method="POST" action="{{ route('user.logout') }}" class="shrink-0">
+        <form id="logout-form" method="POST" action="{{ route('chat.logout') }}" class="shrink-0">
             @csrf
             <button type="submit" class="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-200 text-[10px] md:text-sm font-black px-3 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl transition-all hover:scale-105 active:scale-95 whitespace-nowrap">
                 <span class="hidden xs:inline">Akhiri Percakapan</span>
@@ -103,39 +103,35 @@
                                     : 'bg-white text-slate-800 rounded-br-sm border border-slate-200'">
                                 
                                 <!-- Pesan Teks -->
-                                <template x-if="!msg.message_type || msg.message_type === 'text'">
-                                    <div>
-                                        <span x-html="formatMessage(msg.content)"></span>
-                                    </div>
-                                </template>
+                                <div x-show="!msg.message_type || msg.message_type === 'text'">
+                                    <span x-html="formatMessage(msg.content)"></span>
+                                </div>
 
                                 <!-- Pesan Gambar -->
-                                <template x-if="msg.message_type === 'image'">
+                                <div x-show="msg.message_type === 'image'">
                                     <div class="space-y-2">
                                         <img :src="msg.content" 
                                              class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
                                              @click="window.open(msg.content, '_blank')"
                                              x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
                                     </div>
-                                </template>
+                                </div>
 
                                 <!-- Pesan File -->
-                                <template x-if="msg.message_type === 'file'">
-                                    <div class="w-full">
-                                        <div class="flex items-center gap-3 min-w-0">
-                                            <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                            </div>
-                                            <div class="flex-1 min-w-0 overflow-hidden text-left">
-                                                <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
-                                                <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
-                                                    <span>Unduh Dokumen</span>
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                                </a>
-                                            </div>
+                                <div x-show="msg.message_type === 'file'" class="w-full">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0 overflow-hidden text-left">
+                                            <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
+                                            <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
+                                                <span>Unduh Dokumen</span>
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                            </a>
                                         </div>
                                     </div>
-                                </template>
+                                </div>
                             </div>
                             
                             <!-- Timestamp -->
@@ -208,7 +204,7 @@
     <!-- Logic Alpine JS Tetap Sama, Tidak Diubah -->
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase) => ({
+            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase, botCategories) => ({
                 conversationId: conversationId,
                 userId: userId,
                 status: initialStatus,
@@ -219,7 +215,7 @@
                 isTyping: false,
                 typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
-                botCategories: ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'],
+                botCategories: botCategories,
 
                 init() {
                     this.scrollToBottom();
@@ -249,52 +245,52 @@
                 },
 
                 listenForEvents() {
-                    if (!this.conversationId) return;
+                    if (typeof window.Echo === 'undefined') return;
 
-                    let retries = 0;
-                    const maxRetries = 20;
+                    if (this.userId) {
+                        window.Echo.private(`user.${this.userId}`)
+                            .listen('.user.logged.out', (e) => {
+                                setTimeout(() => {
+                                    document.getElementById('logout-form').submit();
+                                }, 2000);
+                            });
+                    }
 
-                    const checkEcho = setInterval(() => {
-                        if (typeof window.Echo !== 'undefined') {
-                            clearInterval(checkEcho);
+                    window.Echo.private(`conversation.${this.conversationId}`)
+                        .listen('.message.sent', (e) => {
+                            if (e.sender_id == this.userId && e.sender_type === 'user') return;
+                            if (e.is_whisper) return;
 
-                            window.Echo.private(`conversation.${this.conversationId}`)
-                                .listen('.message.sent', (e) => {
-                                    if (e.sender_id == this.userId && e.sender_type === 'user') return;
-                                    if (e.is_whisper) return;
-
-                                    this.messages.push({
-                                        id: e.id,
-                                        sender_id: e.sender_id,
-                                        sender_type: e.sender_type,
-                                        message_type: e.message_type,
-                                        content: e.content,
-                                        created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                                    });
-                                    this.scrollToBottom();
-                                })
-                                .listen('.conversation.status.changed', (e) => {
-                                    this.status = e.status;
-                                    if (e.bot_phase) this.botPhase = e.bot_phase;
-                                })
-                                .listen('.typing', (e) => {
-                                    if (e.sender_type === 'admin') {
-                                        this.isTyping = e.is_typing;
-                                        this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
-                                        clearTimeout(this.typingTimeout);
-                                        if (this.isTyping) {
-                                            this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
-                                        }
-                                    }
-                                });
-                        } else {
-                            retries++;
-                            if (retries >= maxRetries) {
-                                clearInterval(checkEcho);
-                                console.warn('Echo initialization timed out.');
+                            this.messages.push({
+                                id: e.id,
+                                sender_id: e.sender_id,
+                                sender_type: e.sender_type,
+                                message_type: e.message_type,
+                                content: e.content,
+                                created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
+                            this.scrollToBottom();
+                        })
+                        .listen('.conversation.status.changed', (e) => {
+                            this.status = e.status;
+                            if (e.bot_phase) this.botPhase = e.bot_phase;
+                            
+                            if (e.status === 'closed') {
+                                setTimeout(() => {
+                                    window.location.href = '{{ route('chat.logout') }}';
+                                }, 3000);
                             }
-                        }
-                    }, 500);
+                        })
+                        .listen('.typing', (e) => {
+                            if (e.sender_type === 'admin') {
+                                this.isTyping = e.is_typing;
+                                this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
+                                clearTimeout(this.typingTimeout);
+                                if (this.isTyping) {
+                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                }
+                            }
+                        });
                 },
 
                 async sendMessage() {
