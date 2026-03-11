@@ -85,7 +85,8 @@
 
             <!-- Guest Profile (Reactive with Alpine) -->
             <div x-show="isAuthenticated" x-cloak class="flex items-center gap-4 relative">
-                <div class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent">
+                <div @click="open = !open" 
+                     class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer">
                     <div class="relative">
                         <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
                             <span x-text="user.initial"></span>
@@ -485,6 +486,7 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('chatWidget', () => ({
+                open: false,
                 isOpen: false,
                 isLoading: false,
                 isInitialized: false,
