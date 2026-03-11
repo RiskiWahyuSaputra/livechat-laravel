@@ -403,7 +403,7 @@
                 <textarea x-model="newMessage" x-ref="messageInput"
                           :placeholder="(!canReply) ? 'Menunggu chat diklaim...' : (messageType === 'whisper' ? '🔒 Tulis catatan internal...' : 'Ketik pesan ke pelanggan...')"
                           @input="handleInput" @keydown="handleKeydown"
-                          :disabled="isSending || !canReply"
+                          :disabled="!canReply"
                           class="msg-textarea" :class="messageType === 'whisper' ? 'whisper-mode' : ''"
                           rows="1"></textarea>
 

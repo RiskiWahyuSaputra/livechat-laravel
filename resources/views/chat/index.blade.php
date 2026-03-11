@@ -188,7 +188,6 @@
                 <textarea x-model="newMessage" 
                           @input="sendTypingEvent"
                           @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
-                          :disabled="isSending"
                           placeholder="Ketik balasan Anda..." 
                           class="flex-1 max-h-32 min-h-[40px] md:min-h-[44px] bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl px-3.5 py-2 md:py-2.5 text-[13px] md:text-sm transition-colors resize-none overflow-y-auto"
                           rows="1"></textarea>
