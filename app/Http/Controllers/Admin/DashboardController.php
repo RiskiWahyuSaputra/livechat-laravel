@@ -159,14 +159,26 @@ class DashboardController extends Controller
         $quickFilters = array_values(array_filter(explode(',', (string) $request->get('quick_filters', ''))));
         $unreadOnly = $request->boolean('unread_only');
 
-        $mainQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
-                $query->latest()->limit(1);
-            }])
-            ->whereIn('status', ['pending', 'queued', 'active', 'closed']);
+        $pendingQuery = Conversation::with('customer')
+            ->whereIn('status', ['pending', 'queued']);
+
+        $activeQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
+            $query->latest()->limit(1);
+        }])->where('status', 'active');
 
         if ($search !== '') {
             $needle = '%' . mb_strtolower($search) . '%';
-            $mainQuery->where(function ($query) use ($needle) {
+
+            $pendingQuery->where(function ($query) use ($needle) {
+                $query->whereHas('customer', function ($customerQuery) use ($needle) {
+                    $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
+                        ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
+                })->orWhereHas('messages', function ($messageQuery) use ($needle) {
+                    $messageQuery->whereRaw('LOWER(content) LIKE ?', [$needle]);
+                });
+            });
+
+            $activeQuery->where(function ($query) use ($needle) {
                 $query->whereHas('customer', function ($customerQuery) use ($needle) {
                     $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
                         ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
@@ -176,14 +188,14 @@ class DashboardController extends Controller
             });
         }
 
-        $conversations = $mainQuery
-            ->orderBy('queue_position', 'asc') // Keep queue_position for pending/queued
+        $pendingConversations = $pendingQuery
+            ->orderBy('queue_position')
             ->orderBy('last_message_at', $sortOrder)
             ->get();
 
-        $pendingConversations = $conversations->whereIn('status', ['pending', 'queued'])->values();
-        $activeConversations  = $conversations->where('status', 'active')->values();
-        $closedConversations  = $conversations->where('status', 'closed')->values();
+        $activeConversations = $activeQuery
+            ->orderBy('last_message_at', $sortOrder)
+            ->get();
 
         if ($request->ajax() || $request->has('ajax')) {
             $searchResults = [
@@ -199,13 +211,11 @@ class DashboardController extends Controller
             return response()->json([
                 'pending' => $pendingConversations,
                 'active' => $activeConversations,
-                'closed' => $closedConversations, // New: include closed conversations
                 'search_results' => $searchResults,
                 'search_summary' => [
                     'query' => $search,
                     'total_pending' => $pendingConversations->count(),
                     'total_active' => $activeConversations->count(),
-                    'total_closed' => $closedConversations->count(), // New: include count
                 ],
             ]);
         }
@@ -215,7 +225,7 @@ class DashboardController extends Controller
             ->where('status', '!=', 'offline')
             ->get();
 
-        return view('admin.chat', compact('admin', 'pendingConversations', 'activeConversations', 'closedConversations', 'otherAdmins'));
+        return view('admin.chat', compact('admin', 'pendingConversations', 'activeConversations', 'otherAdmins'));
     }
 
     /**
@@ -305,18 +315,7 @@ class DashboardController extends Controller
         ]);
 
         $admin        = Auth::guard('admin')->user();
-        $conversation = Conversation::withTrashed()->findOrFail($request->conversation_id);
-
-        // Logic to handle re-opening closed conversations
-        if ($conversation->status === 'closed') {
-            $conversation->update([
-                'status'   => 'active',
-                'admin_id' => $admin->id,
-                'deleted_at' => null, // Restore the conversation if soft-deleted
-            ]);
-            // Broadcast status change
-            broadcast(new ConversationStatusChanged($conversation, $admin->username));
-        }
+        $conversation = Conversation::findOrFail($request->conversation_id);
 
         // Pastikan admin ini yang menangani conversation ini (kecuali whisper bisa semua admin)
         // Gunakan non-strict comparison agar aman
@@ -443,10 +442,9 @@ class DashboardController extends Controller
         $conversation->update([
             'status'           => 'closed',
             'problem_category' => $category,
-            'deleted_at'       => null, // Ensure it's not soft-deleted when setting status to closed
         ]);
 
-        // $conversation->delete(); // Soft delete memindahkannya ke arsip - REMOVED
+        $conversation->delete(); // Soft delete memindahkannya ke arsip
 
         $sysMessage = Message::create([
             'conversation_id' => $conversation->id,
@@ -475,11 +473,8 @@ class DashboardController extends Controller
 
         $conversation->customer->update(['is_blocked' => true]);
 
-        $conversation->update([
-            'status'     => 'closed',
-            'deleted_at' => null, // Ensure it's not soft-deleted
-        ]);
-        // $conversation->delete(); // REMOVED
+        $conversation->update(['status' => 'closed']);
+        $conversation->delete();
 
         Message::create([
             'conversation_id' => $conversation->id,
