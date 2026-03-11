@@ -342,8 +342,7 @@
         </div>
 
         <!-- Cannot Reply Notice -->
-        <div class="no-reply-bar" x-show="!canReply && status !== 'pending' && status !== 'queued'" x-cloak>
-            <span x-show="status === 'closed'">⛔ Sesi obrolan ini telah ditutup.</span>
+        <div class="no-reply-bar" x-show="!canReply && status !== 'pending' && status !== 'queued' && status !== 'closed'" x-cloak>
             <span x-show="status === 'active' && adminId !== sessionAdminId">👁 Mode Membaca (Read-Only)</span>
         </div>
 
@@ -504,6 +503,7 @@
                 },
 
                 get canReply() {
+                    if (this.status === 'closed') return true;
                     return this.status === 'active' && this.adminId == this.sessionAdminId;
                 },
 
