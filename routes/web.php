@@ -61,11 +61,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/conversation/{conversation}/block', [DashboardController::class , 'blockUser'])->name('conversation.block');
             });
 
-            // --- Menu 3: Chat History / Archive ---
-            Route::middleware('admin.permission:view_history')->group(function () {
-                Route::get('/history', [App\Http\Controllers\Admin\ChatHistoryController::class, 'index'])->name('history.index');
-                Route::get('/history/{id}', [App\Http\Controllers\Admin\ChatHistoryController::class, 'show'])->name('history.show');
-            });
+
 
             // --- Menu 4: Quick Replies Management ---
             Route::middleware('admin.permission:manage_quick_replies')->group(function () {
