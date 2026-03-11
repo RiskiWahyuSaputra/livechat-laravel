@@ -187,13 +187,10 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 16px 8px; /* Adjusted bottom padding */
+        padding: 16px 16px 10px;
     }
     .sidebar-header h6 {
         font-size: 1.1rem;
-    }
-    .ci-badge.offline { background: #e5e7eb; color: #6b7280; } /* New style for offline badge */
-
         font-weight: 700;
         color: #111827;
         margin: 0;
@@ -601,11 +598,12 @@
         z-index: 20;
         background: inherit;
     }
+    .ci-badge.offline { background: #e5e7eb; color: #6b7280; } /* New style for offline badge */
 </style>
 @endpush
 
 @section('content')
-<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }})">
+<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }}, {{ Js::from($closedConversations) }})">
     <div class="row chat-window">
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
@@ -713,12 +711,19 @@
                                         <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active').length"></span>
                                     </span>
                                 </li>
+                                <li class="nav-item">
+                                    <span class="nav-link" :class="statusFilter === 'closed' ? 'active' : ''"
+                                        @click="statusFilter = 'closed'" style="cursor:pointer;">
+                                        Ditutup
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'closed').length"></span>
+                                    </span>
+                                </li>
                             </ul>
                         </div>
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active'))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : c.status === 'closed')))" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
@@ -761,10 +766,10 @@
                             </template>
 
                             <!-- Empty state -->
-                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active')).length === 0"
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : c.status === 'closed'))).length === 0"
                                 class="chat-empty-state">
                                 <i class="fe fe-message-circle"></i>
-                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : 'Belum ada percakapan.')"></p>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'closed' ? 'Tidak ada chat yang ditutup.' : 'Belum ada percakapan.'))"></p>
                             </div>
                         </div>
 
@@ -931,9 +936,9 @@
 @push('scripts')
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('adminChat', (adminId, initPending, initActive) => ({
+        Alpine.data('adminChat', (adminId, initPending, initActive, initClosed) => ({
             adminId: adminId,
-            chats: [...initPending, ...initActive],
+            chats: [...initPending, ...initActive, ...initClosed],
             currentTime: Date.now(),
             sidebarCollapsed: false,
             selectedChat: null,
@@ -999,7 +1004,7 @@
             },
 
             escapeRegex(str) {
-                return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                return str.replace(/[.*+?^${}()|[\]\]/g, '\$&');
             },
 
             highlightText(text) {
@@ -1176,7 +1181,7 @@
                     }
 
                     const data = await res.json();
-                    this.chats = [...(data.pending || []), ...(data.active || [])];
+                    this.chats = [...(data.pending || []), ...(data.active || []), ...(data.closed || [])];
                     this.searchResults = data.search_results || this.emptySearchResults();
 
                     if (this.selectedChat) {
