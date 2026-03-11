@@ -11,7 +11,7 @@ const adminRolesData = {
     form: { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [] },
     availablePermissions: {{ Js::from($permissions) }},
     permissionGroups: {
-        'Modul Percakapan & Pelayanan': ['view_chat', 'view_history', 'manage_quick_replies'],
+        'Modul Percakapan & Pelayanan': ['view_chat', 'manage_quick_replies'],
         'Modul Pelanggan': ['manage_customers'],
         'Modul Sistem & Keamanan': ['manage_roles']
     },

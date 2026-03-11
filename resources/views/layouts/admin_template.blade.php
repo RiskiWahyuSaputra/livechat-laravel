@@ -491,11 +491,7 @@
                         </li>
                         @endif
 
-                        @if(auth('admin')->user()->hasPermission('view_history'))
-                        <li class="{{ request()->routeIs('admin.history.*') ? 'active' : '' }}">
-                            <a href="{{ route('admin.history.index') }}"><i class="fe fe-clock"></i> <span>Riwayat Arsip</span></a>
-                        </li>
-                        @endif
+
 
                         @if(auth('admin')->user()->hasPermission('manage_quick_replies'))
                         <li class="{{ request()->routeIs('admin.quick-replies.*') ? 'active' : '' }}">
