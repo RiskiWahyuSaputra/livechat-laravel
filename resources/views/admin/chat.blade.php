@@ -534,6 +534,10 @@
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
         }
 
+        .ci-avatar-circle.closed-bg {
+            background: #9ca3af;
+        }
+
         .ci-status-dot {
             position: absolute;
             bottom: 1px;
@@ -623,6 +627,12 @@
         .ci-badge.active-other {
             background: #f0fdf4;
             color: #166534;
+        }
+
+        .ci-badge.closed {
+            background: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
         }
 
         /* Empty state */
