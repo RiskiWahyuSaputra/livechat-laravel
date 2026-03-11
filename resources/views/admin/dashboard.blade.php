@@ -3,8 +3,89 @@
 @section('title', 'Dashboard')
 
 @push('styles')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
+    #indonesia-svg-map {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
+    }
+    .land {
+        fill: #ffffff;
+        stroke: #94a3b8;
+        stroke-width: 0.5;
+        transition: all 0.3s ease;
+        cursor: grab;
+    }
+    .land:active {
+        cursor: grabbing;
+    }
+    .land:hover {
+        stroke: #1d4ed8;
+        stroke-width: 2;
+        filter: brightness(0.95) drop-shadow(0 2px 4px rgba(29, 78, 216, 0.3));
+    }
+    .user-dot {
+        pointer-events: auto;
+        cursor: pointer;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+    }
+    .user-dot:hover {
+        r: 6;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    .user-dot.pulse {
+        animation: dotPulse 2s infinite;
+    }
+    @keyframes dotPulse {
+        0% { r: 3; opacity: 1; }
+        50% { r: 5; opacity: 0.7; }
+        100% { r: 3; opacity: 1; }
+    }
+    .map-info-overlay {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(4px);
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 1px solid var(--gray-200);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 10;
+        min-width: 150px;
+    }
+    .zoom-controls {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 20;
+    }
+    #map-container {
+        overflow: hidden !important;
+    }
+    .zoom-btn {
+        width: 36px;
+        height: 36px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--dark);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s;
+    }
+    .zoom-btn:hover {
+        background: var(--gray-100);
+        color: var(--primary);
+        border-color: var(--primary);
+    }
     .empty-state {
         padding: 60px 20px;
         text-align: center;
@@ -573,7 +654,42 @@
     </div>
 </div>
 
-<!-- Info Grid -->
+<!-- Full Width Map Section - Priority placement after stats -->
+<div class="dashboard-card" style="margin-bottom: 24px;">
+    <div class="card-header-custom" style="display:flex;justify-content:space-between;align-items:center;">
+        <h5 class="card-title-custom"><i class="fe fe-map me-2"></i>Peta Sebaran Pelanggan</h5>
+        <span style="font-size:11px;color:var(--gray-500);">Hover untuk detail • Klik wilayah untuk lihat pelanggan</span>
+    </div>
+    <div class="card-body-custom" style="padding: 12px; position: relative;">
+        <div id="map-container" style="width: 100%; height: 500px; position: relative; overflow: hidden; background: #f8fafc; border-radius: 8px; border: 1px solid var(--gray-100);">
+            <!-- SVG will be injected here via JS or included directly -->
+            @include('admin.partials.indonesia_svg')
+            <div id="map-tooltip" style="position: absolute; pointer-events: none; background: rgba(255,255,255,0.95); color: #333; padding: 12px 16px; border-radius: 8px; font-size: 13px; display: none; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(0,0,0,0.1); max-width: 250px; backdrop-filter: blur(4px);"></div>
+            
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoom-in" title="Zoom In"><i class="fe fe-plus"></i></button>
+                <button class="zoom-btn" id="zoom-out" title="Zoom Out"><i class="fe fe-minus"></i></button>
+                <button class="zoom-btn" id="zoom-reset" title="Reset Camera"><i class="fe fe-refresh-cw"></i></button>
+            </div>
+
+            <!-- Province Detail Panel -->
+            <div id="province-panel" style="position: absolute; top: 0; right: -350px; width: 320px; height: 100%; background: white; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 100; transition: right 0.3s ease; overflow-y: auto; border-radius: 8px 0 0 8px;">
+                <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 id="panel-province-name" style="margin: 0; font-size: 16px; font-weight: 700; color: #1d4ed8;">Provinsi</h4>
+                        <button id="close-panel" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">&times;</button>
+                    </div>
+                    <p id="panel-province-count" style="margin: 8px 0 0; font-size: 14px; color: #666;">0 Pelanggan</p>
+                </div>
+                <div id="panel-customer-list" style="padding: 15px;">
+                    <!-- Customer list will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
 <div class="info-grid">
     <!-- Complaint Categories -->
     <div class="dashboard-card">
@@ -592,90 +708,16 @@
             @endif
         </div>
     </div>
-<!-- Interactive Indonesia Map -->
-    <div class="dashboard-card">
-        <div class="card-header-custom" style="display:flex;justify-content:space-between;align-items:center;">
-            <h5 class="card-title-custom"><i class="fe fe-map me-2"></i>Peta Sebaran Pelanggan</h5>
-            <span style="font-size:11px;color:var(--gray-500);">Hover untuk detail</span>
-        </div>
-        <div class="card-body-custom" style="padding: 12px;">
-            <div id="indonesia-map"></div>
-        </div>
-    </div>
 </div>
 
-<!-- Customer Table Section Below (if needed) -->
+    <!-- Complaint Categories (Duplicate - Removed) -->
+</div>
 
-<!-- Tabel Pelanggan -->
-<div class="row mt-4">
-    <div class="col-lg-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Daftar Pelanggan</h5>
-                <div class="search-input-group">
-                    <i class="fe fe-search"></i>
-                    <form method="GET" action="{{ route('admin.dashboard') }}" class="d-flex">
-                        <input type="text" name="search" class="form-control" placeholder="Cari pelanggan..." value="{{ request('search') }}">
-                        <button type="submit" class="btn btn-primary ms-2">Cari</button>
-                    </form>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Nama</th>
-                                <th>Contact</th>
-                                <th>Origin</th>
-                                <th>Status</th>
-                                <th>Tanggal Daftar</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($customers as $customer)
-                            <tr>
-                                <td>{{ $customer->name }}</td>
-                                <td>{{ $customer->contact }}</td>
-                                <td>{{ $customer->origin ?: '-' }}</td>
-                                <td>
-                                    @if($customer->is_blocked)
-                                    <span class="badge bg-danger">Blocked</span>
-                                    @elseif($customer->current_status && $customer->current_status != 'no_session')
-                                    <span class="badge bg-{{ $customer->current_status == 'active' ? 'success' : ($customer->current_status == 'pending' ? 'warning' : 'info') }}">
-                                        {{ ucfirst($customer->current_status) }}
-                                    </span>
-                                    @elseif($customer->is_online)
-                                    <span class="badge bg-success">Online</span>
-                                    @else
-                                    <span class="badge bg-secondary">Offline</span>
-                                    @endif
-                                </td>
-                                <td>{{ $customer->created_at->format('d M Y, H:i') }}</td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5" class="text-center">Tidak ada pelanggan</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Pagination -->
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $customers->links() }}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-</div>
 @endsection
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
 <script>
     // ==================== ANALYTICS CHARTS ====================
     Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
@@ -873,215 +915,249 @@
         }
     });
 
-    // ==================== CHOROPLETH MAP ====================
+    // ==================== SVG INTERACTIVE MAP ====================
     (function() {
-        const CITY_TO_PROVINCE = {
-            'jakarta': 'DKI JAKARTA', 'jakarta utara': 'DKI JAKARTA', 'jakarta selatan': 'DKI JAKARTA',
-            'jakarta barat': 'DKI JAKARTA', 'jakarta timur': 'DKI JAKARTA', 'jakarta pusat': 'DKI JAKARTA',
-            'bekasi': 'JAWA BARAT', 'bandung': 'JAWA BARAT', 'bogor': 'JAWA BARAT', 'depok': 'JAWA BARAT',
-            'cirebon': 'JAWA BARAT', 'tasikmalaya': 'JAWA BARAT', 'karawang': 'JAWA BARAT', 'sukabumi': 'JAWA BARAT',
-            'tangerang': 'BANTEN', 'serang': 'BANTEN', 'cilegon': 'BANTEN',
-            'semarang': 'JAWA TENGAH', 'solo': 'JAWA TENGAH', 'surakarta': 'JAWA TENGAH', 'pekalongan': 'JAWA TENGAH',
-            'surabaya': 'JAWA TIMUR', 'malang': 'JAWA TIMUR', 'kediri': 'JAWA TIMUR', 'sidoarjo': 'JAWA TIMUR',
-            'yogyakarta': 'DI YOGYAKARTA', 'jogja': 'DI YOGYAKARTA',
-            'medan': 'SUMATERA UTARA', 'pematangsiantar': 'SUMATERA UTARA',
-            'padang': 'SUMATERA BARAT', 'bukittinggi': 'SUMATERA BARAT',
-            'palembang': 'SUMATERA SELATAN',
-            'lampung': 'LAMPUNG', 'bandar lampung': 'LAMPUNG',
-            'pekanbaru': 'RIAU', 'dumai': 'RIAU',
-            'batam': 'KEPULAUAN RIAU', 'tanjungpinang': 'KEPULAUAN RIAU',
-            'jambi': 'JAMBI',
-            'bengkulu': 'BENGKULU',
-            'banda aceh': 'ACEH', 'aceh': 'ACEH',
-            'pangkal pinang': 'BANGKA BELITUNG', 'bangka': 'BANGKA BELITUNG',
-            'pontianak': 'KALIMANTAN BARAT',
-            'banjarmasin': 'KALIMANTAN SELATAN',
-            'palangkaraya': 'KALIMANTAN TENGAH',
-            'samarinda': 'KALIMANTAN TIMUR', 'balikpapan': 'KALIMANTAN TIMUR',
-            'tarakan': 'KALIMANTAN UTARA',
-            'kalimantan': 'KALIMANTAN TIMUR',
-            'makassar': 'SULAWESI SELATAN', 'pare-pare': 'SULAWESI SELATAN',
-            'manado': 'SULAWESI UTARA',
-            'palu': 'SULAWESI TENGAH',
-            'kendari': 'SULAWESI TENGGARA',
-            'gorontalo': 'GORONTALO',
-            'mamuju': 'SULAWESI BARAT',
-            'sulawesi': 'SULAWESI SELATAN',
-            'denpasar': 'BALI', 'bali': 'BALI',
-            'mataram': 'NUSA TENGGARA BARAT', 'lombok': 'NUSA TENGGARA BARAT',
-            'kupang': 'NUSA TENGGARA TIMUR',
-            'ambon': 'MALUKU', 'maluku': 'MALUKU',
-            'ternate': 'MALUKU UTARA',
-            'jayapura': 'PAPUA', 'papua': 'PAPUA',
-            'manokwari': 'PAPUA BARAT',
-            'sorong': 'PAPUA BARAT DAYA',
-            'merauke': 'PAPUA SELATAN',
-            'timika': 'PAPUA TENGAH',
-            'wamena': 'PAPUA PEGUNUNGAN',
+        const svgElement = document.getElementById('indonesia-svg-map');
+        const tooltip = document.getElementById('map-tooltip');
+        const container = document.getElementById('map-container');
+        if (!svgElement) return;
+
+        // Distinct Colors for Provinces
+        const PROVINCE_COLORS = {
+            'ID-AC': '#fecaca', 'ID-BA': '#fed7aa', 'ID-BB': '#fef08a', 'ID-BE': '#d9f99d',
+            'ID-BT': '#bbf7d0', 'ID-GO': '#99f6e4', 'ID-JA': '#bae6fd', 'ID-JB': '#c7d2fe',
+            'ID-JI': '#ddd6fe', 'ID-JK': '#f5d0fe', 'ID-JT': '#fbcfe8', 'ID-KB': '#fecdd3',
+            'ID-KI': '#e2e8f0', 'ID-KR': '#cbd5e1', 'ID-KS': '#94a3b8', 'ID-KT': '#64748b',
+            'ID-KU': '#475569', 'ID-LA': '#334155', 'ID-MA': '#1e293b', 'ID-MU': '#0f172a',
+            'ID-NB': '#ef4444', 'ID-NT': '#f97316', 'ID-PA': '#f59e0b', 'ID-PB': '#eab308',
+            'ID-RI': '#84cc16', 'ID-SA': '#10b981', 'ID-SB': '#06b6d4', 'ID-SG': '#3b82f6',
+            'ID-SN': '#6366f1', 'ID-SR': '#8b5cf6', 'ID-SS': '#a855f7', 'ID-ST': '#d946ef',
+            'ID-SU': '#ec4899', 'ID-YO': '#f43f5e'
         };
 
-        function normalizeProvince(name) {
-            if (!name) return '';
-            return name.toUpperCase().replace(/\s+/g, ' ').trim();
-        }
+        const CITY_TO_PROVINCE = {
+            'jakarta': 'ID-JK', 'jakarta utara': 'ID-JK', 'jakarta selatan': 'ID-JK',
+            'jakarta barat': 'ID-JK', 'jakarta timur': 'ID-JK', 'jakarta pusat': 'ID-JK',
+            'bekasi': 'ID-JB', 'bandung': 'ID-JB', 'bogor': 'ID-JB', 'depok': 'ID-JB',
+            'cirebon': 'ID-JB', 'tasikmalaya': 'ID-JB', 'karawang': 'ID-JB', 'sukabumi': 'ID-JB',
+            'tangerang': 'ID-BT', 'serang': 'ID-BT', 'cilegon': 'ID-BT',
+            'semarang': 'ID-JT', 'solo': 'ID-JT', 'surakarta': 'ID-JT', 'pekalongan': 'ID-JT',
+            'surabaya': 'ID-JI', 'malang': 'ID-JI', 'kediri': 'ID-JI', 'sidoarjo': 'ID-JI',
+            'yogyakarta': 'ID-YO', 'jogja': 'ID-YO',
+            'medan': 'ID-SU', 'pematangsiantar': 'ID-SU',
+            'padang': 'ID-SB', 'bukittinggi': 'ID-SB',
+            'palembang': 'ID-SS',
+            'lampung': 'ID-LA', 'bandar lampung': 'ID-LA',
+            'pekanbaru': 'ID-RI', 'dumai': 'ID-RI',
+            'batam': 'ID-KR', 'tanjungpinang': 'ID-KR',
+            'jambi': 'ID-JA',
+            'bengkulu': 'ID-BE',
+            'banda aceh': 'ID-AC', 'aceh': 'ID-AC',
+            'pangkal pinang': 'ID-BB', 'bangka': 'ID-BB',
+            'pontianak': 'ID-KB',
+            'banjarmasin': 'ID-KS',
+            'palangkaraya': 'ID-KT',
+            'samarinda': 'ID-KI', 'balikpapan': 'ID-KI',
+            'tarakan': 'ID-KU',
+            'makassar': 'ID-SN', 'pare-pare': 'ID-SN',
+            'manado': 'ID-SA',
+            'palu': 'ID-ST',
+            'kendari': 'ID-SG',
+            'gorontalo': 'ID-GO',
+            'mamuju': 'ID-SR',
+            'denpasar': 'ID-BA', 'bali': 'ID-BA',
+            'mataram': 'ID-NB', 'lombok': 'ID-NB',
+            'kupang': 'ID-NT',
+            'ambon': 'ID-MA', 'maluku': 'ID-MA',
+            'ternate': 'ID-MU',
+            'jayapura': 'ID-PA', 'papua': 'ID-PA',
+            'manokwari': 'ID-PB'
+        };
 
-        function getColor(d) {
-            return d > 10 ? '#084594' :
-                   d > 7  ? '#2171b5' :
-                   d > 4  ? '#4292c6' :
-                   d > 2  ? '#6baed6' :
-                   d > 0  ? '#c6dbef' :
-                            '#f0f0f0';
-        }
-
-        // Wait for map container to be visible (handle animation delay)
-        var mapContainer = document.getElementById('indonesia-map');
-        if (!mapContainer) return;
-
-        var map = L.map('indonesia-map', {
-            center: [-2.5, 118],
-            zoom: 5,
-            minZoom: 4,
-            maxZoom: 8,
-            zoomControl: true,
-            attributionControl: false
+        // Initialize Zoom/Pan
+        const panZoom = svgPanZoom('#indonesia-svg-map', {
+            zoomEnabled: true,
+            controlIconsEnabled: false,
+            fit: true,
+            center: true,
+            minZoom: 0.5,
+            maxZoom: 15,
+            zoomScaleSensitivity: 0.2,
+            panEnabled: true,
+            zoomWheelEnabled: true,
+            beforePan: function(oldPan, newPan) {
+                return newPan;
+            }
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
+        // External Zoom Controls
+        document.getElementById('zoom-in').addEventListener('click', () => panZoom.zoomIn());
+        document.getElementById('zoom-out').addEventListener('click', () => panZoom.zoomOut());
+        document.getElementById('zoom-reset').addEventListener('click', () => {
+            panZoom.resetZoom();
+            panZoom.center();
+        });
 
-        // Info control
-        var info = L.control({ position: 'topright' });
-        info.onAdd = function() {
-            this._div = L.DomUtil.create('div', 'map-info-tooltip');
-            L.DomEvent.disableClickPropagation(this._div);
-            L.DomEvent.disableScrollPropagation(this._div);
-            this.update();
-            return this._div;
-        };
-        info.update = function(props) {
-            if (!props) {
-                this._div.innerHTML = '<div style="color:var(--gray-500);font-size:12px;">Arahkan kursor<br>ke area provinsi</div>';
-                return;
+        // Apply Colors Instantly
+        Object.keys(PROVINCE_COLORS).forEach(id => {
+            const path = document.getElementById(id);
+            if (path) {
+                path.style.fill = PROVINCE_COLORS[id];
             }
-            var html = '<div class="province-name">' + props.provinceName + '</div>';
-            if (props.cities && props.cities.length > 0) {
-                props.cities.forEach(function(c) {
-                    html += '<div class="city-row"><span>' + c.name + '</span><span class="city-count">' + c.count + '</span></div>';
-                });
-            }
-            html += '<div class="total-row"><span>Total</span><span>' + props.total + '</span></div>';
-            this._div.innerHTML = html;
-        };
-        info.addTo(map);
+        });
 
-        // Legend
-        var legend = L.control({ position: 'bottomleft' });
-        legend.onAdd = function() {
-            var div = L.DomUtil.create('div', 'map-legend');
-            var grades = [0, 1, 3, 5, 8, 11];
-            var labels = ['0', '1-2', '3-4', '5-7', '8-10', '11+'];
-            div.innerHTML = '<div class="legend-title">Jumlah Pelanggan</div>';
-            for (var i = 0; i < grades.length; i++) {
-                div.innerHTML += '<i style="background:' + getColor(grades[i] || 0.5) + '"></i> ' + labels[i] + '<br>';
-            }
-            return div;
-        };
-        legend.addTo(map);
-
-        // Province data aggregated from origins
-        var provinceData = {};
-        var geojsonLayer = null;
-
-        function findProvinceData(normalizedName) {
-            if (provinceData[normalizedName]) return provinceData[normalizedName];
-            for (var key in provinceData) {
-                if (normalizedName.indexOf(key) !== -1 || key.indexOf(normalizedName) !== -1) {
-                    return provinceData[key];
-                }
-            }
-            return null;
-        }
-
-        function highlightFeature(e) {
-            var layer = e.target;
-            layer.setStyle({
-                weight: 3,
-                color: '#4f46e5',
-                fillOpacity: 0.9
-            });
-            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-                layer.bringToFront();
-            }
-            var provName = layer.feature.properties.PROVINSI || layer.feature.properties.Propinsi || '';
-            var data = findProvinceData(normalizeProvince(provName));
-            info.update({
-                provinceName: provName,
-                cities: data ? data.cities : [],
-                total: data ? data.total : 0
-            });
-        }
-
-        function resetHighlight(e) {
-            if (geojsonLayer) {
-                geojsonLayer.resetStyle(e.target);
-            }
-            info.update();
-        }
-
-        function onEachFeature(feature, layer) {
-            layer.on({
-                mouseover: highlightFeature,
-                mouseout: resetHighlight
-            });
-        }
-
-        function styleFeature(feature) {
-            var provName = normalizeProvince(feature.properties.PROVINSI || feature.properties.Propinsi || '');
-            var data = findProvinceData(provName);
-            var total = data ? data.total : 0;
-            return {
-                fillColor: getColor(total),
-                weight: 1.5,
-                opacity: 1,
-                color: '#ffffff',
-                fillOpacity: 0.8
-            };
-        }
-
-        // Fetch data then GeoJSON
+        // Fetch User Data
         fetch('{{ route("admin.map.data") }}')
-            .then(function(r) { return r.json(); })
-            .then(function(origins) {
-                origins.forEach(function(item) {
-                    var originLower = (item.origin || '').toLowerCase().trim();
-                    var province = CITY_TO_PROVINCE[originLower];
-                    if (!province) {
-                        province = originLower.toUpperCase();
+            .then(res => res.json())
+            .then(data => {
+                const provinceCounts = {};
+                
+                // Track counts for tooltip
+                data.provinces.forEach(item => {
+                    const originLower = (item.origin || '').toLowerCase().trim();
+                    const provinceId = CITY_TO_PROVINCE[originLower];
+                    if (provinceId) {
+                        provinceCounts[provinceId] = (provinceCounts[provinceId] || 0) + item.count;
                     }
-                    if (!provinceData[province]) {
-                        provinceData[province] = { total: 0, cities: [] };
-                    }
-                    provinceData[province].total += item.count;
-                    provinceData[province].cities.push({ name: item.origin, count: item.count });
                 });
 
-                return fetch('https://raw.githubusercontent.com/denyherianto/indonesia-geojson-topojson-maps-with-38-provinces/main/GeoJSON/indonesia-38-provinces.geojson');
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(geojson) {
-                geojsonLayer = L.geoJSON(geojson, {
-                    style: styleFeature,
-                    onEachFeature: onEachFeature,
-                    interactive: true
-                }).addTo(map);
+                // Apply Colors Based on Data (keep original province colors with data overlay)
+                const getColor = (count) => {
+                    if (count === 0 || !count) return '#f1f5f9'; // Light gray for no data
+                    if (count <= 2) return '#dbeafe';  // Very light blue
+                    if (count <= 5) return '#bfdbfe';  // Light blue
+                    if (count <= 10) return '#93c5fd'; // Blue
+                    if (count <= 20) return '#60a5fa'; // Medium blue
+                    if (count <= 50) return '#3b82f6'; // Strong blue
+                    if (count <= 100) return '#2563eb'; // Stronger blue
+                    return '#1d4ed8'; // Darkest blue
+                };
 
-                // Force map to invalidate size after animation completes
-                setTimeout(function() { map.invalidateSize(); }, 1000);
-            })
-            .catch(function(err) { console.error('Map error:', err); });
+                // Store customers by province for click functionality
+                const customersByProvince = {};
+                data.users.forEach(user => {
+                    const originLower = (user.origin || '').toLowerCase().trim();
+                    const provinceId = CITY_TO_PROVINCE[originLower];
+                    if (provinceId) {
+                        if (!customersByProvince[provinceId]) {
+                            customersByProvince[provinceId] = [];
+                        }
+                        customersByProvince[provinceId].push(user);
+                    }
+                });
+
+                // Update paths with counts and colors
+                Object.keys(provinceCounts).forEach(id => {
+                    const path = document.getElementById(id);
+                    if (path) {
+                        path.setAttribute('data-count', provinceCounts[id]);
+                        path.setAttribute('data-province-id', id);
+                        path.style.fill = getColor(provinceCounts[id]);
+                    }
+                });
+
+                // Province Hover and Click Effects
+                const paths = svgElement.querySelectorAll('.land');
+                const provincePanel = document.getElementById('province-panel');
+                const panelProvinceName = document.getElementById('panel-province-name');
+                const panelProvinceCount = document.getElementById('panel-province-count');
+                const panelCustomerList = document.getElementById('panel-customer-list');
+                const closePanelBtn = document.getElementById('close-panel');
+                
+                // Close panel function
+                const closePanel = () => {
+                    provincePanel.style.right = '-350px';
+                };
+                
+                closePanelBtn.addEventListener('click', closePanel);
+                
+                // Show customers in panel
+                const showProvinceCustomers = (provinceId, provinceTitle) => {
+                    const customers = customersByProvince[provinceId] || [];
+                    
+                    panelProvinceName.textContent = provinceTitle || 'Provinsi Tidak Diketahui';
+                    panelProvinceCount.textContent = `${customers.length} Pelanggan`;
+                    
+                    if (customers.length === 0) {
+                        panelCustomerList.innerHTML = `
+                            <div style="text-align: center; padding: 30px; color: #999;">
+                                <i class="fe fe-users" style="font-size: 40px; margin-bottom: 10px;"></i>
+                                <p>Tidak ada pelanggan di wilayah ini</p>
+                            </div>
+                        `;
+                    } else {
+                        // Group customers by origin/city
+                        const customersByOrigin = {};
+                        customers.forEach(customer => {
+                            const origin = customer.origin || 'Tidak diketahui';
+                            if (!customersByOrigin[origin]) {
+                                customersByOrigin[origin] = [];
+                            }
+                            customersByOrigin[origin].push(customer);
+                        });
+                        
+                        let html = '';
+                        Object.keys(customersByOrigin).forEach(origin => {
+                            const originCustomers = customersByOrigin[origin];
+                            html += `
+                                <div style="margin-bottom: 15px;">
+                                    <div style="font-size: 12px; font-weight: 600; color: #1d4ed8; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb;">
+                                        ${origin} (${originCustomers.length})
+                                    </div>
+                            `;
+                            originCustomers.forEach(customer => {
+                                html += `
+                                    <div style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #dbeafe; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;">
+                                            <span style="font-size: 12px; font-weight: 600; color: #1d4ed8;">${customer.name.charAt(0).toUpperCase()}</span>
+                                        </div>
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-size: 13px; font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${customer.name}</div>
+                                            <div style="font-size: 11px; color: #666;">${customer.contact || '-'}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                        });
+                        panelCustomerList.innerHTML = html;
+                    }
+                    
+                    provincePanel.style.right = '0';
+                };
+                
+                paths.forEach(path => {
+                    path.addEventListener('mouseenter', () => {
+                        const count = path.getAttribute('data-count') || 0;
+                        const title = path.getAttribute('title');
+                        
+                        tooltip.style.display = 'block';
+                        tooltip.innerHTML = `
+                            <div style="font-weight:700;margin-bottom:2px;color:#1d4ed8;">${title}</div>
+                            <div style="font-size:14px;font-weight:600;color:#333;">${count} Pelanggan</div>
+                            <div style="font-size:11px;color:#666;margin-top:4px;">Klik untuk detail</div>
+                        `;
+                    });
+
+                    path.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+                    
+                    // Click to show province detail
+                    path.addEventListener('click', () => {
+                        const provinceId = path.getAttribute('id');
+                        const title = path.getAttribute('title');
+                        showProvinceCustomers(provinceId, title);
+                    });
+                });
+            });
+
+        // Mouse follow tooltip
+        container.addEventListener('mousemove', (e) => {
+            if (tooltip.style.display === 'block') {
+                const rect = container.getBoundingClientRect();
+                tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+                tooltip.style.top = (e.clientY - rect.top + 15) + 'px';
+            }
+        });
     })();
 </script>
 @endpush
