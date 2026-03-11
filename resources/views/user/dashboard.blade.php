@@ -454,7 +454,6 @@
                             x-ref="messageInput"
                             @input="sendTypingEvent"
                             @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
-                            :disabled="isSending || isLoading"
                             placeholder="Ketik balasan Anda..." 
                             class="flex-1 max-h-24 min-h-[40px] bg-slate-100 border-transparent focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors resize-none overflow-y-auto"
                             rows="1"></textarea>
