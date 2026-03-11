@@ -713,12 +713,19 @@
                                         <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active').length"></span>
                                     </span>
                                 </li>
+                                <li class="nav-item">
+                                    <span class="nav-link" :class="statusFilter === 'closed' ? 'active' : ''"
+                                        @click="statusFilter = 'closed'" style="cursor:pointer;">
+                                        Ditutup
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'closed').length"></span>
+                                    </span>
+                                </li>
                             </ul>
                         </div>
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active'))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : c.status === 'closed')))" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
@@ -761,10 +768,10 @@
                             </template>
 
                             <!-- Empty state -->
-                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : c.status === 'active')).length === 0"
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : c.status === 'closed'))).length === 0"
                                 class="chat-empty-state">
                                 <i class="fe fe-message-circle"></i>
-                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : 'Belum ada percakapan.')"></p>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'closed' ? 'Tidak ada chat yang ditutup.' : 'Belum ada percakapan.'))"></p>
                             </div>
                         </div>
 
@@ -931,9 +938,9 @@
 @push('scripts')
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('adminChat', (adminId, initPending, initActive) => ({
+        Alpine.data('adminChat', (adminId, initPending, initActive, initClosed) => ({
             adminId: adminId,
-            chats: [...initPending, ...initActive],
+            chats: [...initPending, ...initActive, ...initClosed],
             currentTime: Date.now(),
             sidebarCollapsed: false,
             selectedChat: null,
@@ -1176,7 +1183,7 @@
                     }
 
                     const data = await res.json();
-                    this.chats = [...(data.pending || []), ...(data.active || [])];
+                    this.chats = [...(data.pending || []), ...(data.active || []), ...(data.closed || [])];
                     this.searchResults = data.search_results || this.emptySearchResults();
 
                     if (this.selectedChat) {
