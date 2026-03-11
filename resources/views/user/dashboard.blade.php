@@ -87,8 +87,7 @@
             <div x-show="isAuthenticated" 
                  x-cloak 
                  @login-success.window="isAuthenticated = true; user.name = $event.detail.name; user.initial = $event.detail.name.charAt(0).toUpperCase()"
-                 class="flex items-center gap-4 relative"
-                 x-data="{ open: false }">
+                 class="flex items-center gap-4 relative">
                 <div @click="open = !open" class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer">
                     <div class="relative">
                         <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
@@ -489,6 +488,7 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('chatWidget', () => ({
+                open: false,
                 isOpen: false,
                 isLoading: false,
                 isInitialized: false,
