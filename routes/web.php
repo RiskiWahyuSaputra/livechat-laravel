@@ -19,7 +19,7 @@ Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home
 
 // Route registrasi chat
 Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');
-Route::post('/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');
+Route::match(['get', 'post'], '/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');
 
 // Routes Chat
 Route::get('/chat', [ChatController::class, 'showChat'])->name('chat.index');

@@ -19,6 +19,11 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+// Channel untuk notifikasi personal ke user
+Broadcast::channel('user.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
+
 // ─────────────────────────────────────────────────────────────────────────
 // Channel: conversation.{conversationId}
 // Siapa yang boleh: User pemilik conversation ATAU Admin yang menanganinya
