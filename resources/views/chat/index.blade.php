@@ -179,7 +179,9 @@
             </div>
 
             <!-- Form Input Bawah -->
-            <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="p-2 md:p-3 bg-white flex items-end gap-2 relative">
+            <form @submit.prevent="sendMessage" 
+                  method="POST" action="{{ route('chat.send') }}"
+                  x-show="status !== 'closed'" class="p-2 md:p-3 bg-white flex items-end gap-2 relative">
                 <button type="button" 
                         @click="$refs.fileInput.click()"
                         class="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 focus:outline-none transition-all"
