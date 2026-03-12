@@ -318,7 +318,7 @@ class ChatController extends Controller
 
         // Tangani Bot Response dan kumpulkan untuk dikirim di JSON
         $botReplies = [];
-        if ($conversation->bot_phase && $conversation->bot_phase !== 'off') {
+        if ($conversation->bot_phase !== 'off' || is_null($conversation->admin_id)) {
             $botReplies = $this->handleBotResponse($conversation, $message->content);
         }
 
@@ -415,21 +415,33 @@ class ChatController extends Controller
                 $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
                 $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
 
-                $newBotMessages[] = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => 0,
-                    'sender_type'     => 'admin',
-                    'message_type'    => 'text',
-                    'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
-                ]);
-                $newBotMessages[] = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => 0,
-                    'sender_type'     => 'admin',
-                    'message_type'    => 'text',
-                    'content'         => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.",
-                ]);
+                $rawReplies = [
+                    ['content' => $aiResponse, 'type' => 'ai'],
+                    ['content' => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.", 'type' => 'system']
+                ];
+
+                $newBotMessages = []; // Clear previous if any, though in this branch it should be empty
+                foreach ($rawReplies as $bm) {
+                    $newBotMessages[] = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => ($bm['type'] === 'ai' ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' : '') . $bm['content'],
+                    ]);
+                }
             }
+        } elseif ($conversation->bot_phase === 'off' && is_null($conversation->admin_id)) {
+            // Jika bot sudah OFF tapi admin belum klaim, bot tetap menjawab sebagai asisten pintar
+            $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan lanjutan dari pelanggan (Admin belum bergabung): ");
+            
+            $newBotMessages[] = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
+            ]);
         }
 
         return $this->formatBotReplies($newBotMessages, $conversation);
