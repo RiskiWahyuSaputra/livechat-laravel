@@ -35,7 +35,8 @@ class GeminiService
         4. Jawab dengan singkat, padat, dan sangat profesional dalam bahasa Indonesia.
         5. jangan gunakan ** untuk membuat teks menjadi bold.
         6. JANGAN PERNAH menggunakan tanda kurung [] atau placeholder seperti '[Sebutkan produk...]'.
-        7. Jika informasi tidak ditemukan di KNOWLEDGE BASE di bawah, beritahu pelanggan bahwa Anda belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.";
+        7. Jika informasi tidak ditemukan di KNOWLEDGE BASE di bawah, gunakan hasil pencarian Google yang tersedia untuk menjawab.
+        8. Jika tetap tidak ditemukan di keduanya, beritahu pelanggan bahwa Anda belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.";
         
         // Tambahkan Knowledge Base dari QuickReply
         $quickReplies = \App\Models\QuickReply::all();
