@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['web', 'auth:web,admin']]
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+        
         $middleware->validateCsrfTokens(except: [
             'api/webhook/whatsapp',
         ]);
