@@ -243,8 +243,8 @@ class DashboardController extends Controller
             $admin->update(['status' => 'online']);
         }
 
-        // Cek kapasitas admin hanya jika ini adalah chat baru untuknya
-        if ($conversation->admin_id !== $admin->id && !$admin->canTakeNewChat()) {
+        // Cek kapasitas admin
+        if (!$admin->canTakeNewChat()) {
             return response()->json(['error' => 'Anda sudah mencapai batas maksimum chat aktif.'], 422);
         }
 
