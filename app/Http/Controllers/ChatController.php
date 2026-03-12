@@ -415,18 +415,14 @@ class ChatController extends Controller
                 $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
                 $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
 
-                $newBotMessages[] = [
-                    'content' => $aiResponse,
-                    'type' => 'ai'
-                ];
-                $newBotMessages[] = [
-                    'content' => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.",
-                    'type' => 'system'
+                $rawReplies = [
+                    ['content' => $aiResponse, 'type' => 'ai'],
+                    ['content' => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.", 'type' => 'system']
                 ];
 
-                // Create actual message records
-                foreach ($newBotMessages as $bm) {
-                    Message::create([
+                $newBotMessages = []; // Clear previous if any, though in this branch it should be empty
+                foreach ($rawReplies as $bm) {
+                    $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id'       => 0,
                         'sender_type'     => 'admin',
