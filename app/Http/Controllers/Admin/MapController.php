@@ -13,6 +13,7 @@ class MapController extends Controller
      */
     public function getMapData()
     {
+        // Data for Choropleth (Provinces)
         $origins = User::select('origin', DB::raw('count(*) as count'))
             ->whereNotNull('origin')
             ->where('origin', '!=', '')
@@ -20,6 +21,15 @@ class MapController extends Controller
             ->orderByDesc('count')
             ->get();
 
-        return response()->json($origins);
+        // Data for Dot Markers (Individual Users)
+        $users = User::select('id', 'name', 'contact', 'origin', 'is_online')
+            ->whereNotNull('origin')
+            ->where('origin', '!=', '')
+            ->get();
+
+        return response()->json([
+            'provinces' => $origins,
+            'users' => $users
+        ]);
     }
 }

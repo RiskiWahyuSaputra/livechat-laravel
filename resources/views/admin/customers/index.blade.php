@@ -34,7 +34,7 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-center table-hover datatable">
+                    <table class="table table-center table-hover">
                         <thead class="thead-light">
                             <tr>
                                 <th>Pelanggan</th>
@@ -119,6 +119,7 @@
                     </table>
                 </div>
                 <div class="mt-4">
+                    {{ $customers->links() }}
                 </div>
             </div>
         </div>

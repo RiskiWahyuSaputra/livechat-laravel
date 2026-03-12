@@ -7,6 +7,7 @@ use App\Events\MessageSent;
 use App\Events\TypingIndicator;
 use App\Events\UserShouldBeLoggedOut;
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessAdminMessage;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
@@ -159,26 +160,14 @@ class DashboardController extends Controller
         $quickFilters = array_values(array_filter(explode(',', (string) $request->get('quick_filters', ''))));
         $unreadOnly = $request->boolean('unread_only');
 
-        $pendingQuery = Conversation::with('customer')
-            ->whereIn('status', ['pending', 'queued']);
-
-        $activeQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
-            $query->latest()->limit(1);
-        }])->where('status', 'active');
+        $mainQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
+                $query->latest()->limit(1);
+            }])
+            ->whereIn('status', ['pending', 'queued', 'active', 'closed']);
 
         if ($search !== '') {
             $needle = '%' . mb_strtolower($search) . '%';
-
-            $pendingQuery->where(function ($query) use ($needle) {
-                $query->whereHas('customer', function ($customerQuery) use ($needle) {
-                    $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
-                        ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
-                })->orWhereHas('messages', function ($messageQuery) use ($needle) {
-                    $messageQuery->whereRaw('LOWER(content) LIKE ?', [$needle]);
-                });
-            });
-
-            $activeQuery->where(function ($query) use ($needle) {
+            $mainQuery->where(function ($query) use ($needle) {
                 $query->whereHas('customer', function ($customerQuery) use ($needle) {
                     $customerQuery->whereRaw('LOWER(name) LIKE ?', [$needle])
                         ->orWhereRaw('LOWER(contact) LIKE ?', [$needle]);
@@ -188,14 +177,14 @@ class DashboardController extends Controller
             });
         }
 
-        $pendingConversations = $pendingQuery
-            ->orderBy('queue_position')
+        $conversations = $mainQuery
+            ->orderBy('queue_position', 'asc') // Keep queue_position for pending/queued
             ->orderBy('last_message_at', $sortOrder)
             ->get();
 
-        $activeConversations = $activeQuery
-            ->orderBy('last_message_at', $sortOrder)
-            ->get();
+        $pendingConversations = $conversations->whereIn('status', ['pending', 'queued'])->values();
+        $activeConversations  = $conversations->where('status', 'active')->values();
+        $closedConversations  = $conversations->where('status', 'closed')->values();
 
         if ($request->ajax() || $request->has('ajax')) {
             $searchResults = [
@@ -211,11 +200,13 @@ class DashboardController extends Controller
             return response()->json([
                 'pending' => $pendingConversations,
                 'active' => $activeConversations,
+                'closed' => $closedConversations,
                 'search_results' => $searchResults,
                 'search_summary' => [
                     'query' => $search,
                     'total_pending' => $pendingConversations->count(),
                     'total_active' => $activeConversations->count(),
+                    'total_closed' => $closedConversations->count(),
                 ],
             ]);
         }
@@ -225,7 +216,7 @@ class DashboardController extends Controller
             ->where('status', '!=', 'offline')
             ->get();
 
-        return view('admin.chat', compact('admin', 'pendingConversations', 'activeConversations', 'otherAdmins'));
+        return view('admin.chat', compact('admin', 'pendingConversations', 'activeConversations', 'closedConversations', 'otherAdmins'));
     }
 
     /**
@@ -236,9 +227,8 @@ class DashboardController extends Controller
         $conversation = Conversation::withTrashed()->findOrFail($id);
         $admin    = Auth::guard('admin')->user();
         $messages = $conversation->messages()->get();
-        $quickReplies = \App\Models\QuickReply::pluck('content')->toArray();
 
-        return view('admin.conversation', compact('conversation', 'messages', 'admin', 'quickReplies'));
+        return view('admin.conversation', compact('conversation', 'messages', 'admin'));
     }
 
     /**
@@ -258,7 +248,7 @@ class DashboardController extends Controller
             return response()->json(['error' => 'Anda sudah mencapai batas maksimum chat aktif.'], 422);
         }
 
-        // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)
+        // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)  
         $updated = Conversation::where('id', $conversation->id)
             ->whereIn('status', ['pending', 'queued'])
             ->where(function($q) use ($admin) {
@@ -315,7 +305,18 @@ class DashboardController extends Controller
         ]);
 
         $admin        = Auth::guard('admin')->user();
-        $conversation = Conversation::findOrFail($request->conversation_id);
+        $conversation = Conversation::withTrashed()->findOrFail($request->conversation_id);
+
+        // Logic to handle re-opening closed conversations
+        if ($conversation->status === 'closed') {
+            $conversation->update([
+                'status'   => 'active',
+                'admin_id' => $admin->id,
+                'deleted_at' => null, // Restore the conversation if soft-deleted
+            ]);
+            // Broadcast status change
+            broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        }
 
         // Pastikan admin ini yang menangani conversation ini (kecuali whisper bisa semua admin)
         // Gunakan non-strict comparison agar aman
@@ -352,20 +353,13 @@ class DashboardController extends Controller
             broadcast(new MessageSent($message));
             \Log::info('Admin Broadcast MessageSent success');
 
-            // --- WHAPI NOTIFICATION START ---
-            // Kirim ke WhatsApp user jika bukan pesan internal (whisper)
-            if ($messageType !== 'whisper' && $conversation->customer) {
-                $to = $conversation->customer->contact;
-                if ($messageType === 'text') {
-                    $this->whatsappService->sendMessage($to, "👩‍💼 *Admin:* " . $content);
-                } else {
-                    $this->whatsappService->sendMedia($to, $content, "👩‍💼 *Admin:* [Kirim Media]", $messageType);
-                }
+            // --- WHAPI NOTIFICATION (MOVED TO BACKGROUND JOB) ---
+            if ($messageType !== 'whisper') {
+                ProcessAdminMessage::dispatch($message);
             }
-            // --- WHAPI NOTIFICATION END ---
 
         } catch (\Exception $e) {
-            \Log::error('Admin Broadcast/Whapi MessageSent failed', ['error' => $e->getMessage()]);
+            \Log::error('Admin Broadcast/Job dispatch MessageSent failed', ['error' => $e->getMessage()]);
         }
 
         return response()->json([
@@ -442,9 +436,11 @@ class DashboardController extends Controller
         $conversation->update([
             'status'           => 'closed',
             'problem_category' => $category,
+            'deleted_at'       => null,
         ]);
 
-        $conversation->delete(); // Soft delete memindahkannya ke arsip
+        // Trigger Auto-Learning background job
+        \App\Jobs\AutoLearnChat::dispatch($conversation->id);
 
         $sysMessage = Message::create([
             'conversation_id' => $conversation->id,
@@ -454,8 +450,10 @@ class DashboardController extends Controller
             'content'         => 'Chat telah ditutup. Terima kasih telah menghubungi kami!',
         ]);
 
-        broadcast(new MessageSent($sysMessage));
-        broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        try {
+            broadcast(new MessageSent($sysMessage));
+            broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        } catch (\Exception $e) {}
 
         if ($conversation->customer) {
             event(new UserShouldBeLoggedOut($conversation->customer));
@@ -473,8 +471,10 @@ class DashboardController extends Controller
 
         $conversation->customer->update(['is_blocked' => true]);
 
-        $conversation->update(['status' => 'closed']);
-        $conversation->delete();
+        $conversation->update([
+            'status'     => 'closed',
+            'deleted_at' => null,
+        ]);
 
         Message::create([
             'conversation_id' => $conversation->id,
@@ -492,7 +492,6 @@ class DashboardController extends Controller
 
         return response()->json(['success' => true]);
     }
-
     /**
      * Update status admin (online/busy/offline).
      */

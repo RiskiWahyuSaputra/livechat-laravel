@@ -332,49 +332,21 @@
         </div>
 
         <!-- Cannot Reply Notice -->
-        <div class="no-reply-bar" x-show="!canReply && status !== 'pending' && status !== 'queued'" x-cloak>
-            <span x-show="status === 'closed'">⛔ Sesi obrolan ini telah ditutup.</span>
+        <div class="no-reply-bar" x-show="!canReply && status !== 'pending' && status !== 'queued' && status !== 'closed'" x-cloak>
             <span x-show="status === 'active' && adminId !== sessionAdminId">👁 Mode Membaca (Read-Only)</span>
         </div>
 
         <!-- Input Form -->
         <form class="input-form"
+              method="POST" action="{{ route('admin.chat.send') }}"
               :class="(!canReply) ? 'opacity-50 pointer-events-none' : ''"
               @submit.prevent="sendMessage"
               x-show="status === 'pending' || status === 'queued' || canReply" x-cloak>
 
-            <!-- Quick Replies -->
-            <div class="quick-replies-bar" x-show="messageType === 'text'" x-transition>
-                <span class="qr-label">Balasan:</span>
-                <template x-for="(reply, index) in quickReplies" :key="index">
-                    <button type="button" class="qr-chip" @click="insertQuickReply(reply)" :title="reply">
-                        <span x-text="reply"></span>
-                    </button>
-                </template>
-            </div>
 
             <!-- Input Row -->
             <div class="input-row" :class="messageType === 'whisper' ? 'whisper-mode' : ''" style="position:relative;">
 
-                <!-- Slash dropdown -->
-                <div x-show="showDropdown && filteredQuickReplies.length > 0"
-                     x-ref="quickReplyDropdown"
-                     x-transition.opacity.duration.150ms
-                     @click.away="showDropdown = false"
-                     class="slash-dropdown">
-                    <div class="slash-dropdown-header">
-                        <span>Balasan Cepat</span>
-                        <span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:10px;">↑↓ Enter</span>
-                    </div>
-                    <template x-for="(reply, index) in filteredQuickReplies" :key="index">
-                        <button type="button" class="slash-dropdown-item"
-                                :class="selectedIndex === index ? 'selected' : ''"
-                                @click="insertQuickReply(reply); showDropdown = false;"
-                                @mouseenter="selectedIndex = index">
-                            <span x-text="reply"></span>
-                        </button>
-                    </template>
-                </div>
 
                 <!-- Internal Note Toggle -->
                 <button type="button" @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
@@ -394,7 +366,7 @@
                 <textarea x-model="newMessage" x-ref="messageInput"
                           :placeholder="(!canReply) ? 'Menunggu chat diklaim...' : (messageType === 'whisper' ? '🔒 Tulis catatan internal...' : 'Ketik pesan ke pelanggan...')"
                           @input="handleInput" @keydown="handleKeydown"
-                          :disabled="isSending || !canReply"
+                          :disabled="!canReply"
                           class="msg-textarea" :class="messageType === 'whisper' ? 'whisper-mode' : ''"
                           rows="1"></textarea>
 
@@ -426,61 +398,20 @@
                 isSending: false,
                 isTyping: false,
                 typingTimeout: null,
-                showDropdown: false,
-                selectedIndex: 0,
                 prevDate: null, // To track date for separators
                 
-                get filteredQuickReplies() {
-                    if (!this.newMessage.startsWith('/')) return [];
-                    const search = this.newMessage.slice(1).toLowerCase();
-                    return this.quickReplies.filter(qr => qr.toLowerCase().includes(search));
-                },
 
                 handleInput(e) {
-                    if (this.newMessage.startsWith('/')) {
-                        this.showDropdown = true;
-                        if (this.selectedIndex >= this.filteredQuickReplies.length) {
-                            this.selectedIndex = 0;
-                        }
-                    } else {
-                        this.showDropdown = false;
-                    }
                     this.sendTypingEvent(true);
                 },
 
                 handleKeydown(e) {
-                    if (this.showDropdown && this.filteredQuickReplies.length > 0) {
-                        if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            this.selectedIndex = (this.selectedIndex + 1) % this.filteredQuickReplies.length;
-                            this.scrollToSelected();
-                        } else if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            this.selectedIndex = (this.selectedIndex - 1 + this.filteredQuickReplies.length) % this.filteredQuickReplies.length;
-                            this.scrollToSelected();
-                        } else if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            this.insertQuickReply(this.filteredQuickReplies[this.selectedIndex]);
-                            this.showDropdown = false;
-                        } else if (e.key === 'Escape') {
-                            this.showDropdown = false;
-                        }
-                    } else if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
                     }
                 },
 
-                scrollToSelected() {
-                    this.$nextTick(() => {
-                        if (this.$refs.quickReplyDropdown) {
-                            const buttons = this.$refs.quickReplyDropdown.querySelectorAll('button');
-                            if (buttons[this.selectedIndex]) {
-                                buttons[this.selectedIndex].scrollIntoView({ block: 'nearest' });
-                            }
-                        }
-                    });
-                },
 
                 init() {
                     this.scrollToBottom();
@@ -494,6 +425,7 @@
                 },
 
                 get canReply() {
+                    if (this.status === 'closed') return true;
                     return this.status === 'active' && this.adminId == this.sessionAdminId;
                 },
 
@@ -572,37 +504,52 @@
                 },
 
                 listenForEvents() {
-                    if (!window.Echo) return;
+                    if (!this.conversationId) return;
 
-                    window.Echo.private(`conversation.${this.conversationId}`)
-                        .listen('.message.sent', (e) => {
-                            const alreadyExists = this.messages.some(m => m.id === e.id);
-                            if (alreadyExists) return;
+                    let retries = 0;
+                    const maxRetries = 20;
 
-                            if (e.sender_id == this.adminId && e.sender_type === 'admin') return;
+                    const checkEcho = setInterval(() => {
+                        if (typeof window.Echo !== 'undefined') {
+                            clearInterval(checkEcho);
 
-                            this.messages.push({
-                                id: e.id,
-                                sender_type: e.sender_type,
-                                message_type: e.message_type,
-                                content: e.content,
-                                created_at: e.created_at // Store raw ISO string
-                            });
-                            this.scrollToBottom();
-                        })
-                        .listen('.conversation.status.changed', (e) => {
-                            this.status = e.status;
-                            this.sessionAdminId = e.admin_id;
-                        })
-                        .listen('.typing', (e) => {
-                            if (e.sender_type === 'user') {
-                                this.isTyping = e.is_typing;
-                                clearTimeout(this.typingTimeout);
-                                if (this.isTyping) {
-                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
-                                }
+                            window.Echo.private(`conversation.${this.conversationId}`)
+                                .listen('.message.sent', (e) => {
+                                    const alreadyExists = this.messages.some(m => m.id === e.id);
+                                    if (alreadyExists) return;
+
+                                    if (e.sender_id == this.adminId && e.sender_type === 'admin') return;
+
+                                    this.messages.push({
+                                        id: e.id,
+                                        sender_type: e.sender_type,
+                                        message_type: e.message_type,
+                                        content: e.content,
+                                        created_at: e.created_at // Store raw ISO string
+                                    });
+                                    this.scrollToBottom();
+                                })
+                                .listen('.conversation.status.changed', (e) => {
+                                    this.status = e.status;
+                                    this.sessionAdminId = e.admin_id;
+                                })
+                                .listen('.typing', (e) => {
+                                    if (e.sender_type === 'user') {
+                                        this.isTyping = e.is_typing;
+                                        clearTimeout(this.typingTimeout);
+                                        if (this.isTyping) {
+                                            this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                        }
+                                    }
+                                });
+                        } else {
+                            retries++;
+                            if (retries >= maxRetries) {
+                                clearInterval(checkEcho);
+                                console.warn('Echo initialization timed out.');
                             }
-                        });
+                        }
+                    }, 500);
                 },
 
                 async sendMessage() {
