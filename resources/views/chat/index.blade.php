@@ -353,7 +353,7 @@
                         formData.append('conversation_id', this.conversationId);
                         formData.append('content', content);
 
-                        const response = await fetch('{{ route('chat.send') }}', {
+                        const response = await fetch('{{ route('chat.send', [], false) }}', {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -424,7 +424,7 @@
                         formData.append('conversation_id', this.conversationId);
                         formData.append('file', file);
 
-                        const response = await fetch('{{ route('chat.send') }}', {
+                        const response = await fetch('{{ route('chat.send', [], false) }}', {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -462,7 +462,7 @@
                 sendTypingEvent(isTyping = true) {
                     if (this.status !== 'active') return;
 
-                    fetch('{{ route('chat.typing') }}', {
+                    fetch('{{ route('chat.typing', [], false) }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
