@@ -318,7 +318,7 @@ class ChatController extends Controller
 
         // Tangani Bot Response dan kumpulkan untuk dikirim di JSON
         $botReplies = [];
-        if ($conversation->bot_phase && $conversation->bot_phase !== 'off') {
+        if ($conversation->bot_phase !== 'off' || is_null($conversation->admin_id)) {
             $botReplies = $this->handleBotResponse($conversation, $message->content);
         }
 
