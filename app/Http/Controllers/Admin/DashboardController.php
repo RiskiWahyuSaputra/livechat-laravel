@@ -347,7 +347,10 @@ class DashboardController extends Controller
 
         \Log::info('Message created by admin', ['id' => $message->id]);
 
-        $conversation->update(['last_message_at' => now()]);
+        $conversation->update([
+            'last_message_at' => now(),
+            'reminder_count' => 0,
+        ]);
 
         try {
             broadcast(new MessageSent($message));

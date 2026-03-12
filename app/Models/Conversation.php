@@ -17,6 +17,7 @@ class Conversation extends Model
         'queue_position',
         'problem_category',
         'last_message_at',
+        'reminder_count',
     ];
 
     protected function casts(): array
