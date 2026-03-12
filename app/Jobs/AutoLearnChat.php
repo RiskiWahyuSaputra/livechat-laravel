@@ -48,14 +48,22 @@ class AutoLearnChat implements ShouldQueue
         if (!empty($newKnowledge) && is_array($newKnowledge)) {
             foreach ($newKnowledge as $item) {
                 if (!empty($item['title']) && !empty($item['content'])) {
-                    // Cek apakah sudah ada yang mirip (opsional, untuk mencegah duplikasi ketat)
+                    
+                    // Jika ini adalah koreksi, hapus data lama yang dikoreksi
+                    if (!empty($item['is_correction']) && $item['is_correction'] === true) {
+                        $targetTitle = $item['old_title'] ?? $item['title'];
+                        QuickReply::where('title', 'like', '%' . $targetTitle . '%')->delete();
+                        Log::info("Bot menghapus pengetahuan lama karena ada koreksi Admin: " . $targetTitle);
+                    }
+
+                    // Cek apakah sudah ada yang persis sama
                     $exists = QuickReply::where('title', $item['title'])->exists();
                     if (!$exists) {
                         QuickReply::create([
                             'title' => $item['title'],
                             'content' => $item['content']
                         ]);
-                        Log::info("Bot telah mempelajari pengetahuan baru secara otomatis: " . $item['title']);
+                        Log::info("Bot telah mempelajari pengetahuan baru/koreksi: " . $item['title']);
                     }
                 }
             }
