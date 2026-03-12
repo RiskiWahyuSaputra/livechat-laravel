@@ -227,9 +227,8 @@ class DashboardController extends Controller
         $conversation = Conversation::withTrashed()->findOrFail($id);
         $admin    = Auth::guard('admin')->user();
         $messages = $conversation->messages()->get();
-        $quickReplies = \App\Models\QuickReply::pluck('content')->toArray();
 
-        return view('admin.conversation', compact('conversation', 'messages', 'admin', 'quickReplies'));
+        return view('admin.conversation', compact('conversation', 'messages', 'admin'));
     }
 
     /**
@@ -439,6 +438,9 @@ class DashboardController extends Controller
             'problem_category' => $category,
             'deleted_at'       => null,
         ]);
+
+        // Trigger Auto-Learning background job
+        \App\Jobs\AutoLearnChat::dispatch($conversation->id);
 
         $sysMessage = Message::create([
             'conversation_id' => $conversation->id,

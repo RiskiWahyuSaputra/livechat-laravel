@@ -21,8 +21,6 @@ class GeminiService
 
         // Coba model-model ini secara berurutan
         $models = [
-            'gemini-2.5-flash', 
-            'gemini-2.5-pro', 
             'gemini-2.0-flash', 
             'gemini-1.5-flash', 
             'gemini-1.5-pro',
@@ -36,7 +34,15 @@ class GeminiService
         3. Jika memberikan jawaban dalam bentuk daftar atau list, wajib gunakan format angka (1, 2, 3, dst).
         4. Jawab dengan singkat, padat, dan sangat profesional dalam bahasa Indonesia.
         5. jangan gunakan ** untuk membuat teks menjadi bold.";
-        $fullInstruction = $baseInstruction . " " . $additionalInstruction;
+        
+        // Tambahkan Knowledge Base dari QuickReply
+        $quickReplies = \App\Models\QuickReply::all();
+        $knowledgeBase = "\n\nKNOWLEDGE BASE (Gunakan informasi ini untuk menjawab):\n";
+        foreach ($quickReplies as $qr) {
+            $knowledgeBase .= "- {$qr->title}: {$qr->content}\n";
+        }
+
+        $fullInstruction = $baseInstruction . $knowledgeBase . " " . $additionalInstruction;
 
         foreach ($models as $model) {
             $aiText = $this->tryModel($model, $fullInstruction, $prompt);
@@ -61,6 +67,38 @@ class GeminiService
         }
 
         return "Maaf, admin sedang tidak di tempat. Pesan Anda sudah kami catat.";
+    }
+
+    public function summarizeConversation($history)
+    {
+        if (empty($this->apiKey)) return null;
+
+        $prompt = "Berikut adalah riwayat percakapan antara Pelanggan dan Admin Support PT BEST CORP. 
+        TUGAS ANDA:
+        1. Analisis apakah ada informasi Penting/Pertanyaan Baru yang berhasil dijawab oleh Admin dengan BAIK.
+        2. Jika ada, buatlah satu atau lebih ringkasan pengetahuan dalam format JSON array.
+        3. Setiap elemen array harus punya 'title' (singkat, max 5 kata) dan 'content' (jawaban lengkap dan profesional).
+        4. HANYA ambil informasi yang BERGUNA untuk masa depan. Abaikan basa-basi seperti 'Halo', 'Terima kasih', 'Sama-sama'.
+        5. Jika tidak ada informasi berguna, kembalikan array kosong [].
+        6. Jawab HANYA dalam format JSON array asli, tanpa markdown block.
+
+        RIWAYAT CHAT:
+        $history";
+
+        // Gunakan model yang mumpuni untuk ekstraksi
+        $models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+        
+        foreach ($models as $model) {
+            $response = $this->tryModel($model, "Anda adalah AI Knowledge Extractor.", $prompt);
+            if ($response) {
+                // Bersihkan respon dari markdown jika AI membandel
+                $cleaned = preg_replace('/```json|```/', '', $response);
+                $data = json_decode(trim($cleaned), true);
+                if (is_array($data)) return $data;
+            }
+        }
+
+        return null;
     }
 
     private function tryModel($model, $fullInstruction, $prompt)
