@@ -716,28 +716,28 @@
                                     <span class="nav-link" :class="statusFilter === 'all' ? 'active' : ''"
                                         @click="statusFilter = 'all'" style="cursor:pointer;">
                                         Semua
-                                        <span class="tab-count" x-text="filteredChats.length"></span>
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.customer.is_online).length"></span>
                                     </span>
                                 </li>
                                 <li class="nav-item">
                                     <span class="nav-link tab-queue" :class="statusFilter === 'queue' ? 'active' : ''"
                                         @click="statusFilter = 'queue'" style="cursor:pointer;">
                                         Antrean
-                                        <span class="tab-count" x-text="filteredChats.filter(c => ['pending','queued'].includes(c.status)).length"></span>
+                                        <span class="tab-count" x-text="filteredChats.filter(c => ['pending','queued'].includes(c.status) && c.customer.is_online).length"></span>
                                     </span>
                                 </li>
                                 <li class="nav-item">
                                     <span class="nav-link" :class="statusFilter === 'active' ? 'active' : ''"
                                         @click="statusFilter = 'active'" style="cursor:pointer;">
                                         Aktif
-                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active').length"></span>
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.customer.is_online).length"></span>
                                     </span>
                                 </li>
                                 <li class="nav-item">
                                     <span class="nav-link" :class="statusFilter === 'offline' ? 'active' : ''"
                                         @click="statusFilter = 'offline'" style="cursor:pointer;">
                                         Offline
-                                        <span class="tab-count" x-text="filteredChats.filter(c => !c.customer.is_online).length"></span>
+                                        <span class="tab-count" x-text="filteredChats.filter(c => !c.customer.is_online || c.status === 'closed').length"></span>
                                     </span>
                                 </li>
                             </ul>
@@ -745,7 +745,15 @@
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true))))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => {
+                                if (statusFilter === 'offline') return !c.customer.is_online || c.status === 'closed';
+                                // For other filters, only show ONLINE users
+                                if (!c.customer.is_online && c.status !== 'closed') return false; 
+                                if (statusFilter === 'all') return c.customer.is_online;
+                                if (statusFilter === 'queue') return ['pending','queued'].includes(c.status) && c.customer.is_online;
+                                if (statusFilter === 'active') return c.status === 'active' && c.customer.is_online;
+                                return true;
+                            })" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"

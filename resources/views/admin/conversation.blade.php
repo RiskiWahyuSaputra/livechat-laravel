@@ -494,7 +494,6 @@
                 },
 
                 get canReply() {
-                    if (this.status === 'closed') return true;
                     return this.status === 'active' && this.adminId == this.sessionAdminId;
                 },
 

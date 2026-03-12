@@ -49,7 +49,7 @@ class ChatController extends Controller
             ->first();
 
         if (!$activeConversation) {
-            $activeConversation = $this->createConversation($user);
+            return redirect()->route('chat.logout');
         }
 
         // Ambil pesan awal agar tidak kosong saat render
@@ -59,13 +59,14 @@ class ChatController extends Controller
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function($msg) {
+                $isToday = $msg->created_at->isToday();
                 return [
                     'id' => $msg->id,
                     'sender_id' => $msg->sender_id,
                     'sender_type' => $msg->sender_type,
                     'message_type' => $msg->message_type,
                     'content' => $msg->content,
-                    'created_at' => $msg->created_at->format('H:i'),
+                    'created_at' => $isToday ? $msg->created_at->format('H:i') : $msg->created_at->format('d/m/y H:i'),
                 ];
             });
 
@@ -107,8 +108,8 @@ class ChatController extends Controller
             ]);
         }
 
-        // Set Cookie & Login
-        Cookie::queue('guest_chat_token', $user->email, 60);
+        // Set Cookie & Login (1 year = 525600 minutes)
+        Cookie::queue('guest_chat_token', $user->email, 525600);
         Auth::guard('web')->login($user, true);
 
         // Pastikan conversation dan pesan otomatis dibuat
@@ -157,29 +158,24 @@ class ChatController extends Controller
                 ->first();
 
             if ($conversation) {
-                $conversation->update([
-                    'status' => 'closed',
-                    'deleted_at' => null // Ensure not soft-deleted
-                ]);
+                // We no longer set status to 'closed' here.
+                // The conversation remains 'active' (or its current status)
+                // so the admin can still reply until they manually close it.
                 
                 $sysMessage = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id'       => 0,
                     'sender_type'     => 'system',
                     'message_type'    => 'text',
-                    'content'         => 'Sesi berakhir karena pelanggan logout atau tidak aktif.',
+                    'content'         => 'Pelanggan telah meninggalkan percakapan (logout).',
                 ]);
-
-                $conversation->load('customer');
 
                 try {
                     broadcast(new MessageSent($sysMessage));
-                    broadcast(new ConversationStatusChanged($conversation, 'system'));
+                    // We don't broadcast ConversationStatusChanged because status didn't change
                 } catch (\Exception $e) {
                     \Log::warning('Broadcast failed during logout: ' . $e->getMessage());
                 }
-
-                // $conversation->delete(); // REMOVED to allow admin to still reply
             }
         }
 
@@ -223,7 +219,7 @@ class ChatController extends Controller
                 ->first();
 
             if (!$activeConversation) {
-                $activeConversation = $this->createConversation($user);
+                return response()->json(['error' => 'Sesi obrolan tidak aktif.'], 404);
             }
 
             $allConversations = $user->conversations()->withTrashed()->pluck('id');
@@ -232,13 +228,14 @@ class ChatController extends Controller
                 ->orderBy('created_at', 'asc')
                 ->get()
                 ->map(function($msg) {
+                    $isToday = $msg->created_at->isToday();
                     return [
                         'id' => $msg->id,
                         'sender_id' => $msg->sender_id,
                         'sender_type' => $msg->sender_type,
                         'message_type' => $msg->message_type,
                         'content' => $msg->content,
-                        'created_at' => $msg->created_at->format('H:i'),
+                        'created_at' => $isToday ? $msg->created_at->format('H:i') : $msg->created_at->format('d/m/y H:i'),
                     ];
                 });
 
@@ -459,39 +456,59 @@ class ChatController extends Controller
             $queuePosition = Conversation::where('status', 'queued')->count() + 1;
         }
 
+        // Check if this user has had any previous conversations (returning user)
+        $isReturning = Conversation::where('user_id', $user->id)->exists();
+        $botPhase = $isReturning ? 'off' : 'awaiting_category';
+
         $conversation = Conversation::create([
             'user_id' => $user->id,
             'status' => $status,
-            'bot_phase' => 'awaiting_category',
+            'bot_phase' => $botPhase,
             'queue_position' => $queuePosition,
             'last_message_at'=> now(),
         ]);
 
-        $intro = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id'       => $user->id,
-            'sender_type'     => 'user',
-            'message_type'    => 'text',
-            'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin bantuan tim Support.",
-        ]);
+        if (!$isReturning) {
+            // New user experience: AI Greeting + Category selection
+            $intro = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => $user->id,
+                'sender_type'     => 'user',
+                'message_type'    => 'text',
+                'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin bantuan tim Support.",
+            ]);
 
-        $botCategories = config('chat.complaint_categories');
-        $categoryButtons = "";
-        foreach ($botCategories as $cat) { $categoryButtons .= "- {$cat}\n"; }
-        
-        $botMsg = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id'       => 0,
-            'sender_type'     => 'admin',
-            'message_type'    => 'text',
-            'content'         => "👋 Selamat datang di BEST CORP. Pilih kategori kendala Anda:\n\n" . $categoryButtons,
-        ]);
+            $botCategories = config('chat.complaint_categories');
+            $categoryButtons = "";
+            foreach ($botCategories as $cat) { $categoryButtons .= "- {$cat}\n"; }
+            
+            $botMsg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "👋 Selamat datang di BEST CORP. Pilih kategori kendala Anda:\n\n" . $categoryButtons,
+            ]);
 
-        try {
-            broadcast(new MessageSent($intro))->toOthers();
-            broadcast(new MessageSent($botMsg));
-            broadcast(new ConversationStatusChanged($conversation, 'system'));
-        } catch (\Exception $e) {}
+            try {
+                broadcast(new MessageSent($intro))->toOthers();
+                broadcast(new MessageSent($botMsg));
+                broadcast(new ConversationStatusChanged($conversation, 'system'));
+            } catch (\Exception $e) {}
+        } else {
+            // Returning user experience: No AI questions, just notification
+            $resumeMsg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => $user->id,
+                'sender_type'     => 'user',
+                'message_type'    => 'text',
+                'content'         => "Pelanggan kembali memulai percakapan baru.",
+            ]);
+            try {
+                broadcast(new MessageSent($resumeMsg))->toOthers();
+                broadcast(new ConversationStatusChanged($conversation, 'system'));
+            } catch (\Exception $e) {}
+        }
 
         return $conversation;
     }
