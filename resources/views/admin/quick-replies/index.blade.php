@@ -34,7 +34,7 @@
                 <div class="card-body">
 
                     <div class="table-responsive">
-                        <table class="table table-center table-hover datatable">
+                        <table class="table table-center table-hover">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Judul / Singkatan</th>
@@ -63,6 +63,10 @@
                                 @endforelse
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="mt-4">
+                        {{ $replies->links() }}
                     </div>
                 </div>
             </div>

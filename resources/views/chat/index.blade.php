@@ -103,35 +103,39 @@
                                     : 'bg-white text-slate-800 rounded-br-sm border border-slate-200'">
                                 
                                 <!-- Pesan Teks -->
-                                <div x-show="!msg.message_type || msg.message_type === 'text'">
-                                    <span x-html="formatMessage(msg.content)"></span>
-                                </div>
+                                <template x-if="!msg.message_type || msg.message_type === 'text'">
+                                    <div>
+                                        <span x-html="formatMessage(msg.content)"></span>
+                                    </div>
+                                </template>
 
                                 <!-- Pesan Gambar -->
-                                <div x-show="msg.message_type === 'image'">
+                                <template x-if="msg.message_type === 'image'">
                                     <div class="space-y-2">
                                         <img :src="msg.content" 
                                              class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
                                              @click="window.open(msg.content, '_blank')"
                                              x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
                                     </div>
-                                </div>
+                                </template>
 
                                 <!-- Pesan File -->
-                                <div x-show="msg.message_type === 'file'" class="w-full">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                        </div>
-                                        <div class="flex-1 min-w-0 overflow-hidden text-left">
-                                            <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
-                                            <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
-                                                <span>Unduh Dokumen</span>
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                            </a>
+                                <template x-if="msg.message_type === 'file'">
+                                    <div class="w-full">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0 overflow-hidden text-left">
+                                                <p class="text-sm font-bold truncate mb-0.5" x-text="msg.content.split('/').pop()"></p>
+                                                <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider hover:underline" :class="msg.sender_type === 'admin' ? 'text-blue-100' : 'text-blue-600'">
+                                                    <span>Unduh Dokumen</span>
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                </template>
                             </div>
                             
                             <!-- Timestamp -->
@@ -175,7 +179,9 @@
             </div>
 
             <!-- Form Input Bawah -->
-            <form @submit.prevent="sendMessage" x-show="status !== 'closed'" class="p-2 md:p-3 bg-white flex items-end gap-2 relative">
+            <form @submit.prevent="sendMessage" 
+                  method="POST" action="{{ route('chat.send') }}"
+                  x-show="status !== 'closed'" class="p-2 md:p-3 bg-white flex items-end gap-2 relative">
                 <button type="button" 
                         @click="$refs.fileInput.click()"
                         class="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 focus:outline-none transition-all"
@@ -187,7 +193,6 @@
                 <textarea x-model="newMessage" 
                           @input="sendTypingEvent"
                           @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
-                          :disabled="isSending"
                           placeholder="Ketik balasan Anda..." 
                           class="flex-1 max-h-32 min-h-[40px] md:min-h-[44px] bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl px-3.5 py-2 md:py-2.5 text-[13px] md:text-sm transition-colors resize-none overflow-y-auto"
                           rows="1"></textarea>
