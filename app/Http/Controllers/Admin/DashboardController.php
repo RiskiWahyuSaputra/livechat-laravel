@@ -529,6 +529,28 @@ class DashboardController extends Controller
     }
 
     /**
+     * Cek status cookie agent untuk pengetesan.
+     */
+    public function checkCookie(Request $request)
+    {
+        $cookieValue = $request->cookie('agent_session');
+        
+        if ($cookieValue) {
+            return response()->json([
+                'status' => 'active',
+                'message' => 'Cookie agent_session ditemukan.',
+                'agent_id' => $cookieValue,
+                'expires_at' => 'Akan kadaluarsa dalam 2 menit sejak login/set.'
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'expired_or_not_found',
+            'message' => 'Cookie agent_session tidak ditemukan atau sudah kadaluarsa.'
+        ], 404);
+    }
+
+    /**
      * Urutkan ulang posisi antrian setelah ada yang diklaim/ditutup.
      */
     private function reorderQueue(): void
