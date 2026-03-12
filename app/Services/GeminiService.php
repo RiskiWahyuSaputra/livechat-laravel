@@ -21,9 +21,9 @@ class GeminiService
 
         // Coba model-model ini secara berurutan
         $models = [
-            'gemini-2.0-flash', 
             'gemini-1.5-flash', 
             'gemini-1.5-pro',
+            'gemini-2.0-flash',
             'gemini-pro'
         ];
         
@@ -113,23 +113,29 @@ class GeminiService
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->apiKey;
 
         try {
+            $payload = [
+                'contents' => [
+                    ['role' => 'user', 'parts' => [['text' => $prompt]]]
+                ],
+                'system_instruction' => [
+                    'parts' => [['text' => $fullInstruction]]
+                ],
+                'tools' => [['google_search_retrieval' => new \stdClass()]]
+            ];
+
             $response = Http::withoutVerifying()
-                ->timeout(5)
+                ->timeout(12) // Ditambah agar pencarian Google punya waktu lebih
                 ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($url, [
-                    'contents' => [['parts' => [['text' => "Instruksi: $fullInstruction\n\nUser: $prompt"]]]],
-                    'tools' => [['google_search_retrieval' => new \stdClass()]]
-                ]);
+                ->post($url, $payload);
 
             if ($response->successful()) {
-                $candidates = $response->json('candidates');
+                $data = $response->json();
+                $candidates = $data['candidates'] ?? [];
+                
                 if (!empty($candidates) && isset($candidates[0]['content']['parts'])) {
                     $fullText = "";
                     foreach ($candidates[0]['content']['parts'] as $part) {
                         if (isset($part['text'])) {
-                            // Abaikan bagian thinking jika ada (biasanya di model 2.0 thinking)
-                            // Meskipun biasanya thinking ada di field terpisah atau punya metadata,
-                            // kita ambil semua teks yang tersedia.
                             $fullText .= $part['text'];
                         }
                     }
@@ -139,10 +145,12 @@ class GeminiService
                         return trim($fullText);
                     }
                 }
-                Log::warning("Gemini model {$model} sukses tapi tidak ada teks:", ['body' => $response->json()]);
+                
+                $finishReason = $candidates[0]['finishReason'] ?? 'UNKNOWN';
+                Log::warning("Gemini model {$model} selesai tanpa teks. Reason: {$finishReason}", ['body' => $data]);
+            } else {
+                Log::warning("Gemini model {$model} API Error: " . $response->status(), ['body' => $response->json()]);
             }
-
-            Log::warning("Gemini model {$model} gagal: " . $response->status(), ['body' => $response->json()]);
 
         } catch (\Exception $e) {
             Log::error("Gemini Exception ({$model}): " . $e->getMessage());
