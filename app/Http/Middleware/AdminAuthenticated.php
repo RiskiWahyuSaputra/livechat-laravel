@@ -25,7 +25,7 @@ class AdminAuthenticated
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('admin.login')->with('error', 'Sesi agent (2 menit) telah berakhir. Silakan login kembali.');
+            return redirect()->route('admin.login')->with('error', 'Sesi agent (30m Agent / 1w Superadmin) telah berakhir. Silakan login kembali.');
         }
 
         return $next($request);

@@ -534,13 +534,16 @@ class DashboardController extends Controller
     public function checkCookie(Request $request)
     {
         $cookieValue = $request->cookie('agent_session');
+        $admin = Auth::guard('admin')->user();
+        $duration = $admin && $admin->is_superadmin ? '1 minggu' : '30 menit';
         
         if ($cookieValue) {
             return response()->json([
                 'status' => 'active',
                 'message' => 'Cookie agent_session ditemukan.',
                 'agent_id' => $cookieValue,
-                'expires_at' => 'Akan kadaluarsa dalam 2 menit sejak login/set.'
+                'role' => $admin && $admin->is_superadmin ? 'Superadmin' : 'Agent',
+                'expires_at' => "Sesi berlaku selama $duration sejak login."
             ]);
         }
 
