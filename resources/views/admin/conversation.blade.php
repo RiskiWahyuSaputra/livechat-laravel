@@ -353,38 +353,10 @@
               @submit.prevent="sendMessage"
               x-show="status === 'pending' || status === 'queued' || canReply" x-cloak>
 
-            <!-- Quick Replies -->
-            <div class="quick-replies-bar" x-show="messageType === 'text'" x-transition>
-                <span class="qr-label">Balasan:</span>
-                <template x-for="(reply, index) in quickReplies" :key="index">
-                    <button type="button" class="qr-chip" @click="insertQuickReply(reply)" :title="reply">
-                        <span x-text="reply"></span>
-                    </button>
-                </template>
-            </div>
 
             <!-- Input Row -->
             <div class="input-row" :class="messageType === 'whisper' ? 'whisper-mode' : ''" style="position:relative;">
 
-                <!-- Slash dropdown -->
-                <div x-show="showDropdown && filteredQuickReplies.length > 0"
-                     x-ref="quickReplyDropdown"
-                     x-transition.opacity.duration.150ms
-                     @click.away="showDropdown = false"
-                     class="slash-dropdown">
-                    <div class="slash-dropdown-header">
-                        <span>Balasan Cepat</span>
-                        <span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:10px;">↑↓ Enter</span>
-                    </div>
-                    <template x-for="(reply, index) in filteredQuickReplies" :key="index">
-                        <button type="button" class="slash-dropdown-item"
-                                :class="selectedIndex === index ? 'selected' : ''"
-                                @click="insertQuickReply(reply); showDropdown = false;"
-                                @mouseenter="selectedIndex = index">
-                            <span x-text="reply"></span>
-                        </button>
-                    </template>
-                </div>
 
                 <!-- Internal Note Toggle -->
                 <button type="button" @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
@@ -436,61 +408,20 @@
                 isSending: false,
                 isTyping: false,
                 typingTimeout: null,
-                showDropdown: false,
-                selectedIndex: 0,
                 prevDate: null, // To track date for separators
                 
-                get filteredQuickReplies() {
-                    if (!this.newMessage.startsWith('/')) return [];
-                    const search = this.newMessage.slice(1).toLowerCase();
-                    return this.quickReplies.filter(qr => qr.toLowerCase().includes(search));
-                },
 
                 handleInput(e) {
-                    if (this.newMessage.startsWith('/')) {
-                        this.showDropdown = true;
-                        if (this.selectedIndex >= this.filteredQuickReplies.length) {
-                            this.selectedIndex = 0;
-                        }
-                    } else {
-                        this.showDropdown = false;
-                    }
                     this.sendTypingEvent(true);
                 },
 
                 handleKeydown(e) {
-                    if (this.showDropdown && this.filteredQuickReplies.length > 0) {
-                        if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            this.selectedIndex = (this.selectedIndex + 1) % this.filteredQuickReplies.length;
-                            this.scrollToSelected();
-                        } else if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            this.selectedIndex = (this.selectedIndex - 1 + this.filteredQuickReplies.length) % this.filteredQuickReplies.length;
-                            this.scrollToSelected();
-                        } else if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            this.insertQuickReply(this.filteredQuickReplies[this.selectedIndex]);
-                            this.showDropdown = false;
-                        } else if (e.key === 'Escape') {
-                            this.showDropdown = false;
-                        }
-                    } else if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
                     }
                 },
 
-                scrollToSelected() {
-                    this.$nextTick(() => {
-                        if (this.$refs.quickReplyDropdown) {
-                            const buttons = this.$refs.quickReplyDropdown.querySelectorAll('button');
-                            if (buttons[this.selectedIndex]) {
-                                buttons[this.selectedIndex].scrollIntoView({ block: 'nearest' });
-                            }
-                        }
-                    });
-                },
 
                 init() {
                     this.scrollToBottom();
