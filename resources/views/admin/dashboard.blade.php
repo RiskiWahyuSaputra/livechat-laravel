@@ -1138,40 +1138,43 @@
 
     // ==================== ORIGINAL DASHBOARD CHARTS ====================
     // User Growth Chart
-    const ctx = document.getElementById('userGrowthChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: {!! json_encode($stats['chart_labels']) !!},
-            datasets: [{
-                label: 'Pelanggan Baru',
-                data: {!! json_encode($stats['chart_data']) !!},
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 5,
-                pointBackgroundColor: '#667eea'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                }
+    const growthChartEl = document.getElementById('userGrowthChart');
+    if (growthChartEl) {
+        const ctx = growthChartEl.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode($stats['chart_labels']) !!},
+                datasets: [{
+                    label: 'Pelanggan Baru',
+                    data: {!! json_encode($stats['chart_data']) !!},
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#667eea'
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 </script>
 @endpush
