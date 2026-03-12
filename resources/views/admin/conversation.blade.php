@@ -75,9 +75,17 @@
             border: 1.5px dashed #fcd34d; border-radius: 14px; font-size: 13px;
         }
         .bubble-system {
-            background: #fef2f2; color: #991b1b;
-            border: 1px solid #fecaca; border-radius: 20px;
-            font-size: 12px; font-weight: 500; padding: 5px 14px;
+            background: #fffbeb; color: #92400e;
+            border: 1px solid #fde68a; border-radius: 12px;
+            font-size: 11px; font-weight: 600; padding: 10px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            max-width: 85%; line-height: 1.5;
+            text-align: center;
+        }
+        .msg-row.from-system {
+            justify-content: center;
+            padding: 15px 0;
+            width: 100%;
         }
 
         /* ── Timestamp ── */
@@ -252,7 +260,9 @@
                 <!-- System Message -->
                 <template x-if="msg.sender_type === 'system'">
                     <div class="msg-row from-system">
-                        <div class="bubble bubble-system"><span x-html="formatMessage(msg.content)"></span></div>
+                        <div class="bubble bubble-system">
+                            <span x-html="formatMessage(msg.content)"></span>
+                        </div>
                     </div>
                 </template>
 

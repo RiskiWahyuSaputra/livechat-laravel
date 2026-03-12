@@ -861,6 +861,14 @@
                                         </span>
                                     </li>
                                     <li class="nav-item">
+                                        <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
+                                            @click="statusFilter = 'mine'" style="cursor:pointer;"
+                                            title="Chat yang sedang Anda tangani">
+                                            Milik Saya
+                                            <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
+                                        </span>
+                                    </li>
+                                    <li class="nav-item">
                                         <span class="nav-link" :class="statusFilter === 'offline' ? 'active' : ''"
                                             @click="statusFilter = 'offline'" style="cursor:pointer;">
                                             Offline
@@ -876,6 +884,7 @@
                                 <template
                                     x-for="chat in filteredChats.filter(c => {
                                 if (statusFilter === 'offline') return !c.customer.is_online || c.status === 'closed';
+                                if (statusFilter === 'mine') return c.status === 'active' && c.admin_id === adminId;
                                 // For other filters, only show ONLINE users
                                 if (!c.customer.is_online && c.status !== 'closed') return false; 
                                 if (statusFilter === 'all') return c.customer.is_online;
@@ -927,12 +936,19 @@
                                     </a>
                                 </template>
 
-                                <!-- Empty state -->
-                                <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true)))).length === 0"
+                                <div x-show="filteredChats.filter(c => {
+                                    if (statusFilter === 'offline') return !c.customer.is_online || c.status === 'closed';
+                                    if (statusFilter === 'mine') return c.status === 'active' && c.admin_id === adminId;
+                                    if (!c.customer.is_online && c.status !== 'closed') return false;
+                                    if (statusFilter === 'all') return c.customer.is_online;
+                                    if (statusFilter === 'queue') return ['pending','queued'].includes(c.status) && c.customer.is_online;
+                                    if (statusFilter === 'active') return c.status === 'active' && c.customer.is_online;
+                                    return true;
+                                }).length === 0"
                                     class="chat-empty-state">
                                     <i class="fe fe-message-circle"></i>
                                     <p
-                                        x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.'))">
+                                        x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.')))">
                                     </p>
                                 </div>
                             </div>
