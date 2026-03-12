@@ -1025,13 +1025,4 @@ $(function() {
 			});
 		}
 	}
-
-// var height=document.querySelector('.slimscroll').clientHeight;
-// var heights=$(".slimScrollBar").position().top;
-// const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-// $(window).scroll(function(){
-// 	var scrollTop     = $(window).scrollTop(),
-// 	elementOffset = $('.sidebar .active').offset().top,
-// 	distance      = (elementOffset - scrollTop);
-// });
 })(jQuery);
