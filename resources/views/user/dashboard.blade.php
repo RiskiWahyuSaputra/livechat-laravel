@@ -522,6 +522,7 @@
                 lastActivity: Date.now(),
                 inactivityTimeout: 30 * 60 * 1000, 
                 checkInterval: 60 * 1000, 
+                reminderSentCount: 0,
 
                 get statusText() {
                     if (this.status === 'pending') return 'Menunggu Agen';
@@ -537,22 +538,48 @@
                     ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
                         window.addEventListener(event, () => {
                             if (this.isAuthenticated) {
+                                if (this.reminderSentCount > 0) {
+                                    this.reminderSentCount = 0;
+                                    console.log("✅ Aktivitas terdeteksi. Reset pengingat.");
+                                }
                                 this.lastActivity = Date.now();
                             }
                         }, { passive: true });
                     });
 
-                    // Interval untuk mengecek ketidakaktifan
+                    // Interval untuk mengecek ketidakaktifan (PENGINGAT USER)
                     setInterval(() => {
-                        if (this.isAuthenticated) {
+                        if (this.isAuthenticated && this.status !== 'closed') {
                             const now = Date.now();
                             const diff = now - this.lastActivity;
                             
+                            // Cek pengingat setiap 5 menit (300.000 ms)
+                            const intervalMs = 5 * 60 * 1000;
+                            const expectedReminders = Math.floor(diff / intervalMs);
+                            
+                            if (expectedReminders > this.reminderSentCount && expectedReminders < 6) {
+                                this.reminderSentCount = expectedReminders;
+                                const remainingMinutes = 30 - (expectedReminders * 5);
+                                
+                                // Tambahkan bubble chat pengingat (lokal ke user)
+                                this.messages.push({
+                                    id: 'reminder-' + Date.now(),
+                                    sender_type: 'system',
+                                    content: `💡 PENGINGAT: Sesi chat akan berakhir dalam ${remainingMinutes} menit jika tidak ada aktivitas.`,
+                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+                                
+                                this.$nextTick(() => { this.scrollToBottom(); });
+                                if (!this.isOpen) this.unreadCount++;
+                                
+                                console.log(`⚠️ User inactivity reminder triggered: ${expectedReminders}x`);
+                            }
+
                             if (diff > this.inactivityTimeout) {
                                 this.handleTimeout();
                             }
                         }
-                    }, this.checkInterval);
+                    }, 10000); // Cek setiap 10 detik agar lebih responsif
                 },
 
                 async handleTimeout() {
@@ -685,6 +712,7 @@
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
                             this.lastActivity = Date.now();
+                            this.reminderSentCount = 0;
                             const alreadyExists = this.messages.some(m => m.id === e.id);
                             if (alreadyExists) return;
 
@@ -728,6 +756,8 @@
                 async sendMessage() {
                     if (!this.newMessage.trim() || this.isSending) return;
 
+                    this.lastActivity = Date.now();
+                    this.reminderSentCount = 0;
                     const content = this.newMessage;
                     this.newMessage = ''; 
                     this.isSending = true;

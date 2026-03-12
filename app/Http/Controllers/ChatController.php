@@ -304,7 +304,10 @@ class ChatController extends Controller
             'content'         => $content ?? '',
         ]);
 
-        $conversation->update(['last_message_at' => now()]);
+        $conversation->update([
+            'last_message_at' => now(),
+            'reminder_count' => 0,
+        ]);
 
         try {
             broadcast(new MessageSent($message));
