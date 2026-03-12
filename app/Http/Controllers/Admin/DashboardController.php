@@ -307,15 +307,9 @@ class DashboardController extends Controller
         $admin        = Auth::guard('admin')->user();
         $conversation = Conversation::withTrashed()->findOrFail($request->conversation_id);
 
-        // Logic to handle re-opening closed conversations
-        if ($conversation->status === 'closed') {
-            $conversation->update([
-                'status'   => 'active',
-                'admin_id' => $admin->id,
-                'deleted_at' => null, // Restore the conversation if soft-deleted
-            ]);
-            // Broadcast status change
-            broadcast(new ConversationStatusChanged($conversation, $admin->username));
+        // Jangan izinkan kirim pesan (kecuali whisper) jika status sudah closed
+        if ($conversation->status === 'closed' && $request->message_type !== 'whisper') {
+            return response()->json(['error' => 'Sesi obrolan ini sudah ditutup.'], 403);
         }
 
         // Pastikan admin ini yang menangani conversation ini (kecuali whisper bisa semua admin)

@@ -83,17 +83,24 @@
                 </a>
             </div>
 
-            <!-- Guest Profile (Only show if logged in) -->
-            @auth
-            <div class="flex items-center gap-4 relative" x-data="{ open: false }">
+            <!-- Guest Profile (Reactive) -->
+            <div x-data="{ 
+                    isLoggedIn: {{ $isAuthenticated ? 'true' : 'false' }}, 
+                    userName: '{{ $isAuthenticated ? Auth::user()->name : '' }}',
+                    open: false 
+                 }" 
+                 @login-success.window="isLoggedIn = true; userName = $event.detail.name"
+                 x-show="isLoggedIn" 
+                 x-cloak 
+                 class="flex items-center gap-4 relative">
                 <div @click="open = !open" class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer">
                     <div class="relative">
                         <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                            <span x-text="userName.charAt(0).toUpperCase()"></span>
                         </div>
                     </div>
                     <div class="text-left hidden sm:block">
-                        <p class="text-xs font-bold text-slate-900 leading-none mb-1">{{ Auth::user()->name }}</p>
+                        <p class="text-xs font-bold text-slate-900 leading-none mb-1" x-text="userName"></p>
                         <div class="flex items-center gap-1">
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                             <p class="text-[9px] md:text-[10px] text-slate-500 font-bold leading-none uppercase tracking-tighter">Online</p>
@@ -114,18 +121,14 @@
                      x-transition:leave-end="opacity-0 scale-95"
                      class="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50">
                     
-                    <form method="POST" action="{{ route('chat.logout') }}">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
-                            Logout Sesi
-                        </button>
-                    </form>
+                    <a href="{{ route('chat.logout') }}" class="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Logout Sesi
+                    </a>
                 </div>
             </div>
-            @endauth
         </div>
     </header>
 
@@ -522,6 +525,14 @@
                 initWidget() {
                     console.log("🕒 Inactivity Timer diaktifkan. Batas waktu: 30 Menit.");
                     
+                    // Background Sync (Setiap 30 detik) jika chat terbuka
+                    setInterval(() => {
+                        if (this.isOpen && this.isAuthenticated && this.isInitialized) {
+                            console.log("🔄 Background syncing chat data...");
+                            this.fetchChatData();
+                        }
+                    }, 30000);
+
                     // Pantau aktivitas user (gerakan mouse, klik, ketik)
                     ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
                         window.addEventListener(event, () => {
@@ -589,6 +600,10 @@
                         if (response.ok && data.success) {
                             if (data.csrf_token) this.csrfToken = data.csrf_token;
                             this.isAuthenticated = true;
+                            
+                            // Dispatch event to update header profile immediately
+                            window.dispatchEvent(new CustomEvent('login-success', { detail: data.user }));
+
                             this.regForm = { name: '', contact: '', origin: '' };
                             await this.fetchChatData();
                         } else {

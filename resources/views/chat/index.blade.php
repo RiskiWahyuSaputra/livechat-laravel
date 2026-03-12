@@ -55,13 +55,10 @@
             </div>
         </div>
         
-        <form id="logout-form" method="POST" action="{{ route('chat.logout') }}" class="shrink-0">
-            @csrf
-            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-200 text-[10px] md:text-sm font-black px-3 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl transition-all hover:scale-105 active:scale-95 whitespace-nowrap">
-                <span class="hidden xs:inline">Akhiri Percakapan</span>
-                <span class="xs:hidden">Akhiri</span>
-            </button>
-        </form>
+        <a href="{{ route('chat.logout') }}" class="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-200 text-[10px] md:text-sm font-black px-3 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl transition-all hover:scale-105 active:scale-95 whitespace-nowrap decoration-transparent">
+            <span class="hidden xs:inline">Akhiri Percakapan</span>
+            <span class="xs:hidden">Akhiri</span>
+        </a>
     </header>
 
     <!-- Area Konten Utama -->
@@ -219,6 +216,27 @@
                 init() {
                     this.scrollToBottom();
                     this.listenForEvents();
+
+                    // Auto-refresh (30 detik)
+                    setInterval(() => {
+                        console.log("🔄 Syncing chat data...");
+                        this.fetchMessages();
+                    }, 30000);
+                },
+
+                async fetchMessages() {
+                    try {
+                        const response = await fetch('{{ route('chat.init') }}', {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        
+                        this.status = data.status;
+                        this.botPhase = data.bot_phase;
+                        this.messages = data.messages;
+                    } catch (e) {}
                 },
 
                 get statusText() {
