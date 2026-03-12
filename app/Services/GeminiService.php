@@ -110,6 +110,20 @@ class GeminiService
 
     private function tryModel($model, $fullInstruction, $prompt)
     {
+        // Mencoba dengan Grounding (Google Search) terlebih dahulu
+        $result = $this->executeRequest($model, $fullInstruction, $prompt, true);
+        
+        // Jika gagal atau tidak ada teks, coba lagi TANPA Grounding
+        if (!$result) {
+            Log::info("Gemini model {$model} gagal dengan Grounding, mencoba tanpa Grounding...");
+            $result = $this->executeRequest($model, $fullInstruction, $prompt, false);
+        }
+
+        return $result;
+    }
+
+    private function executeRequest($model, $fullInstruction, $prompt, $useGrounding = true)
+    {
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->apiKey;
 
         try {
@@ -120,11 +134,14 @@ class GeminiService
                 'system_instruction' => [
                     'parts' => [['text' => $fullInstruction]]
                 ],
-                'tools' => [['google_search_retrieval' => new \stdClass()]]
             ];
 
+            if ($useGrounding) {
+                $payload['tools'] = [['google_search_retrieval' => new \stdClass()]];
+            }
+
             $response = Http::withoutVerifying()
-                ->timeout(12) // Ditambah agar pencarian Google punya waktu lebih
+                ->timeout($useGrounding ? 15 : 8)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post($url, $payload);
 
@@ -141,7 +158,7 @@ class GeminiService
                     }
 
                     if (!empty(trim($fullText))) {
-                        Log::info("Gemini Berhasil menggunakan model: {$model}");
+                        Log::info("Gemini Berhasil menggunakan model: {$model} " . ($useGrounding ? "(With Search)" : "(No Search)"));
                         return trim($fullText);
                     }
                 }
