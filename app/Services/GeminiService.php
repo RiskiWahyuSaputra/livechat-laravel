@@ -78,11 +78,16 @@ class GeminiService
         $prompt = "Berikut adalah riwayat percakapan antara Pelanggan dan Admin Support PT BEST CORP. 
         TUGAS ANDA:
         1. Analisis apakah ada informasi Penting/Pertanyaan Baru yang berhasil dijawab oleh Admin dengan BAIK.
-        2. Jika ada, buatlah satu atau lebih ringkasan pengetahuan dalam format JSON array.
-        3. Setiap elemen array harus punya 'title' (singkat, max 5 kata) dan 'content' (jawaban lengkap dan profesional).
-        4. HANYA ambil informasi yang BERGUNA untuk masa depan. Abaikan basa-basi seperti 'Halo', 'Terima kasih', 'Sama-sama'.
-        5. Jika tidak ada informasi berguna, kembalikan array kosong [].
-        6. Jawab HANYA dalam format JSON array asli, tanpa markdown block.
+        2. KHUSUS: Jika Admin mengoreksi jawaban AI yang salah atau kurang lengkap sebelumnya, tandai ini sebagai KOREKSI.
+        3. Buatlah ringkasan pengetahuan dalam format JSON array.
+        4. Setiap elemen array harus punya:
+           - 'title': (singkat, max 5 kata).
+           - 'content': (jawaban lengkap dan profesional).
+           - 'is_correction': (boolean, true jika ini memperbaiki jawaban AI sebelumnya).
+           - 'old_title': (opsional, judul lama yang harus diganti jika is_correction true).
+        5. HANYA ambil informasi yang BERGUNA. Abaikan basa-basi.
+        6. Jika tidak ada informasi berguna, kembalikan [].
+        7. Jawab HANYA dalam format JSON array asli, tanpa markdown block.
 
         RIWAYAT CHAT:
         $history";
@@ -112,7 +117,8 @@ class GeminiService
                 ->timeout(5)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post($url, [
-                    'contents' => [['parts' => [['text' => "Instruksi: $fullInstruction\n\nUser: $prompt"]]]]
+                    'contents' => [['parts' => [['text' => "Instruksi: $fullInstruction\n\nUser: $prompt"]]]],
+                    'tools' => [['google_search_retrieval' => new \stdClass()]]
                 ]);
 
             if ($response->successful()) {
