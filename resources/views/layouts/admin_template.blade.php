@@ -650,6 +650,18 @@
                 title: '{{ Session::get("error") }}'
             });
         @endif
+
+        // Pengecekan cookie agent_session untuk ditampilkan di console
+        @if(request()->cookie('agent_session'))
+            console.log("%c[Agent Session] Cookie ditemukan: {{ request()->cookie('agent_session') }}", "color: #28a745; font-weight: bold;");
+            @if(auth('admin')->user()->is_superadmin)
+                console.log("%cRole: Superadmin - Sesi berlaku selama 1 minggu.", "color: #17a2b8;");
+            @else
+                console.log("%cRole: Agent - Sesi berlaku selama 30 menit.", "color: #17a2b8;");
+            @endif
+        @else
+            console.log("%c[Agent Session] Cookie tidak ditemukan atau sudah kadaluarsa.", "color: #dc3545; font-weight: bold;");
+        @endif
     </script>
 
     @stack('scripts')

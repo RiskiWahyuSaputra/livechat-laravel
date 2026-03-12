@@ -35,10 +35,16 @@ class AdminAuthController extends Controller
         if (Auth::guard('admin')->attempt($authCredentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
             
+            $admin = Auth::guard('admin')->user();
             // Set admin online
-            Auth::guard('admin')->user()->update(['status' => 'online']);
+            $admin->update(['status' => 'online']);
             
-            return redirect()->intended(route('admin.dashboard'));
+            // Tentukan durasi cookie berdasarkan role
+            // Agent: 30 menit, Superadmin: 1 minggu (10080 menit)
+            $duration = $admin->is_superadmin ? 10080 : 30;
+            
+            return redirect()->intended(route('admin.dashboard'))
+                ->withCookie(cookie('agent_session', $admin->id, $duration));
         }
 
         return back()->withErrors([
@@ -49,10 +55,17 @@ class AdminAuthController extends Controller
     // Logout admin
     public function logout(Request $request)
     {
-        Auth::guard('admin')->user()->update(['status' => 'offline']);
+        $admin = Auth::guard('admin')->user();
+        if ($admin) {
+            $admin->update(['status' => 'offline']);
+        }
+        
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('admin.login');
+        
+        // Hapus cookie saat logout
+        return redirect()->route('admin.login')
+            ->withoutCookie('agent_session');
     }
 }
