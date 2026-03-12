@@ -710,9 +710,71 @@
     </div>
 </div>
 
-    <!-- Complaint Categories (Duplicate - Removed) -->
+<!-- Customer Table Section -->
+<div class="row mt-4">
+    <div class="col-lg-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Daftar Pelanggan</h5>
+                <div class="search-input-group">
+                    <i class="fe fe-search"></i>
+                    <form method="GET" action="{{ route('admin.dashboard') }}" class="d-flex">
+                        <input type="text" name="search" class="form-control" placeholder="Cari pelanggan..." value="{{ request('search') }}">
+                        <button type="submit" class="btn btn-primary ms-2">Cari</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Contact</th>
+                                <th>Origin</th>
+                                <th>Status</th>
+                                <th>Tanggal Daftar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($customers as $customer)
+                            <tr>
+                                <td>{{ $customer->name }}</td>
+                                <td>{{ $customer->contact }}</td>
+                                <td>{{ $customer->origin ?: '-' }}</td>
+                                <td>
+                                    @if($customer->is_blocked)
+                                    <span class="badge bg-danger">Blocked</span>
+                                    @elseif($customer->current_status && $customer->current_status != 'no_session')
+                                    <span class="badge bg-{{ $customer->current_status == 'active' ? 'success' : ($customer->current_status == 'pending' ? 'warning' : 'info') }}">
+                                        {{ ucfirst($customer->current_status) }}
+                                    </span>
+                                    @elseif($customer->is_online)
+                                    <span class="badge bg-success">Online</span>
+                                    @else
+                                    <span class="badge bg-secondary">Offline</span>
+                                    @endif
+                                </td>
+                                <td>{{ $customer->created_at->format('d M Y, H:i') }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5" class="text-center">Tidak ada pelanggan</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $customers->links() }}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-
+</div>
 @endsection
 
 @push('scripts')
@@ -1021,16 +1083,16 @@
                     }
                 });
 
-                // Apply Colors Based on Data (keep original province colors with data overlay)
+                // Apply Colors Based on Data
                 const getColor = (count) => {
-                    if (count === 0 || !count) return '#f1f5f9'; // Light gray for no data
-                    if (count <= 2) return '#dbeafe';  // Very light blue
-                    if (count <= 5) return '#bfdbfe';  // Light blue
-                    if (count <= 10) return '#93c5fd'; // Blue
-                    if (count <= 20) return '#60a5fa'; // Medium blue
-                    if (count <= 50) return '#3b82f6'; // Strong blue
-                    if (count <= 100) return '#2563eb'; // Stronger blue
-                    return '#1d4ed8'; // Darkest blue
+                    if (count === 0 || !count) return '#f1f5f9';
+                    if (count <= 2) return '#dbeafe';
+                    if (count <= 5) return '#bfdbfe';
+                    if (count <= 10) return '#93c5fd';
+                    if (count <= 20) return '#60a5fa';
+                    if (count <= 50) return '#3b82f6';
+                    if (count <= 100) return '#2563eb';
+                    return '#1d4ed8';
                 };
 
                 // Store customers by province for click functionality
@@ -1086,7 +1148,6 @@
                             </div>
                         `;
                     } else {
-                        // Group customers by origin/city
                         const customersByOrigin = {};
                         customers.forEach(customer => {
                             const origin = customer.origin || 'Tidak diketahui';
@@ -1141,7 +1202,6 @@
 
                     path.addEventListener('mouseleave', () => tooltip.style.display = 'none');
                     
-                    // Click to show province detail
                     path.addEventListener('click', () => {
                         const provinceId = path.getAttribute('id');
                         const title = path.getAttribute('title');
@@ -1159,5 +1219,40 @@
             }
         });
     })();
+
+    // ==================== ORIGINAL DASHBOARD CHARTS ====================
+    // User Growth Chart logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const growthChartEl = document.getElementById('userGrowthChart');
+        if (growthChartEl) {
+            const ctx = growthChartEl.getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: {!! json_encode($stats['chart_labels']) !!},
+                    datasets: [{
+                        label: 'Pelanggan Baru',
+                        data: {!! json_encode($stats['chart_data']) !!},
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+    });
 </script>
 @endpush
