@@ -83,19 +83,12 @@
                 </a>
             </div>
 
-<<<<<<< HEAD
             <!-- Profile Section (Reactive) -->
             <div x-show="isAuthenticated" 
                  x-cloak 
                  @login-success.window="isAuthenticated = true; user.name = $event.detail.name; user.initial = $event.detail.name.charAt(0).toUpperCase()"
                  class="flex items-center gap-4 relative">
                 <div @click="open = !open" class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer">
-=======
-            <!-- Guest Profile (Reactive with Alpine) -->
-            <div x-show="isAuthenticated" x-cloak class="flex items-center gap-4">
-                <div @click="open = !open" 
-                     class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer relative">
->>>>>>> 3e28b9c (Nesting logout dropdown for absolute bottom alignment and increased offset)
                     <div class="relative">
                         <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
                             <span x-text="user.initial"></span>
@@ -111,27 +104,27 @@
                     <svg class="w-4 h-4 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
+                </div>
 
-                    <!-- Dropdown Menu -->
-                    <div x-show="open" @click.away="open = false" @click.stop x-cloak
-                         x-transition:enter="transition ease-out duration-100"
-                         x-transition:enter-start="opacity-0 scale-95"
-                         x-transition:enter-end="opacity-100 scale-100"
-                         x-transition:leave="transition ease-in duration-75"
-                         x-transition:leave-start="opacity-100 scale-100"
-                         x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute right-0 top-full mt-4 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 origin-top-right">
-                        
-                        <form method="POST" action="{{ route('chat.logout') }}">
-                            @csrf
-                            <button type="submit" class="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                                </svg>
-                                Logout Sesi
-                            </button>
-                        </form>
-                    </div>
+                <!-- Dropdown Menu -->
+                <div x-show="open" @click.away="open = false" x-cloak
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="absolute right-0 top-[calc(100%+12px)] w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 origin-top-right">
+                    
+                    <form method="POST" action="{{ route('chat.logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Logout Sesi
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -534,6 +527,7 @@
                 lastActivity: Date.now(),
                 inactivityTimeout: 30 * 60 * 1000, 
                 checkInterval: 60 * 1000, 
+                reminderSentCount: 0,
 
                 get statusText() {
                     if (this.status === 'pending') return 'Menunggu Agen';
@@ -557,22 +551,48 @@
                     ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
                         window.addEventListener(event, () => {
                             if (this.isAuthenticated) {
+                                if (this.reminderSentCount > 0) {
+                                    this.reminderSentCount = 0;
+                                    console.log("✅ Aktivitas terdeteksi. Reset pengingat.");
+                                }
                                 this.lastActivity = Date.now();
                             }
                         }, { passive: true });
                     });
 
-                    // Interval untuk mengecek ketidakaktifan
+                    // Interval untuk mengecek ketidakaktifan (PENGINGAT USER)
                     setInterval(() => {
-                        if (this.isAuthenticated) {
+                        if (this.isAuthenticated && this.status !== 'closed') {
                             const now = Date.now();
                             const diff = now - this.lastActivity;
                             
+                            // Cek pengingat setiap 5 menit (300.000 ms)
+                            const intervalMs = 5 * 60 * 1000;
+                            const expectedReminders = Math.floor(diff / intervalMs);
+                            
+                            if (expectedReminders > this.reminderSentCount && expectedReminders < 6) {
+                                this.reminderSentCount = expectedReminders;
+                                const remainingMinutes = 30 - (expectedReminders * 5);
+                                
+                                // Tambahkan bubble chat pengingat (lokal ke user)
+                                this.messages.push({
+                                    id: 'reminder-' + Date.now(),
+                                    sender_type: 'system',
+                                    content: `💡 PENGINGAT: Sesi chat akan berakhir dalam ${remainingMinutes} menit jika tidak ada aktivitas.`,
+                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+                                
+                                this.$nextTick(() => { this.scrollToBottom(); });
+                                if (!this.isOpen) this.unreadCount++;
+                                
+                                console.log(`⚠️ User inactivity reminder triggered: ${expectedReminders}x`);
+                            }
+
                             if (diff > this.inactivityTimeout) {
                                 this.handleTimeout();
                             }
                         }
-                    }, this.checkInterval);
+                    }, 10000); // Cek setiap 10 detik agar lebih responsif
                 },
 
                 async handleTimeout() {
@@ -715,6 +735,7 @@
                             window.Echo.private(`conversation.${this.conversationId}`)
                                 .listen('.message.sent', (e) => {
                                     this.lastActivity = Date.now();
+                                    this.reminderSentCount = 0;
                                     const alreadyExists = this.messages.some(m => m.id === e.id);
                                     if (alreadyExists) return;
 
@@ -766,6 +787,8 @@
                 async sendMessage() {
                     if (!this.newMessage.trim() || this.isSending) return;
 
+                    this.lastActivity = Date.now();
+                    this.reminderSentCount = 0;
                     const content = this.newMessage;
                     this.newMessage = ''; 
                     this.isSending = true;
