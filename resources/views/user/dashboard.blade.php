@@ -321,11 +321,14 @@
                 <template x-for="(msg, index) in messages" :key="msg.id || msg.temp_id">
                     <div class="flex flex-col w-full" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                         
-                        <!-- System Message -->
+                        <!-- System Message / Reminder -->
                         <template x-if="msg.sender_type === 'system'">
-                            <div class="w-full flex justify-center my-2">
-                                <div class="bg-red-50 text-red-800 text-[10px] px-3 py-1.5 rounded-lg border border-red-100 text-center max-w-[85%] shadow-sm">
-                                    <span class="block font-medium" x-text="msg.content"></span>
+                            <div class="w-full flex flex-col items-center my-4 px-2" data-aos="fade-up">
+                                <div class="bg-amber-50/80 backdrop-blur-sm border border-amber-200/60 rounded-2xl px-4 py-2 shadow-sm max-w-[95%] text-center transition-all hover:bg-amber-50">
+                                    <div class="flex flex-col">
+                                        <span class="text-[9px] font-black text-amber-700 uppercase tracking-[0.15em] mb-0.5">Pemberitahuan Sistem</span>
+                                        <span class="text-[11px] text-amber-800/90 font-bold leading-normal" x-text="msg.content"></span>
+                                    </div>
                                 </div>
                             </div>
                         </template>
