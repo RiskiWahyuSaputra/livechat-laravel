@@ -410,6 +410,10 @@
                 typingTimeout: null,
                 prevDate: null, // To track date for separators
                 
+                // Inactivity Tracking (30 Minutes)
+                lastActivity: Date.now(),
+                reminderSentCount: 0,
+                inactivityTimeout: 30 * 60 * 1000,
 
                 handleInput(e) {
                     this.sendTypingEvent(true);
@@ -426,6 +430,41 @@
                 init() {
                     this.scrollToBottom();
                     this.listenForEvents();
+
+                    // Inactivity Timer
+                    setInterval(() => {
+                        if (this.status !== 'closed') {
+                            const now = Date.now();
+                            const diff = now - this.lastActivity;
+                            const intervalMs = 5 * 60 * 1000; // 5 Minutes
+                            const expectedReminders = Math.floor(diff / intervalMs);
+
+                            if (expectedReminders > this.reminderSentCount && expectedReminders < 6) {
+                                this.reminderSentCount = expectedReminders;
+                                const remaining = 30 - (expectedReminders * 5);
+
+                                this.messages.push({
+                                    id: 'admin-reminder-' + Date.now(),
+                                    sender_type: 'system',
+                                    message_type: 'text',
+                                    content: `💡 PENGINGAT (Admin): Sesi chat ini akan berakhir dalam ${remaining} menit jika tidak ada aktivitas.`,
+                                    created_at: new Date().toISOString()
+                                });
+                                this.scrollToBottom();
+                            }
+                        }
+                    }, 30000); // Check every 30s
+
+                    // Global activity listeners for Admin
+                    ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+                        window.addEventListener(event, () => {
+                            if (this.reminderSentCount > 0) {
+                                this.reminderSentCount = 0;
+                            }
+                            this.lastActivity = Date.now();
+                        }, { passive: true });
+                    });
+
                     // Update relative timestamps every minute
                     setInterval(() => {
                         this.$nextTick(() => { 
@@ -524,9 +563,10 @@
                             clearInterval(checkEcho);
 
                             window.Echo.private(`conversation.${this.conversationId}`)
-                                .listen('.message.sent', (e) => {
-                                    const alreadyExists = this.messages.some(m => m.id === e.id);
-                                    if (alreadyExists) return;
+                            .listen('.message.sent', (e) => {
+                                this.lastActivity = Date.now();
+                                this.reminderSentCount = 0;
+                                const alreadyExists = this.messages.some(m => m.id === e.id);                                    if (alreadyExists) return;
 
                                     if (e.sender_id == this.adminId && e.sender_type === 'admin') return;
 
@@ -565,6 +605,8 @@
                 async sendMessage() {
                     if (!this.newMessage.trim() || this.isSending) return;
 
+                    this.lastActivity = Date.now();
+                    this.reminderSentCount = 0;
                     const content = this.newMessage;
                     const type = this.messageType;
                     this.newMessage = ''; 

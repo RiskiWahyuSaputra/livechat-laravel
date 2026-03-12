@@ -77,7 +77,7 @@ class GeminiService
         if (empty($this->apiKey)) return null;
 
         $prompt = "Berikut adalah riwayat percakapan antara Pelanggan dan Admin Support PT BEST CORP. 
-        TUGAS ANDA:
+        TUGAS ANDA: 
         1. Analisis apakah ada informasi Penting/Pertanyaan Baru yang berhasil dijawab oleh Admin dengan BAIK.
         2. KHUSUS: Jika Admin mengoreksi jawaban AI yang salah atau kurang lengkap sebelumnya, tandai ini sebagai KOREKSI.
         3. Buatlah ringkasan pengetahuan dalam format JSON array.
