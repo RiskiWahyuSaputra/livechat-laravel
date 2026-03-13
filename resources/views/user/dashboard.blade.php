@@ -14,6 +14,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Fontawesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
         html { scroll-behavior: smooth; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -705,11 +708,27 @@
 
                         setTimeout(() => {
                             // Show the message from database
+                            let content = menu.message_response || "Memproses permintaan Anda...";
+                            
+                            // If it's a link, append the button HTML locally
+                            if (menu.action_type === 'link' && menu.action_value) {
+                                const btnLabel = menu.label.toLowerCase().includes('youtube') ? 'Buka YouTube' : 'Lihat Detail';
+                                const iconClass = menu.label.toLowerCase().includes('youtube') ? 'fab fa-youtube' : 'fas fa-external-link-alt';
+                                
+                                content += `<div class="mt-2 flex">
+                                    <a href="${menu.action_value}" target="_blank" 
+                                       class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-bold no-underline shadow-md hover:bg-red-700 transition-all active:scale-95" 
+                                       style="font-size: 11px; text-decoration: none !important; color: white !important;">
+                                        <i class="${iconClass}"></i> ${btnLabel}
+                                    </a>
+                                </div>`;
+                            }
+
                             this.messages.push({
                                 id: 'local-bot-' + Date.now(),
                                 sender_id: 0,
                                 sender_type: 'admin',
-                                content: menu.message_response || "Memproses permintaan Anda...",
+                                content: content,
                                 created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                             });
 

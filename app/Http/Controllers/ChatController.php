@@ -219,6 +219,7 @@ class ChatController extends Controller
                     'id' => $m->id,
                     'label' => $m->label,
                     'action_type' => $m->action_type,
+                    'action_value' => $m->action_value,
                     'message_response' => $m->message_response
                 ]),
             ];
@@ -482,12 +483,17 @@ class ChatController extends Controller
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = \App\Models\BotMenu::where('label', $userMessage)->whereNull('parent_id')->first();
             if ($menu) {
-                if ($menu->message_response) $newBotMessages[] = Message::create([
+                $content = $menu->message_response ?? '';
+                if ($menu->action_type === 'link' && $menu->action_value) {
+                    $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Buka Link</a></div>';
+                }
+
+                if ($content) $newBotMessages[] = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => $menu->message_response . ($menu->action_type === 'link' ? "\n\nPilih layanan kami lainnya:" : ""),
+                    'content'         => $content . ($menu->action_type === 'link' ? "\n\nPilih layanan kami lainnya:" : ""),
                 ]);
 
                 if ($menu->action_type === 'submenu') {
@@ -613,7 +619,13 @@ class ChatController extends Controller
         // Bot Response
         $botReplies = [];
         if ($menu) {
-            if ($menu->message_response) $botReplies[] = $menu->message_response;
+            $content = $menu->message_response ?? '';
+            
+            if ($menu->action_type === 'link' && $menu->action_value) {
+                $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Buka Link</a></div>';
+            }
+            
+            if ($content) $botReplies[] = $content;
             
             if ($menu->action_type === 'submenu') {
                 // No need to send text list, Alpine.js will render buttons
