@@ -109,6 +109,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // --- Menu 9: Settings ---
             Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
             Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
+
+            // --- Flow Builder ---
+            Route::get('/flows', [App\Http\Controllers\Admin\FlowController::class, 'index'])->name('flows.index');
+            Route::get('/flows/create', [App\Http\Controllers\Admin\FlowController::class, 'create'])->name('flows.create');
+            Route::post('/flows', [App\Http\Controllers\Admin\FlowController::class, 'store'])->name('flows.store');
+            Route::get('/flows/{flow}', [App\Http\Controllers\Admin\FlowController::class, 'show'])->name('flows.show');
+            Route::put('/flows/{flow}', [App\Http\Controllers\Admin\FlowController::class, 'update'])->name('flows.update');
+            Route::delete('/flows/{flow}', [App\Http\Controllers\Admin\FlowController::class, 'destroy'])->name('flows.destroy');
+            Route::post('/flows/{flow}/publish', [App\Http\Controllers\Admin\FlowController::class, 'publish'])->name('flows.publish');
+
+            // --- Holiday Dates ---
+            Route::get('/holidays', [App\Http\Controllers\Admin\FlowController::class, 'holidays'])->name('holidays.index');
+            Route::post('/holidays', [App\Http\Controllers\Admin\FlowController::class, 'storeHoliday'])->name('holidays.store');
+            Route::delete('/holidays/{holiday}', [App\Http\Controllers\Admin\FlowController::class, 'destroyHoliday'])->name('holidays.destroy');
         }
         );
     });

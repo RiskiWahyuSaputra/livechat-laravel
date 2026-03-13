@@ -17,12 +17,16 @@ class Conversation extends Model
         'queue_position',
         'problem_category',
         'last_message_at',
+        'current_flow_id',
+        'current_node_id',
+        'flow_context',
     ];
 
     protected function casts(): array
     {
         return [
             'last_message_at' => 'datetime',
+            'flow_context'    => 'array',
         ];
     }
 
@@ -56,5 +60,15 @@ class Conversation extends Model
     public function isOpen(): bool
     {
         return in_array($this->status, ['pending', 'active', 'queued']);
+    }
+
+    public function currentFlow()
+    {
+        return $this->belongsTo(ConversationFlow::class, 'current_flow_id');
+    }
+
+    public function currentNode()
+    {
+        return $this->belongsTo(FlowNode::class, 'current_node_id');
     }
 }

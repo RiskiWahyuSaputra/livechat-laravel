@@ -17,17 +17,20 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Services\WhatsappService;
 use App\Services\GeminiService;
+use App\Services\FlowEngine;
 use App\Jobs\ProcessUserMessage;
 
 class ChatController extends Controller
 {
     protected $whatsappService;
     protected $geminiService;
+    protected $flowEngine;
 
-    public function __construct(WhatsappService $whatsappService, GeminiService $geminiService)
+    public function __construct(WhatsappService $whatsappService, GeminiService $geminiService, FlowEngine $flowEngine)
     {
         $this->whatsappService = $whatsappService;
         $this->geminiService = $geminiService;
+        $this->flowEngine = $flowEngine;
     }
 
     /**
@@ -318,7 +321,9 @@ class ChatController extends Controller
 
         // Tangani Bot Response dan kumpulkan untuk dikirim di JSON
         $botReplies = [];
-        if ($conversation->bot_phase && $conversation->bot_phase !== 'off') {
+        if ($conversation->bot_phase === 'flow') {
+            $botReplies = $this->handleFlowEngineResponse($conversation, $message->content);
+        } elseif ($conversation->bot_phase && $conversation->bot_phase !== 'off') {
             $botReplies = $this->handleBotResponse($conversation, $message->content);
         }
 
@@ -354,6 +359,25 @@ class ChatController extends Controller
         } catch (\Exception $e) {}
 
         return response()->json(['success' => true]);
+    }
+
+    private function handleFlowEngineResponse($conversation, $userMessage)
+    {
+        $texts = $this->flowEngine->handle($conversation, $userMessage);
+
+        $botMessages = [];
+        foreach ($texts as $text) {
+            $msg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => $text,
+            ]);
+            $botMessages[] = $msg;
+        }
+
+        return $this->formatBotReplies($botMessages, $conversation);
     }
 
     private function handleBotResponse($conversation, $userMessage)
@@ -487,10 +511,12 @@ class ChatController extends Controller
             $queuePosition = Conversation::where('status', 'queued')->count() + 1;
         }
 
+        $useFlowEngine = config('chat.use_flow_engine', true);
+
         $conversation = Conversation::create([
-            'user_id' => $user->id,
-            'status' => $status,
-            'bot_phase' => 'awaiting_category',
+            'user_id'        => $user->id,
+            'status'         => $status,
+            'bot_phase'      => $useFlowEngine ? 'flow' : 'awaiting_category',
             'queue_position' => $queuePosition,
             'last_message_at'=> now(),
         ]);
@@ -503,21 +529,37 @@ class ChatController extends Controller
             'content'         => "Halo! Saya {$user->name} dari {$user->origin}, ingin bantuan tim Support.",
         ]);
 
-        $botCategories = config('chat.complaint_categories');
-        $categoryButtons = "";
-        foreach ($botCategories as $cat) { $categoryButtons .= "- {$cat}\n"; }
-        
-        $botMsg = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id'       => 0,
-            'sender_type'     => 'admin',
-            'message_type'    => 'text',
-            'content'         => "👋 Selamat datang di BEST CORP. Pilih kategori kendala Anda:\n\n" . $categoryButtons,
-        ]);
+        if ($useFlowEngine) {
+            // Start flow engine – renders initial greeting + menu
+            $texts = $this->flowEngine->startFlow($conversation, 'choose_customer_service');
+            foreach ($texts as $text) {
+                $botMsg = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => $text,
+                ]);
+                try { broadcast(new MessageSent($botMsg)); } catch (\Exception $e) {}
+            }
+        } else {
+            // Legacy category-selection bot
+            $botCategories = config('chat.complaint_categories');
+            $categoryButtons = "";
+            foreach ($botCategories as $cat) { $categoryButtons .= "- {$cat}\n"; }
+
+            $botMsg = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "👋 Selamat datang di BEST CORP. Pilih kategori kendala Anda:\n\n" . $categoryButtons,
+            ]);
+            try { broadcast(new MessageSent($botMsg)); } catch (\Exception $e) {}
+        }
 
         try {
             broadcast(new MessageSent($intro))->toOthers();
-            broadcast(new MessageSent($botMsg));
             broadcast(new ConversationStatusChanged($conversation, 'system'));
         } catch (\Exception $e) {}
 
