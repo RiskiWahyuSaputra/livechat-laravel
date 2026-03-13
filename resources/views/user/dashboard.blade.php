@@ -945,5 +945,26 @@
             }));
         });
     </script>
+
+    <script>
+        // Pengecekan cookie session untuk ditampilkan di console
+        @php
+            $sessionCookieName = config('session.cookie');
+            $sessionCookie = request()->cookie($sessionCookieName);
+            $guestCookie = request()->cookie('guest_chat_token');
+        @endphp
+
+        @if($sessionCookie || $guestCookie)
+            @if(Auth::check() && $sessionCookie)
+                console.log("%c[User Session] Cookie ditemukan: {{ $sessionCookie }}", "color: #28a745; font-weight: bold;");
+                console.log("%cStatus: Authenticated User - Sesi berlaku selama {{ config('session.lifetime') }} menit.", "color: #17a2b8;");
+            @elseif($guestCookie)
+                console.log("%c[Guest Session] Cookie ditemukan: {{ $guestCookie }}", "color: #28a745; font-weight: bold;");
+                console.log("%cStatus: Guest User - Sesi berlaku selama {{ config('session.lifetime') }} menit.", "color: #17a2b8;");
+            @endif
+        @else
+            console.log("%c[User Session] Cookie tidak ditemukan atau sudah kadaluarsa.", "color: #dc3545; font-weight: bold;");
+        @endif
+    </script>
 </body>
 </html>
