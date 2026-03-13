@@ -527,6 +527,10 @@
                         </li>
                         @endif
 
+                        <li class="{{ request()->routeIs('admin.flows.*', 'admin.holidays.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.flows.index') }}"><i class="fe fe-git-branch"></i> <span>Flow Chatbot</span></a>
+                        </li>
+
                         <li class="menu-title">
                             <h6>Account</h6>
                         </li>
