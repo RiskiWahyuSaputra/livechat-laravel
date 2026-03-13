@@ -570,6 +570,9 @@
                                 <a href="{{ route('admin.quick-replies.index') }}"><i class="fe fe-zap"></i> <span>Balasan
                                         Cepat</span></a>
                             </li>
+                            <li class="{{ request()->routeIs('admin.bot-menus.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.bot-menus.index') }}"><i class="fe fe-list"></i> <span>Alur Chat</span></a>
+                            </li>
                         @endif
 
                         <li class="menu-title">

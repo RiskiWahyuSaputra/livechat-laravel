@@ -84,7 +84,7 @@
             </div>
 
             <!-- Guest Profile (Reactive with Alpine) -->
-            <div x-show="isAuthenticated" x-cloak class="flex items-center gap-4">
+            <div x-show="isAuthenticated && userId" x-cloak class="flex items-center gap-4">
                 <div @click="open = !open" 
                      class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer relative">
                     <div class="relative">
@@ -375,14 +375,55 @@
                                 </div>
                                 <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
 
-                                <!-- Bot Categories Inline (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah awaiting_category) -->
-                                <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_category' && index === messages.length - 1">
+                                <!-- Bot Categories Inline -->
+                                <template x-if="msg.sender_id == 0 && index === messages.length - 1">
                                     <div class="mt-2 flex flex-wrap gap-1.5 w-full">
-                                        <template x-for="cat in botCategories" :key="cat">
-                                            <button @click="selectCategory(cat)" 
-                                                    class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
-                                                <span x-text="cat"></span>
-                                            </button>
+                                        <!-- Phase: awaiting_category -->
+                                        <template x-if="botPhase === 'awaiting_category'">
+                                            <template x-for="cat in botCategories" :key="cat">
+                                                <button @click="selectCategory(cat)" 
+                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
+                                                    <span x-text="cat"></span>
+                                                </button>
+                                            </template>
+                                        </template>
+
+                                        <!-- Phase: awaiting_cs_type -->
+                                        <template x-if="botPhase === 'awaiting_cs_type'">
+                                            <div class="flex flex-wrap gap-1.5 w-full">
+                                                <button @click="newMessage = 'Customer service'; sendMessage()" 
+                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center">
+                                                    Customer service
+                                                </button>
+                                                <button @click="newMessage = 'CS Voucher'; sendMessage()" 
+                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center">
+                                                    CS Voucher
+                                                </button>
+                                            </div>
+                                        </template>
+
+                                        <!-- Phase: awaiting_submenu (Dynamic) -->
+                                        <template x-if="botPhase === 'awaiting_submenu'">
+                                            <div class="flex flex-wrap gap-1.5 w-full">
+                                                <template x-for="child in botSubmenus" :key="child.id">
+                                                    <button @click="newMessage = child.label; sendMessage()" 
+                                                            class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
+                                                        <span x-text="child.label"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- Phase: awaiting_main_menu -->
+                                        <template x-if="botPhase === 'awaiting_main_menu'">
+                                            <div class="flex flex-wrap gap-1.5 w-full">
+                                                <template x-for="item in chat_main_menu" :key="item.id">
+                                                    <button @click="newMessage = item.label; sendMessage()" 
+                                                            class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
+                                                        <span x-text="item.label"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
                                         </template>
                                     </div>
                                 </template>
@@ -394,37 +435,66 @@
                 <div id="widget-scroll-anchor" class="h-1"></div>
             </div>
 
-            <!-- Registration Form (Show if NOT authenticated) -->
-            <div x-show="!isAuthenticated" class="flex-1 overflow-y-auto p-6 bg-slate-50 flex flex-col justify-center">
-                <div class="text-center mb-6">
-                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <!-- Registration & Greeting (Show if NOT authenticated) -->
+            <div x-show="!isAuthenticated" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col">
+                <!-- Step 1: Greeting & Buttons -->
+                <div x-show="!showRegForm" class="flex-1 flex flex-col justify-center">
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-700 leading-relaxed" x-text="chat_greeting"></p>
+                            </div>
+                        </div>
                     </div>
-                    <h4 class="font-bold text-slate-900">Mulai Percakapan</h4>
-                    <p class="text-xs text-slate-500 mt-1">Silakan isi data diri Anda untuk terhubung dengan tim Support kami.</p>
+
+                    <div class="grid grid-cols-1 gap-2">
+                        <template x-for="item in chat_main_menu" :key="item.id">
+                            <button @click="handleMenuClick(item.id)" 
+                                    class="w-full text-left px-4 py-3 bg-white hover:bg-red-50 text-slate-700 hover:text-red-600 border border-slate-200 hover:border-red-300 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center justify-between group">
+                                <span x-text="item.label"></span>
+                                <svg class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+                        </template>
+                    </div>
                 </div>
 
-                <form @submit.prevent="submitRegistration" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
-                        <input type="text" x-model="regForm.name" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Masukkan nama Anda">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email / No. HP <span class="text-red-500">*</span></label>
-                        <input type="text" x-model="regForm.contact" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Email atau nomor telepon">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Asal / Instansi <span class="text-red-500">*</span></label>
-                        <input type="text" x-model="regForm.origin" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Nama perusahaan atau asal Anda">
-                    </div>
-
-                    <button type="submit" :disabled="isLoading" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex justify-center items-center gap-2">
-                        <span x-show="!isLoading">Mulai Chat</span>
-                        <div x-show="isLoading" class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+                <!-- Step 2: Data Entry -->
+                <div x-show="showRegForm" x-cloak class="flex-1 flex flex-col justify-center">
+                    <button @click="showRegForm = false" class="inline-flex items-center text-xs text-slate-500 hover:text-red-600 mb-4 transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        Kembali ke Menu
                     </button>
                     
-                    <div x-show="regError" x-text="regError" class="text-xs text-red-500 text-center font-medium"></div>
-                </form>
+                    <div class="text-center mb-6">
+                        <h4 class="font-bold text-slate-900">Lengkapi Data Diri</h4>
+                        <p class="text-xs text-slate-500 mt-1">Satu langkah lagi untuk terhubung dengan kami.</p>
+                    </div>
+
+                    <form @submit.prevent="submitRegistration" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="regForm.name" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Masukkan nama Anda">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">No. Handphone <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="regForm.contact" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Contoh: 08123456789">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Asal / Instansi <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="regForm.origin" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Nama perusahaan atau asal Anda">
+                        </div>
+
+                        <button type="submit" :disabled="isLoading" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex justify-center items-center gap-2">
+                            <span x-show="!isLoading">Mulai Chat</span>
+                            <div x-show="isLoading" class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+                        </button>
+                        
+                        <div x-show="regError" x-text="regError" class="text-xs text-red-500 text-center font-medium mt-2"></div>
+                    </form>
+                </div>
             </div>
 
             <!-- Typing Indicator & Footer -->
@@ -443,7 +513,6 @@
                 </div>
 
                 <form @submit.prevent="sendMessage" 
-                      method="POST" action="{{ route('chat.send') }}"
                       x-show="status !== 'closed'" class="border-t border-slate-200 p-2.5 bg-white flex items-end gap-2 relative">
                     <button type="button" 
                             @click="$refs.fileInput.click()"
@@ -504,11 +573,20 @@
                     origin: ''
                 },
                 regError: '',
+                selectedOption: null,
+                showRegForm: false,
+                chat_greeting: 'anda berapa di layanan whatsapp BRILLIAN.BIS kami terus melayani',
+                chat_main_menu: [
+                    {id: 'youtube', label: 'Youtube BRILLIAN.BIZ'},
+                    {id: 'hubungi_cs', label: 'Hubungi CS'},
+                    {id: 'jadwal_seminar', label: 'Jadwal seminar'}
+                ],
 
                 conversationId: null,
                 userId: null,
                 status: 'pending',
                 botPhase: 'off',
+                botSubmenus: [],
                 messages: [],
                 newMessage: '',
                 isSending: false,
@@ -596,9 +674,56 @@
                     this.isOpen = !this.isOpen;
                     if (this.isOpen) {
                         this.unreadCount = 0;
-                        if (!this.isAuthenticated) return;
                         if (!this.isInitialized) await this.fetchChatData();
                         else this.scrollToBottom();
+                    }
+                },
+
+                async handleMenuClick(id) {
+                    this.selectedOption = id;
+                    const menu = this.chat_main_menu.find(m => m.id === id);
+                    
+                    if (menu && (menu.action_type === 'submenu' || menu.action_type === 'connect_cs')) {
+                        // Hubungi CS / Submenu: Must show registration form
+                        // If we are currently in "Local Mode" (no conversationId), reset auth state to show form
+                        if (!this.conversationId) {
+                            this.isAuthenticated = false;
+                            this.messages = []; // Clear local messages for a fresh start
+                        }
+                        this.showRegForm = true;
+                    } else if (menu && menu.action_type === 'link') {
+                        // LOCAL MODE for simple Links: No database records
+                        this.isAuthenticated = true; 
+                        this.isInitialized = true;
+                        
+                        this.messages.push({
+                            id: 'local-user-' + Date.now(),
+                            sender_type: 'user',
+                            content: "Saya ingin melihat: " + menu.label,
+                            created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        });
+
+                        setTimeout(() => {
+                            // Show the message from database
+                            this.messages.push({
+                                id: 'local-bot-' + Date.now(),
+                                sender_id: 0,
+                                sender_type: 'admin',
+                                content: menu.message_response || "Memproses permintaan Anda...",
+                                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
+
+                            // Show main menu buttons again
+                            this.messages.push({
+                                id: 'local-bot-menu-' + Date.now(),
+                                sender_id: 0,
+                                sender_type: 'admin',
+                                content: "Pilih layanan kami lainnya:",
+                                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
+                            this.botPhase = 'awaiting_main_menu';
+                            this.scrollToBottom();
+                        }, 600);
                     }
                 },
 
@@ -611,15 +736,20 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-CSRF-TOKEN': this.csrfToken,
                                 'Accept': 'application/json'
                             },
-                            body: JSON.stringify(this.regForm)
+                            body: JSON.stringify({
+                                ...this.regForm,
+                                selected_option: this.selectedOption
+                            })
                         });
 
-                        const contentType = response.headers.get("content-type");
-                        if (!contentType || !contentType.includes("application/json")) {
-                            throw new Error("Server mengalami masalah internal (500).");
+                        if (response.status === 419) {
+                            // CSRF token mismatch, let's refresh token and retry once
+                            console.warn("CSRF mismatch, refreshing token...");
+                            await this.fetchChatData();
+                            return this.submitRegistration();
                         }
 
                         const data = await response.json();
@@ -633,6 +763,9 @@
                                 this.user.name = data.user.name;
                                 this.user.initial = data.user.name.charAt(0).toUpperCase();
                             }
+
+                            if (data.bot_phase) this.botPhase = data.bot_phase;
+                            if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                             
                             this.regForm = { name: '', contact: '', origin: '' };
                             await this.fetchChatData();
@@ -655,39 +788,44 @@
                             headers: { 'Accept': 'application/json' }
                         });
                         
-                        if (response.status === 401) {
-                            this.isAuthenticated = false;
-                            this.isInitialized = false;
-                            return;
-                        }
-
                         const data = await response.json();
-                        if (!response.ok) throw new Error(data.error || 'Failed to init');
-
                         if (data.csrf_token) this.csrfToken = data.csrf_token;
-                        this.conversationId = data.conversation.id;
-                        this.userId = data.user_id;
-                        this.status = data.status;
-                        this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
 
-                        // Update User Data jika ada dalam response
-                        if (data.user) {
-                            this.user.name = data.user.name;
-                            this.user.initial = data.user.name.charAt(0).toUpperCase();
+                        // Update Settings (Greeting & Menu)
+                        if (data.chat_greeting) this.chat_greeting = data.chat_greeting;
+                        if (data.chat_main_menu) this.chat_main_menu = data.chat_main_menu;
+
+                        // Jika user sudah login/punya session
+                        if (data.conversation) {
+                            this.conversationId = data.conversation.id;
+                            this.userId = data.user_id;
+                            this.status = data.status;
+                            this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+                            if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
+                            this.isAuthenticated = true;
+
+                            // Update User Data
+                            if (data.user) {
+                                this.user.name = data.user.name;
+                                this.user.initial = data.user.name.charAt(0).toUpperCase();
+                            }
+                            
+                            this.messages = data.messages.map(m => ({
+                                id: m.id,
+                                sender_id: m.sender_id,
+                                sender_type: m.sender_type,
+                                message_type: m.message_type,
+                                content: m.content,
+                                created_at: m.created_at
+                            }));
+
+                            this.listenForEvents();
+                        } else {
+                            // User belum registrasi, biarkan tetap di mode sapaan
+                            this.isAuthenticated = false;
                         }
-                        
-                        this.messages = data.messages.map(m => ({
-                            id: m.id,
-                            sender_id: m.sender_id,
-                            sender_type: m.sender_type,
-                            message_type: m.message_type,
-                            content: m.content,
-                            created_at: m.created_at
-                        }));
 
                         this.isInitialized = true;
-                        this.listenForEvents();
-                        
                         this.$nextTick(() => { this.scrollToBottom(); });
                     } catch (e) {
                         console.error('Failed to init chat', e);
@@ -756,10 +894,46 @@
                 async sendMessage() {
                     if (!this.newMessage.trim() || this.isSending) return;
 
-                    this.lastActivity = Date.now();
-                    this.reminderSentCount = 0;
                     const content = this.newMessage;
                     this.newMessage = ''; 
+
+                    // LOCAL MODE HANDLING: If no conversationId, don't hit the server
+                    if (!this.conversationId) {
+                        this.messages.push({
+                            id: 'local-msg-' + Date.now(),
+                            sender_type: 'user',
+                            content: content,
+                            created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        });
+
+                        // Dynamic Lookup: Match message content with menu labels
+                        const matchedMenu = this.chat_main_menu.find(m => 
+                            content.toLowerCase().includes(m.label.toLowerCase()) || 
+                            m.label.toLowerCase().includes(content.toLowerCase())
+                        );
+
+                        if (matchedMenu) {
+                            this.handleMenuClick(matchedMenu.id);
+                        } else {
+                            // Default response if no match
+                            setTimeout(() => {
+                                this.messages.push({
+                                    id: 'local-bot-err-' + Date.now(),
+                                    sender_id: 0,
+                                    sender_type: 'admin',
+                                    content: "Silakan pilih salah satu menu di atas atau hubungi tim Support kami.",
+                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+                                this.scrollToBottom();
+                            }, 500);
+                        }
+                        
+                        this.scrollToBottom();
+                        return;
+                    }
+
+                    this.lastActivity = Date.now();
+                    this.reminderSentCount = 0;
                     this.isSending = true;
 
                     const tempId = Date.now();

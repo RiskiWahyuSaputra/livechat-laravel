@@ -110,6 +110,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // --- Menu 9: Settings ---
             Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
             Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
+
+            // --- Menu 10: Bot Menus Management ---
+            Route::resource('/bot-menus', App\Http\Controllers\Admin\BotMenuController::class)->except(['show', 'create', 'edit']);
         }
         );
     });

@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->validateCsrfTokens(except: [
             'api/webhook/whatsapp',
+            'chat/send',
+            'chat/register',
+            'chat/typing'
         ]);
 
         $middleware->alias([
