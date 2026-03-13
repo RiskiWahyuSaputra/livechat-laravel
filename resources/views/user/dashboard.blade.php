@@ -380,13 +380,13 @@
                                 </div>
                                 <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
 
-                                <!-- Bot Categories Inline (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah awaiting_category) -->
-                                <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_category' && index === messages.length - 1">
+                                <!-- Bot Categories Inline -->
+                                <template x-if="msg.sender_id == 0 && (botPhase === 'awaiting_category' || botPhase === 'awaiting_submenu' || botPhase === 'awaiting_main_menu') && index === messages.length - 1">
                                     <div class="mt-2 flex flex-wrap gap-1.5 w-full">
-                                        <template x-for="cat in botCategories" :key="cat">
-                                            <button @click="selectCategory(cat)" 
+                                        <template x-for="btn in (botPhase === 'awaiting_category' ? botCategories.map(c => ({id: c, label: c})) : botSubmenus)" :key="btn.id">
+                                            <button @click="botPhase === 'awaiting_category' ? selectCategory(btn.id) : selectSubmenu(btn)" 
                                                     class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
-                                                <span x-text="cat"></span>
+                                                <span x-text="btn.label || btn.id"></span>
                                             </button>
                                         </template>
                                     </div>
@@ -421,6 +421,17 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Asal / Instansi <span class="text-red-500">*</span></label>
                         <input type="text" x-model="regForm.origin" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Nama perusahaan atau asal Anda">
+                    </div>
+
+                    <!-- Bot Main Menu -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Layanan <span class="text-red-500">*</span></label>
+                        <select x-model="regForm.selected_option" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none">
+                            <option value="">-- Pilih Layanan --</option>
+                            <template x-for="menu in chatMainMenu" :key="menu.id">
+                                <option :value="menu.id" x-text="menu.label"></option>
+                            </template>
+                        </select>
                     </div>
 
                     <button type="submit" :disabled="isLoading" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex justify-center items-center gap-2">
@@ -497,6 +508,8 @@
                 isInitialized: false,
                 isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
                 csrfToken: '{{ csrf_token() }}',
+                chatGreeting: '',
+                chatMainMenu: [],
                 user: {
                     name: '{{ Auth::check() ? Auth::user()->name : "" }}',
                     initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : "" }}'
@@ -506,7 +519,8 @@
                 regForm: {
                     name: '',
                     contact: '',
-                    origin: ''
+                    origin: '',
+                    selected_option: ''
                 },
                 regError: '',
 
@@ -514,6 +528,7 @@
                 userId: null,
                 status: 'pending',
                 botPhase: 'off',
+                botSubmenus: [],
                 messages: [],
                 newMessage: '',
                 isSending: false,
@@ -566,7 +581,6 @@
                             const now = Date.now();
                             const diff = now - this.lastActivity;
                             
-                            // Cek pengingat setiap 5 menit (300.000 ms)
                             const intervalMs = 5 * 60 * 1000;
                             const expectedReminders = Math.floor(diff / intervalMs);
                             
@@ -574,7 +588,6 @@
                                 this.reminderSentCount = expectedReminders;
                                 const remainingMinutes = 30 - (expectedReminders * 5);
                                 
-                                // Tambahkan bubble chat pengingat (lokal ke user)
                                 this.messages.push({
                                     id: 'reminder-' + Date.now(),
                                     sender_type: 'system',
@@ -584,24 +597,21 @@
                                 
                                 this.$nextTick(() => { this.scrollToBottom(); });
                                 if (!this.isOpen) this.unreadCount++;
-                                
-                                console.log(`⚠️ User inactivity reminder triggered: ${expectedReminders}x`);
                             }
 
                             if (diff > this.inactivityTimeout) {
                                 this.handleTimeout();
                             }
                         }
-                    }, 10000); // Cek setiap 10 detik agar lebih responsif
+                    }, 10000);
+
+                    // Fetch public data immediately
+                    this.fetchChatData();
                 },
 
                 async handleTimeout() {
                     console.log("⚠️ Sesi berakhir. Mengeluarkan user secara total...");
-                    
-                    // Hapus cookie guest secara proaktif
                     document.cookie = "guest_chat_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                    
-                    // Gunakan redirect GET ke rute logout untuk membersihkan sesi dan heading
                     window.location.href = '{{ route('chat.logout') }}';
                 },
 
@@ -630,33 +640,24 @@
                             body: JSON.stringify(this.regForm)
                         });
 
-                        const contentType = response.headers.get("content-type");
-                        if (!contentType || !contentType.includes("application/json")) {
-                            throw new Error("Server mengalami masalah internal (500).");
-                        }
-
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
                             if (data.csrf_token) this.csrfToken = data.csrf_token;
                             this.isAuthenticated = true;
                             
-                            // Update User Data reaktif
                             if (data.user) {
                                 this.user.name = data.user.name;
                                 this.user.initial = data.user.name.charAt(0).toUpperCase();
-                                
-                                // Dispatch event to update header profile immediately if it's listening
                                 window.dispatchEvent(new CustomEvent('login-success', { detail: data.user }));
                             }
                             
-                            this.regForm = { name: '', contact: '', origin: '' };
+                            this.regForm = { name: '', contact: '', origin: '', selected_option: '' };
                             await this.fetchChatData();
                         } else {
                             this.regError = data.message || 'Terjadi kesalahan validasi data.';
                         }
                     } catch (error) {
-                        console.error("Registration Error:", error);
                         this.regError = error.message || 'Gagal terhubung ke server.';
                     } finally {
                         this.isLoading = false;
@@ -671,40 +672,44 @@
                             headers: { 'Accept': 'application/json' }
                         });
                         
+                        const data = await response.json();
+                        if (!response.ok && response.status !== 401) throw new Error(data.error || 'Failed to init');
+
+                        if (data.csrf_token) this.csrfToken = data.csrf_token;
+                        if (data.chat_greeting) this.chatGreeting = data.chat_greeting;
+                        if (data.chat_main_menu) this.chatMainMenu = data.chat_main_menu;
+
                         if (response.status === 401) {
                             this.isAuthenticated = false;
                             this.isInitialized = false;
                             return;
                         }
 
-                        const data = await response.json();
-                        if (!response.ok) throw new Error(data.error || 'Failed to init');
+                        if (data.conversation) {
+                            this.conversationId = data.conversation.id;
+                            this.userId = data.user_id;
+                            this.status = data.status;
+                            this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+                            this.botSubmenus = data.bot_submenus || [];
 
-                        if (data.csrf_token) this.csrfToken = data.csrf_token;
-                        this.conversationId = data.conversation.id;
-                        this.userId = data.user_id;
-                        this.status = data.status;
-                        this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+                            if (data.user) {
+                                this.user.name = data.user.name;
+                                this.user.initial = data.user.name.charAt(0).toUpperCase();
+                            }
+                            
+                            this.messages = data.messages.map(m => ({
+                                id: m.id,
+                                sender_id: m.sender_id,
+                                sender_type: m.sender_type,
+                                message_type: m.message_type,
+                                content: m.content,
+                                created_at: m.created_at
+                            }));
 
-                        // Update User Data jika ada dalam response
-                        if (data.user) {
-                            this.user.name = data.user.name;
-                            this.user.initial = data.user.name.charAt(0).toUpperCase();
+                            this.isInitialized = true;
+                            this.listenForEvents();
+                            this.$nextTick(() => { this.scrollToBottom(); });
                         }
-                        
-                        this.messages = data.messages.map(m => ({
-                            id: m.id,
-                            sender_id: m.sender_id,
-                            sender_type: m.sender_type,
-                            message_type: m.message_type,
-                            content: m.content,
-                            created_at: m.created_at
-                        }));
-
-                        this.isInitialized = true;
-                        this.listenForEvents();
-                        
-                        this.$nextTick(() => { this.scrollToBottom(); });
                     } catch (e) {
                         console.error('Failed to init chat', e);
                     } finally {
@@ -722,7 +727,6 @@
                         if (typeof window.Echo !== 'undefined') {
                             clearInterval(checkEcho);
                             
-                            // Personal User Channel for Global Events (Logout/Blocked)
                             if (this.userId) {
                                 window.Echo.private(`user.${this.userId}`)
                                     .listen('.user.logged.out', (e) => {
@@ -778,7 +782,6 @@
                             retries++;
                             if (retries >= maxRetries) {
                                 clearInterval(checkEcho);
-                                console.warn('Echo initialization timed out.');
                             }
                         }
                     }, 500);
@@ -828,10 +831,8 @@
                                 this.messages[msgIndex].content = data.message.content;
                             }
 
-                            // Tambahkan balasan bot jika ada di response JSON
                             if (data.bot_replies && data.bot_replies.length > 0) {
                                 data.bot_replies.forEach(botMsg => {
-                                    // Cek agar tidak duplikat dengan broadcast
                                     if (!this.messages.some(m => m.id === botMsg.id)) {
                                         this.messages.push(botMsg);
                                     }
@@ -916,7 +917,12 @@
                     if (this.isSending || this.botPhase !== 'awaiting_category') return;
                     this.newMessage = category;
                     await this.sendMessage();
-                    this.botPhase = 'awaiting_explanation';
+                },
+
+                async selectSubmenu(menu) {
+                    if (this.isSending || (this.botPhase !== 'awaiting_submenu' && this.botPhase !== 'awaiting_main_menu')) return;
+                    this.newMessage = menu.label;
+                    await this.sendMessage();
                 },
 
                 sendTypingEvent(isTyping = true) {
@@ -944,27 +950,6 @@
                 }
             }));
         });
-    </script>
-
-    <script>
-        // Pengecekan cookie session untuk ditampilkan di console
-        @php
-            $sessionCookieName = config('session.cookie');
-            $sessionCookie = request()->cookie($sessionCookieName);
-            $guestCookie = request()->cookie('guest_chat_token');
-        @endphp
-
-        @if($sessionCookie || $guestCookie)
-            @if(Auth::check() && $sessionCookie)
-                console.log("%c[User Session] Cookie ditemukan: {{ $sessionCookie }}", "color: #28a745; font-weight: bold;");
-                console.log("%cStatus: Authenticated User - Sesi berlaku selama {{ config('session.lifetime') }} menit.", "color: #17a2b8;");
-            @elseif($guestCookie)
-                console.log("%c[Guest Session] Cookie ditemukan: {{ $guestCookie }}", "color: #28a745; font-weight: bold;");
-                console.log("%cStatus: Guest User - Sesi berlaku selama {{ config('session.lifetime') }} menit.", "color: #17a2b8;");
-            @endif
-        @else
-            console.log("%c[User Session] Cookie tidak ditemukan atau sudah kadaluarsa.", "color: #dc3545; font-weight: bold;");
-        @endif
     </script>
 </body>
 </html>
