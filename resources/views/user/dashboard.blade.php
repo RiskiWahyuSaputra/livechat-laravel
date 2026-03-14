@@ -712,16 +712,46 @@
                             
                             // If it's a link, append the button HTML locally
                             if (menu.action_type === 'link' && menu.action_value) {
-                                const btnLabel = menu.label.toLowerCase().includes('youtube') ? 'Buka YouTube' : 'Lihat Detail';
-                                const iconClass = menu.label.toLowerCase().includes('youtube') ? 'fab fa-youtube' : 'fas fa-external-link-alt';
-                                
-                                content += `<div class="mt-2 flex">
-                                    <a href="${menu.action_value}" target="_blank" 
-                                       class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-bold no-underline shadow-md hover:bg-red-700 transition-all active:scale-95" 
-                                       style="font-size: 11px; text-decoration: none !important; color: white !important;">
-                                        <i class="${iconClass}"></i> ${btnLabel}
-                                    </a>
-                                </div>`;
+                                const isYoutube = menu.action_value.toLowerCase().includes('youtube.com') || menu.action_value.toLowerCase().includes('youtu.be');
+                                if (isYoutube) {
+                                    let embedUrl = false;
+                                    const match = menu.action_value.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+                                    if (match) {
+                                        embedUrl = `https://www.youtube.com/embed/${match[1]}`;
+                                    }
+                                    
+                                    if (embedUrl) {
+                                        content += `<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]">
+                                            <div class="relative w-full" style="padding-bottom: 56.25%;">
+                                                <iframe class="absolute top-0 left-0 w-full h-full" src="${embedUrl}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                                            </div>
+                                            <div class="p-2 bg-white">
+                                                <a href="${menu.action_value}" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;">
+                                                    <i class="fab fa-youtube"></i> Buka di YouTube
+                                                </a>
+                                            </div>
+                                        </div>`;
+                                    } else {
+                                        content += `<div class="mt-2 flex">
+                                            <a href="${menu.action_value}" target="_blank" 
+                                               class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-bold no-underline shadow-md hover:bg-red-700 transition-all active:scale-95" 
+                                               style="font-size: 11px; text-decoration: none !important; color: white !important;">
+                                                <i class="fab fa-youtube"></i> Kunjungi Channel
+                                            </a>
+                                        </div>`;
+                                    }
+                                } else {
+                                    const btnLabel = menu.label.toLowerCase().includes('youtube') ? 'Buka YouTube' : 'Lihat Detail';
+                                    const iconClass = menu.label.toLowerCase().includes('youtube') ? 'fab fa-youtube' : 'fas fa-external-link-alt';
+                                    
+                                    content += `<div class="mt-2 flex">
+                                        <a href="${menu.action_value}" target="_blank" 
+                                           class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-bold no-underline shadow-md hover:bg-red-700 transition-all active:scale-95" 
+                                           style="font-size: 11px; text-decoration: none !important; color: white !important;">
+                                            <i class="${iconClass}"></i> ${btnLabel}
+                                        </a>
+                                    </div>`;
+                                }
                             }
 
                             this.messages.push({
