@@ -556,6 +556,10 @@
                                 <a href="{{ route('admin.chat') }}"><i class="fe fe-message-square"></i>
                                     <span>Chat</span></a>
                             </li>
+                            <li class="{{ request()->routeIs('admin.internal-chat.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.internal-chat.index') }}"><i class="fe fe-send"></i>
+                                    <span>Chat Internal</span></a>
+                            </li>
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('view_history'))

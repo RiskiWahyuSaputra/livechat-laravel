@@ -54,3 +54,8 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 Broadcast::channel('admin.dashboard', function ($user) {
     return $user instanceof \App\Models\Admin;
 }, ['guards' => ['admin']]);
+
+// Channel untuk Chat Internal (Staff to Staff)
+Broadcast::channel('internal-chat.{id}', function ($user, $id) {
+    return $user instanceof \App\Models\Admin && (int) $user->id === (int) $id;
+}, ['guards' => ['admin']]);

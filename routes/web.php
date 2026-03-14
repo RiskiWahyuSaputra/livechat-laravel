@@ -62,7 +62,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/conversation/{conversation}/block', [DashboardController::class , 'blockUser'])->name('conversation.block');
             });
 
+            // --- Menu 2.1: Internal Chat ---
+            Route::prefix('internal-chat')->name('internal-chat.')->group(function () {
+                Route::get('/', [App\Http\Controllers\Admin\InternalChatController::class, 'index'])->name('index');
+                Route::get('/{id}', [App\Http\Controllers\Admin\InternalChatController::class, 'show'])->name('show');
+                Route::get('/conversation/{id}', [App\Http\Controllers\Admin\InternalChatController::class, 'showConversation'])->name('conversation');
+                Route::post('/start', [App\Http\Controllers\Admin\InternalChatController::class, 'startConversation'])->name('start');
+                Route::post('/send', [App\Http\Controllers\Admin\InternalChatController::class, 'sendMessage'])->name('send');
+            });
 
+            // --- Menu 3: Chat History / Archive ---
+            Route::middleware('admin.permission:view_history')->group(function () {
+                Route::get('/history', [App\Http\Controllers\Admin\ChatHistoryController::class, 'index'])->name('history.index');
+                Route::get('/history/{id}', [App\Http\Controllers\Admin\ChatHistoryController::class, 'show'])->name('history.show');
+            });
 
             // --- Menu 4: Quick Replies Management ---
             Route::middleware('admin.permission:manage_quick_replies')->group(function () {
