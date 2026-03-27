@@ -11,6 +11,7 @@
     <title>Dashboard - Live Chat</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <style>
         /* Sembunyikan elemen sebelum Alpine load penuh untuk mencegah loncatan layout */
         [x-cloak] { display: none !important; }
@@ -150,6 +151,20 @@
                                             <span x-text="cat"></span>
                                         </button>
                                     </template>
+                                </div>
+                            </template>
+
+                            <!-- Bot Transfer Options (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah offer_agent_transfer) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'offer_agent_transfer' && index === messages.length - 1">
+                                <div class="mt-3 flex flex-col sm:flex-row gap-2 w-full">
+                                    <button @click="selectOption('LANJUT')" 
+                                            class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-2">
+                                        <i class="fas fa-comment-dots"></i> Tanya Lagi
+                                    </button>
+                                    <button @click="selectOption('AGENT')" 
+                                            class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[11px] font-bold transition-all shadow-md flex-1 text-center flex items-center justify-center gap-2">
+                                        <i class="fas fa-headset"></i> Hubungkan ke Agent
+                                    </button>
                                 </div>
                             </template>
                         </div>
@@ -426,6 +441,12 @@
                     this.botPhase = 'awaiting_explanation';
                 },
 
+                async selectOption(option) {
+                    if (this.isSending) return;
+                    this.newMessage = option;
+                    await this.sendMessage();
+                },
+@//-
                 sendTypingEvent(isTyping = true) {
                     if (this.status !== 'active') return;
 

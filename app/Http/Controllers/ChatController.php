@@ -575,6 +575,19 @@ class ChatController extends Controller
                 }
             }
         } elseif ($conversation->bot_phase === 'chatting_with_ai') {
+            // Cek kata kunci AGENT sebelum ke Gemini agar lebih responsif
+            if (strtoupper(trim($userMessage)) === 'AGENT') {
+                $conversation->update(['bot_phase' => 'require_registration']);
+                $newBotMessages[] = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Baik, saya akan menghubungkan Anda dengan Agent kami. Silakan lengkapi form data diri yang muncul di layar terlebih dahulu.",
+                ]);
+                return $this->formatBotReplies($newBotMessages, $conversation);
+            }
+
             $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan ke BEST AI: ");
             $conversation->update(['bot_phase' => 'offer_agent_transfer']);
             
@@ -592,7 +605,7 @@ class ChatController extends Controller
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => "Apakah jawaban dari BEST AI sudah cukup membantu? 😊\n\n💬 Ketik **LANJUT** untuk bertanya kembali ke BEST AI.\n🎧 Ketik **AGENT** jika Anda butuh bantuan langsung dari Tim Customer Service kami.",
+                    'content'         => "Apakah jawaban dari BEST AI sudah cukup membantu? 😊\n\nSilakan klik salah satu opsi di bawah:",
                 ]);
             }
         } elseif ($conversation->bot_phase === 'offer_agent_transfer') {
@@ -605,8 +618,17 @@ class ChatController extends Controller
                     'message_type'    => 'text',
                     'content'         => "Baik, saya akan menghubungkan Anda dengan Agent kami. Silakan lengkapi form data diri yang muncul di layar terlebih dahulu.",
                 ]);
+            } elseif (strtoupper(trim($userMessage)) === 'LANJUT') {
+                $newBotMessages[] = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Silakan ajukan pertanyaan Anda kembali, saya siap membantu. 😊",
+                ]);
+                $conversation->update(['bot_phase' => 'chatting_with_ai']);
             } else {
-                // If they type LANJUT or ask another question, keep chatting with AI
+                // If they ask another question directly, keep chatting with AI
                 $conversation->update(['bot_phase' => 'chatting_with_ai']);
                 $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan lanjutan ke BEST AI: ");
                 $conversation->update(['bot_phase' => 'offer_agent_transfer']);
@@ -625,7 +647,7 @@ class ChatController extends Controller
                         'sender_id'       => 0,
                         'sender_type'     => 'admin',
                         'message_type'    => 'text',
-                        'content'         => "Apakah informasi dari BEST AI sudah cukup membantu? 😊\n\n💬 Ketik **LANJUT** untuk bertanya kembali ke BEST AI.\n🎧 Ketik **AGENT** jika Anda butuh bantuan langsung dari Tim Customer Service kami.",
+                        'content'         => "Apakah informasi dari BEST AI sudah cukup membantu? 😊\n\nSilakan klik salah satu opsi di bawah:",
                     ]);
                 }
             }
@@ -823,7 +845,7 @@ class ChatController extends Controller
                 $botReplies[] = "Pilih layanan kami lainnya:";
             } elseif ($menu->action_type === 'connect_cs' && $menu->label === 'Customer service') {
                 if ($isAnonymousCS) {
-                     $botReplies[] = "Halo! Saya BEST AI, asisten virtual Anda. Ada yang bisa saya bantu hari ini? Jika Anda ingin terhubung dengan Agent kami, ketik \"AGENT\".";
+                     $botReplies[] = "Halo! Saya BEST AI, asisten virtual Anda. Ada yang bisa saya bantu hari ini? Jika Anda ingin terhubung dengan Agent kami, silakan klik tombol **AGENT** di bawah.";
                 } else {
                      $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
                      $botReplies[] = "Sebelum terhubung dengan Customer service kami apakah ada yang ingin ditanyakan ke BEST AI ketik \"YA\" jika tidak abaikan saja.\n\nAntrean Anda saat ini: ke-{$queueCount}.";
