@@ -54,3 +54,14 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 Broadcast::channel('admin.dashboard', function ($user) {
     return $user instanceof \App\Models\Admin;
 }, ['guards' => ['admin']]);
+
+Broadcast::channel('admin_conversation.{conversationId}', function ($user, $conversationId) {
+    if (auth('admin')->check()) {
+        $admin = auth('admin')->user();
+        $conversation = \App\Models\AdminConversation::find($conversationId);
+        if ($conversation && ($conversation->admin_1_id == $admin->id || $conversation->admin_2_id == $admin->id)) {
+            return true;
+        }
+    }
+    return false;
+}, ['guards' => ['admin']]);

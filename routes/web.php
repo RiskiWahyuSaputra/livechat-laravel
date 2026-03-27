@@ -64,6 +64,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/conversation/{conversation}/block', [DashboardController::class , 'blockUser'])->name('conversation.block');
             });
 
+            // --- Menu: Agent Chat ---
+            Route::middleware('admin.permission:view_chat')->prefix('agent-chat')->name('agent-chat.')->group(function () {
+                Route::get('/', [App\Http\Controllers\Admin\AgentChatController::class, 'index'])->name('index');
+                Route::post('/start', [App\Http\Controllers\Admin\AgentChatController::class, 'startConversation'])->name('start');
+                Route::get('/conversation/{id}', [App\Http\Controllers\Admin\AgentChatController::class, 'showConversation'])->name('show');
+                Route::post('/send', [App\Http\Controllers\Admin\AgentChatController::class, 'sendMessage'])->name('send');
+            });
+
             // --- Menu 3: Chat History / Archive ---
             Route::middleware('admin.permission:view_history')->group(function () {
                 Route::get('/history', [App\Http\Controllers\Admin\ChatHistoryController::class, 'index'])->name('history.index');
