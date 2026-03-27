@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/webhook/whatsapp',
             'chat/send',
             'chat/register',
+            'chat/register-anonymous',
+            'chat/update-profile',
             'chat/typing'
         ]);
 

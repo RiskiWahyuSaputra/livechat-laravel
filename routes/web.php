@@ -19,6 +19,8 @@ Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home
 
 // Route registrasi chat
 Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');
+Route::post('/chat/register-anonymous', [ChatController::class , 'registerAnonymous'])->name('chat.registerAnonymous');
+Route::post('/chat/update-profile', [ChatController::class , 'updateProfile'])->name('chat.updateProfile');
 Route::match(['get', 'post'], '/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');
 
 // Routes Chat

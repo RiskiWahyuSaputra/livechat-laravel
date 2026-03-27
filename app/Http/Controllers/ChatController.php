@@ -145,6 +145,116 @@ class ChatController extends Controller
     }
 
     /**
+     * Register Anonymous User to talk with bot first
+     */
+    public function registerAnonymous(Request $request)
+    {
+        $guestId = 'anon_' . Str::random(10);
+        $user = User::create([
+            'name'      => 'Guest',
+            'email'     => $guestId . '@livechat.best',
+            'contact'   => $guestId,
+            'origin'    => 'Unknown',
+            'password'  => bcrypt('guest123'),
+            'is_online' => true,
+        ]);
+
+        // Set Cookie & Login
+        Cookie::queue('guest_chat_token', $user->email, 60);
+        Auth::guard('web')->login($user, true);
+
+        // Pastikan conversation otomatis dibuat
+        $activeConversation = $this->createConversation($user, $request->selected_option);
+        
+        // Atur agar langsung ke fase bot 'awaiting_submenu' atau sesuai menu yang dipencet
+        if ($request->selected_option) {
+             $menu = \App\Models\BotMenu::find($request->selected_option);
+             if ($menu && $menu->action_type === 'submenu') {
+                  $activeConversation->update(['bot_phase' => 'awaiting_submenu']);
+                  $activeConversation->refresh();
+             } else if ($menu && $menu->label === 'Customer service') {
+                  $activeConversation->update(['bot_phase' => 'chatting_with_ai']);
+                  $activeConversation->refresh();
+             }
+        }
+
+        if ($request->expectsJson()) {
+            $submenus = [];
+            if ($activeConversation->bot_phase === 'awaiting_submenu') {
+                $menu = \App\Models\BotMenu::find($request->selected_option);
+                if ($menu) {
+                    $submenus = $menu->children->map(fn($m) => ['id' => $m->id, 'label' => $m->label]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'user'    => $user,
+                'conversation' => $activeConversation,
+                'bot_phase' => $activeConversation->bot_phase,
+                'bot_submenus' => $submenus
+            ]);
+        }
+
+        return redirect()->route('chat.index');
+    }
+
+    /**
+     * Memperbarui profil ketika Form User diisi (setelah bot mengarahkan ke agent)
+     */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name'            => 'required|string|max:255',
+            'contact'         => 'required|string|max:255',
+            'origin'          => 'required|string|max:255',
+        ]);
+
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+             return response()->json(['success' => false, 'message' => 'Sesi tidak valid.'], 401);
+        }
+
+        $user->update([
+            'name'      => $request->name,
+            'contact'   => $request->contact,
+            'origin'    => $request->origin,
+        ]);
+
+        // Ganti bot_phase ke antrean
+        $activeConversation = $user->conversations()
+            ->whereIn('status', ['pending', 'active', 'queued'])
+            ->first();
+
+        if ($activeConversation) {
+             $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $activeConversation->id)->count();
+             $activeConversation->update([
+                 'bot_phase' => 'off', 
+                 'queue_position' => $queueCount
+             ]);
+             
+             Message::create([
+                 'conversation_id' => $activeConversation->id,
+                 'sender_id'       => 0,
+                 'sender_type'     => 'admin',
+                 'message_type'    => 'text',
+                 'content'         => "Terima kasih, data Anda telah dikonfirmasi. Anda kini berada di antrean ke-{$queueCount} untuk terhubung dengan Agent.",
+             ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'user'    => [
+                 'id' => $user->id,
+                 'name' => $user->name,
+            ],
+            'bot_phase' => 'off',
+        ]);
+    }
+
+    /**
      * Logout guest user secara bersih.
      */
     public function logout(Request $request)
@@ -215,12 +325,19 @@ class ChatController extends Controller
             $publicData = [
                 'csrf_token'   => csrf_token(),
                 'chat_greeting' => \App\Models\Setting::get('chat_greeting', 'anda berapa di layanan whatsapp BRILLIAN.BIS kami terus melayani'),
-                'chat_main_menu' => \App\Models\BotMenu::whereNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => [
+                'chat_main_menu' => \App\Models\BotMenu::with('children')->whereNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => [
                     'id' => $m->id,
                     'label' => $m->label,
                     'action_type' => $m->action_type,
                     'action_value' => $m->action_value,
-                    'message_response' => $m->message_response
+                    'message_response' => $m->message_response,
+                    'submenus' => $m->children->map(fn($c) => [
+                        'id' => $c->id,
+                        'label' => $c->label,
+                        'action_type' => $c->action_type,
+                        'action_value' => $c->action_value,
+                        'message_response' => $c->message_response
+                    ])
                 ]),
             ];
 
@@ -436,43 +553,31 @@ class ChatController extends Controller
             if ($child) {
                 if ($child->action_type === 'connect_cs') {
                     if ($child->label === 'Customer service') {
-                        $conversation->update(['bot_phase' => 'awaiting_ai_optin']);
-                        $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
+                        $conversation->update(['bot_phase' => 'chatting_with_ai']);
                         $newBotMessages[] = Message::create([
                             'conversation_id' => $conversation->id,
                             'sender_id'       => 0,
                             'sender_type'     => 'admin',
                             'message_type'    => 'text',
-                            'content'         => "Sebelum terhubung dengan Customer service kami apakah ada yang ingin ditanyakan ke BEST AI ketik \"YA\" jika tidak abaikan saja.\n\nAntrean Anda saat ini: ke-{$queueCount}.",
+                            'content'         => "Halo! Saya BEST AI. Silakan ceritakan kendala atau pertanyaan Anda, dan saya akan coba membantu terlebih dahulu.",
                         ]);
                     } else {
-                        $conversation->update(['bot_phase' => 'off']);
+                        // Untuk CS Voucher dll
+                        $conversation->update(['bot_phase' => 'require_registration']);
                         $newBotMessages[] = Message::create([
                             'conversation_id' => $conversation->id,
                             'sender_id'       => 0,
                             'sender_type'     => 'admin',
                             'message_type'    => 'text',
-                            'content'         => $child->message_response ?? "Anda akan terhubung dengan {$child->label}, isi kebutuhan anda.",
+                            'content'         => $child->message_response ?? "Untuk terhubung dengan {$child->label}, silakan lengkapi form data diri Anda terlebih dahulu.",
                         ]);
                     }
                 }
             }
-        } elseif ($conversation->bot_phase === 'awaiting_ai_optin') {
-            if (strtoupper(trim($userMessage)) === 'YA') {
-                $conversation->update(['bot_phase' => 'awaiting_ai_question']);
-                $newBotMessages[] = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => 0,
-                    'sender_type'     => 'admin',
-                    'message_type'    => 'text',
-                    'content'         => "Silakan ajukan pertanyaan Anda ke BEST AI.",
-                ]);
-            } else {
-                // User didn't type YA, probably explaining needs. Turn off bot but don't respond further.
-                $conversation->update(['bot_phase' => 'off']);
-            }
-        } elseif ($conversation->bot_phase === 'awaiting_ai_question') {
+        } elseif ($conversation->bot_phase === 'chatting_with_ai') {
             $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan ke BEST AI: ");
+            $conversation->update(['bot_phase' => 'offer_agent_transfer']);
+            
             $newBotMessages[] = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
@@ -480,6 +585,58 @@ class ChatController extends Controller
                 'message_type'    => 'text',
                 'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
             ]);
+            
+            if (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                $newBotMessages[] = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Apakah jawaban dari BEST AI sudah cukup membantu? 😊\n\n💬 Ketik **LANJUT** untuk bertanya kembali ke BEST AI.\n🎧 Ketik **AGENT** jika Anda butuh bantuan langsung dari Tim Customer Service kami.",
+                ]);
+            }
+        } elseif ($conversation->bot_phase === 'offer_agent_transfer') {
+            if (strtoupper(trim($userMessage)) === 'AGENT') {
+                $conversation->update(['bot_phase' => 'require_registration']);
+                $newBotMessages[] = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Baik, saya akan menghubungkan Anda dengan Agent kami. Silakan lengkapi form data diri yang muncul di layar terlebih dahulu.",
+                ]);
+            } else {
+                // If they type LANJUT or ask another question, keep chatting with AI
+                $conversation->update(['bot_phase' => 'chatting_with_ai']);
+                $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan lanjutan ke BEST AI: ");
+                $conversation->update(['bot_phase' => 'offer_agent_transfer']);
+                
+                $newBotMessages[] = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
+                ]);
+                
+                if (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                    $newBotMessages[] = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => "Apakah informasi dari BEST AI sudah cukup membantu? 😊\n\n💬 Ketik **LANJUT** untuk bertanya kembali ke BEST AI.\n🎧 Ketik **AGENT** jika Anda butuh bantuan langsung dari Tim Customer Service kami.",
+                    ]);
+                }
+            }
+        } elseif ($conversation->bot_phase === 'require_registration') {
+             $newBotMessages[] = Message::create([
+                 'conversation_id' => $conversation->id,
+                 'sender_id'       => 0,
+                 'sender_type'     => 'admin',
+                 'message_type'    => 'text',
+                 'content'         => "Silakan lengkapi form data diri Anda terlebih dahulu agar kami dapat menyambungkan Anda ke Agent.",
+             ]);
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = \App\Models\BotMenu::where('label', $userMessage)->whereNull('parent_id')->first();
             if ($menu) {
@@ -606,7 +763,7 @@ class ChatController extends Controller
         if ($menu) {
             if ($menu->action_type === 'submenu') $botPhase = 'awaiting_submenu';
             elseif ($menu->action_type === 'connect_cs') {
-                if ($menu->label === 'Customer service') $botPhase = 'awaiting_ai_optin';
+                if ($menu->label === 'Customer service') $botPhase = 'chatting_with_ai';
                 else $botPhase = 'off';
             }
         } else {
@@ -622,14 +779,18 @@ class ChatController extends Controller
         ]);
 
         // User intro
-        $introLabel = ($menu ? $menu->label : 'Bantuan');
-        $intro = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id'       => $user->id,
-            'sender_type'     => 'user',
-            'message_type'    => 'text',
-            'content'         => "Halo! Saya {$user->name} dari {$user->origin}. Saya memilih: {$introLabel}",
-        ]);
+        $isAnonymousCS = ($user->name === 'Guest' && $menu && $menu->label === 'Customer service');
+        $intro = null;
+        if (!$isAnonymousCS) {
+            $introLabel = ($menu ? $menu->label : 'Bantuan');
+            $intro = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => $user->id,
+                'sender_type'     => 'user',
+                'message_type'    => 'text',
+                'content'         => "Halo! Saya {$user->name} dari {$user->origin}. Saya memilih: {$introLabel}",
+            ]);
+        }
 
         // Bot Response
         $botReplies = [];
@@ -663,8 +824,12 @@ class ChatController extends Controller
                 $conversation->update(['bot_phase' => 'awaiting_main_menu']);
                 $botReplies[] = "Pilih layanan kami lainnya:";
             } elseif ($menu->action_type === 'connect_cs' && $menu->label === 'Customer service') {
-                $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
-                $botReplies[] = "Sebelum terhubung dengan Customer service kami apakah ada yang ingin ditanyakan ke BEST AI ketik \"YA\" jika tidak abaikan saja.\n\nAntrean Anda saat ini: ke-{$queueCount}.";
+                if ($isAnonymousCS) {
+                     $botReplies[] = "Halo! Saya BEST AI, asisten virtual Anda. Ada yang bisa saya bantu hari ini? Jika Anda ingin terhubung dengan Agent kami, ketik \"AGENT\".";
+                } else {
+                     $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
+                     $botReplies[] = "Sebelum terhubung dengan Customer service kami apakah ada yang ingin ditanyakan ke BEST AI ketik \"YA\" jika tidak abaikan saja.\n\nAntrean Anda saat ini: ke-{$queueCount}.";
+                }
             }
         } else {
             // Default legacy behavior
@@ -686,7 +851,9 @@ class ChatController extends Controller
         }
 
         try {
-            broadcast(new MessageSent($intro))->toOthers();
+            if ($intro) {
+                broadcast(new MessageSent($intro))->toOthers();
+            }
             broadcast(new ConversationStatusChanged($conversation, 'system'));
         } catch (\Exception $e) {}
 

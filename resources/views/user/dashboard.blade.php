@@ -312,7 +312,7 @@
             </header>
 
             <!-- Messages Area (Show if authenticated) -->
-            <div x-show="isAuthenticated" id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
+            <div x-show="isAuthenticated && !showRegForm" id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
                 <div class="text-center mb-4">
                     <span class="text-slate-400 font-medium text-[10px] text-center w-full inline-block">Percakapan Dimulai</span>
                 </div>
@@ -409,7 +409,7 @@
                                         <template x-if="botPhase === 'awaiting_submenu'">
                                             <div class="flex flex-wrap gap-1.5 w-full">
                                                 <template x-for="child in botSubmenus" :key="child.id">
-                                                    <button @click="newMessage = child.label; sendMessage()" 
+                                                    <button @click="handleSubmenuClick(child)" 
                                                             class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
                                                         <span x-text="child.label"></span>
                                                     </button>
@@ -439,7 +439,7 @@
             </div>
 
             <!-- Registration & Greeting (Show if NOT authenticated) -->
-            <div x-show="!isAuthenticated" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col">
+            <div x-show="!isAuthenticated || showRegForm" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col">
                 <!-- Step 1: Greeting & Buttons -->
                 <div x-show="!showRegForm" class="flex-1 flex flex-col justify-center">
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6">
@@ -466,9 +466,14 @@
 
                 <!-- Step 2: Data Entry -->
                 <div x-show="showRegForm" x-cloak class="flex-1 flex flex-col justify-center">
-                    <button @click="showRegForm = false" class="inline-flex items-center text-xs text-slate-500 hover:text-red-600 mb-4 transition-colors">
+                    <button x-show="!isAuthenticated" @click="showRegForm = false" class="inline-flex items-center text-xs text-slate-500 hover:text-red-600 mb-4 transition-colors">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         Kembali ke Menu
+                    </button>
+                    <!-- Tombol Batal untuk kembali membatalkan ke CS jika sudah Auth -->
+                    <button x-show="isAuthenticated" @click="cancelRegistration" class="inline-flex items-center text-xs text-slate-500 hover:text-red-600 mb-4 transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        Batal
                     </button>
                     
                     <div class="text-center mb-6">
@@ -501,7 +506,7 @@
             </div>
 
             <!-- Typing Indicator & Footer -->
-            <div x-show="isAuthenticated" class="shrink-0 bg-white">
+            <div x-show="isAuthenticated && !showRegForm" class="shrink-0 bg-white">
                 <div x-show="isTyping" x-cloak class="px-4 py-1.5 flex items-center gap-2 bg-slate-50/80 border-t border-slate-100">
                     <span class="text-[10px] italic text-slate-400 font-medium" x-text="typingMessage"></span>
                     <div class="flex gap-1">
@@ -685,16 +690,44 @@
                 async handleMenuClick(id) {
                     this.selectedOption = id;
                     const menu = this.chat_main_menu.find(m => m.id === id);
+                    if (!menu) return;
                     
-                    if (menu && (menu.action_type === 'submenu' || menu.action_type === 'connect_cs')) {
-                        // Hubungi CS / Submenu: Must show registration form
-                        // If we are currently in "Local Mode" (no conversationId), reset auth state to show form
-                        if (!this.conversationId) {
-                            this.isAuthenticated = false;
-                            this.messages = []; // Clear local messages for a fresh start
-                        }
-                        this.showRegForm = true;
-                    } else if (menu && menu.action_type === 'link') {
+                    if (menu.action_type === 'submenu') {
+                        // LOCAL MODE for Submenu
+                        this.isAuthenticated = true; 
+                        this.isInitialized = true;
+                        
+                        this.messages.push({
+                            id: 'local-user-' + Date.now(),
+                            sender_type: 'user',
+                            content: "Saya memilih: " + menu.label,
+                            created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        });
+
+                        setTimeout(() => {
+                            this.messages.push({
+                                id: 'local-bot-' + Date.now(),
+                                sender_id: 0,
+                                sender_type: 'admin',
+                                content: menu.message_response || "Pilih layanan yang Anda inginkan:",
+                                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
+
+                            this.botSubmenus = menu.submenus || [];
+                            if (this.botSubmenus.length === 0) {
+                                // Fallback jika tidak ada anak
+                                this.botSubmenus = [
+                                    {id: 'cs_umum', label: 'Customer service', action_type: 'connect_cs'},
+                                    {id: 'cs_voucher', label: 'CS Voucher', action_type: 'connect_cs'}
+                                ];
+                            }
+                            this.botPhase = 'awaiting_submenu';
+                            this.scrollToBottom();
+                        }, 600);
+                        
+                    } else if (menu.action_type === 'connect_cs') {
+                        this.handleConnectCS(menu);
+                    } else if (menu.action_type === 'link') {
                         // LOCAL MODE for simple Links: No database records
                         this.isAuthenticated = true; 
                         this.isInitialized = true;
@@ -776,12 +809,100 @@
                     }
                 },
 
+                async handleSubmenuClick(child) {
+                    this.selectedOption = child.id;
+                    
+                    if (this.conversationId) {
+                         // Authenticated, send real message
+                         this.newMessage = child.label;
+                         this.sendMessage();
+                         return;
+                    }
+
+                    // Not authenticated yet
+                    this.messages.push({
+                        id: 'local-user-' + Date.now(),
+                        sender_type: 'user',
+                        content: child.label,
+                        created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+
+                    setTimeout(() => {
+                        if (child.action_type === 'connect_cs') {
+                             this.handleConnectCS(child);
+                        } else if (child.action_type === 'link') {
+                             // Same logic for link if needed, but usually submenus are just connect_cs
+                             this.messages.push({
+                                id: 'local-bot-' + Date.now(),
+                                sender_id: 0,
+                                sender_type: 'admin',
+                                content: "Aksi tidak dikenal.",
+                                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
+                            this.scrollToBottom();
+                        }
+                    }, 500);
+                },
+
+                async handleConnectCS(menu) {
+                    if (!this.conversationId) {
+                        try {
+                            if (menu.label.toLowerCase().includes('voucher')) {
+                                this.showRegForm = true;
+                                this.isAuthenticated = false; // Tampilkan form saja
+                            } else {
+                                this.isLoading = true;
+                                const response = await fetch('{{ route('chat.registerAnonymous') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': this.csrfToken,
+                                        'Accept': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        selected_option: menu.id
+                                    })
+                                });
+
+                                const data = await response.json();
+                                if (response.ok && data.success) {
+                                    this.isAuthenticated = true;
+                                    if (data.user) {
+                                        this.user.name = data.user.name;
+                                        this.user.initial = data.user.name.charAt(0).toUpperCase();
+                                    }
+                                    if (data.bot_phase) {
+                                        this.botPhase = data.bot_phase;
+                                        this.showRegForm = (data.bot_phase === 'require_registration');
+                                    }
+                                    if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
+                                    this.messages = []; // Clear local UI and fetch db UI
+                                    await this.fetchChatData();
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Anon Registration Error:", error);
+                        } finally {
+                            this.isLoading = false;
+                        }
+                    } else {
+                        // Jika sudah ada conversationId
+                        if (menu.label.toLowerCase().includes('voucher')) {
+                            this.showRegForm = true;
+                        } else {
+                            this.newMessage = menu.label;
+                            this.sendMessage();
+                        }
+                    }
+                },
+
                 async submitRegistration() {
                     this.isLoading = true;
                     this.regError = '';
                     
                     try {
-                        const response = await fetch('{{ route('chat.register') }}', {
+                        const targetEndpoint = this.isAuthenticated ? '{{ route('chat.updateProfile') }}' : '{{ route('chat.register') }}';
+                        const response = await fetch(targetEndpoint, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -813,7 +934,10 @@
                                 this.user.initial = data.user.name.charAt(0).toUpperCase();
                             }
 
-                            if (data.bot_phase) this.botPhase = data.bot_phase;
+                            if (data.bot_phase) {
+                                this.botPhase = data.bot_phase;
+                                this.showRegForm = (data.bot_phase === 'require_registration');
+                            }
                             if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                             
                             this.regForm = { name: '', contact: '', origin: '' };
@@ -827,6 +951,11 @@
                     } finally {
                         this.isLoading = false;
                     }
+                },
+
+                cancelRegistration() {
+                    this.showRegForm = false;
+                    this.regError = '';
                 },
 
                 async fetchChatData() {
@@ -1030,7 +1159,12 @@
                                 });
                             }
 
-                            if (data.bot_phase) this.botPhase = data.bot_phase;
+                            if (data.bot_phase) {
+                                this.botPhase = data.bot_phase;
+                                if (data.bot_phase === 'require_registration') {
+                                    this.showRegForm = true;
+                                }
+                            }
                             
                         } else {
                             this.messages = this.messages.filter(m => m.temp_id !== tempId);
