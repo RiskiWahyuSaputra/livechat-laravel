@@ -69,7 +69,7 @@ class GeminiService
             }
         }
 
-        return "Maaf, admin sedang tidak di tempat. Pesan Anda sudah kami catat.";
+        return "Maaf, saat ini sistem BEST AI sedang mengalami kendala jaringan atau sibuk. Silakan coba beberapa saat lagi atau ketik **AGENT** untuk terhubung dengan Customer Service kami.";
     }
 
     public function summarizeConversation($history)
