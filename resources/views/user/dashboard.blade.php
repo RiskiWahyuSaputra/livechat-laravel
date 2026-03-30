@@ -18,8 +18,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; width: 100%; position: relative; }
         [x-cloak] { display: none !important; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -34,10 +34,12 @@
             position: absolute;
             width: 500px;
             height: 500px;
+            max-width: 100vw;
             background: rgba(220, 38, 38, 0.05);
             filter: blur(80px);
             border-radius: 50%;
             z-index: -1;
+            pointer-events: none;
         }
         /* Page Load Animation */
         .fade-in-down {
@@ -218,7 +220,7 @@
         <!-- CTA Section -->
         <section id="produk" class="mb-20 px-4 md:px-6" data-aos="zoom-in-up">
             <div class="bg-[#0a1d37] rounded-[3rem] p-8 md:p-16 text-center space-y-8 relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-1000"></div>
+                <div class="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-1000 pointer-events-none"></div>
                 <h3 class="text-3xl md:text-5xl font-black text-white">Butuh Bantuan Lebih Lanjut?</h3>
                 <p class="text-slate-400 max-w-2xl mx-auto font-medium">Tim Live Support kami siap membantu Anda mengenai pendaftaran, kendala sistem, atau informasi produk.</p>
                 <button @click="toggleChat" class="bg-red-600 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-red-600/30 hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 inline-flex items-center gap-3">
@@ -342,7 +344,7 @@
                                     <!-- Pesan Teks -->
                                     <template x-if="!msg.message_type || msg.message_type === 'text'">
                                         <div class="break-words">
-                                            <div x-html="msg.content"></div>
+                                            <div x-html="formatMessage(msg.content)"></div>
                                         </div>
                                     </template>
 
@@ -570,8 +572,8 @@
                 isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
                 csrfToken: '{{ csrf_token() }}',
                 user: {
-                    name: '{{ Auth::check() ? Auth::user()->name : "" }}',
-                    initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : "" }}'
+                    name: @json(Auth::check() ? Auth::user()->name : ($isAuthenticated ? 'Guest User' : '')),
+                    initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : ($isAuthenticated ? 'G' : '') }}'
                 },
                 
                 // Form Data
@@ -583,11 +585,11 @@
                 regError: '',
                 selectedOption: null,
                 showRegForm: false,
-                chat_greeting: 'anda berapa di layanan whatsapp BRILLIAN.BIS kami terus melayani',
+                chat_greeting: 'Halo! Ada yang bisa kami bantu hari ini?',
                 chat_main_menu: [
-                    {id: 'youtube', label: 'Youtube BRILLIAN.BIZ'},
-                    {id: 'hubungi_cs', label: 'Hubungi CS'},
-                    {id: 'jadwal_seminar', label: 'Jadwal seminar'}
+                    {id: 'youtube', label: 'Youtube BRILLIAN.BIZ', action_type: 'link', action_value: 'https://youtube.com'},
+                    {id: 'hubungi_cs', label: 'Hubungi CS', action_type: 'connect_cs'},
+                    {id: 'jadwal_seminar', label: 'Jadwal seminar', action_type: 'link', action_value: '#'}
                 ],
 
                 conversationId: null,
@@ -615,6 +617,11 @@
                     if (this.status === 'queued') return 'Dalam Antrean';
                     if (this.status === 'active') return 'Terhubung';
                     return 'Sesi Ditutup';
+                },
+
+                formatMessage(text) {
+                    if (!text) return '';
+                    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\n/g, '<br>');
                 },
 
                 initWidget() {
@@ -692,7 +699,9 @@
                     const menu = this.chat_main_menu.find(m => m.id === id);
                     if (!menu) return;
                     
-                    if (menu.action_type === 'submenu') {
+                    const actionType = menu.action_type || 'connect_cs';
+                    
+                    if (actionType === 'submenu') {
                         // LOCAL MODE for Submenu
                         this.isAuthenticated = true; 
                         this.isInitialized = true;
@@ -725,9 +734,9 @@
                             this.scrollToBottom();
                         }, 600);
                         
-                    } else if (menu.action_type === 'connect_cs') {
+                    } else if (actionType === 'connect_cs') {
                         this.handleConnectCS(menu);
-                    } else if (menu.action_type === 'link') {
+                    } else if (actionType === 'link') {
                         // LOCAL MODE for simple Links: No database records
                         this.isAuthenticated = true; 
                         this.isInitialized = true;
@@ -744,7 +753,7 @@
                             let content = menu.message_response || "Memproses permintaan Anda...";
                             
                             // If it's a link, append the button HTML locally
-                            if (menu.action_type === 'link' && menu.action_value) {
+                            if (actionType === 'link' && menu.action_value) {
                                 const isYoutube = menu.action_value.toLowerCase().includes('youtube.com') || menu.action_value.toLowerCase().includes('youtu.be');
                                 if (isYoutube) {
                                     let embedUrl = false;
@@ -985,7 +994,7 @@
                             // Update User Data
                             if (data.user) {
                                 this.user.name = data.user.name;
-                                this.user.initial = data.user.name.charAt(0).toUpperCase();
+                                this.user.initial = data.user.name ? data.user.name.charAt(0).toUpperCase() : 'G';
                             }
                             
                             this.messages = data.messages.map(m => ({
@@ -1013,60 +1022,67 @@
                 },
 
                 listenForEvents() {
-                    if (typeof window.Echo === 'undefined' || !this.conversationId) return;
-
-                    // Personal User Channel for Global Events (Logout/Blocked)
-                    if (this.userId) {
-                        window.Echo.private(`user.${this.userId}`)
-                            .listen('.user.logged.out', (e) => {
-                                setTimeout(() => {
-                                    this.handleTimeout();
-                                }, 3000);
-                            });
+                    if (typeof window.Echo === 'undefined' || !this.conversationId) {
+                        console.warn('Echo or ConversationID not ready.');
+                        return;
                     }
 
-                    window.Echo.private(`conversation.${this.conversationId}`)
-                        .listen('.message.sent', (e) => {
-                            this.lastActivity = Date.now();
-                            this.reminderSentCount = 0;
-                            const alreadyExists = this.messages.some(m => m.id === e.id);
-                            if (alreadyExists) return;
+                    try {
+                        // Personal User Channel for Global Events (Logout/Blocked)
+                        if (this.userId) {
+                            window.Echo.private(`user.${this.userId}`)
+                                .listen('.user.logged.out', (e) => {
+                                    setTimeout(() => {
+                                        this.handleTimeout();
+                                    }, 3000);
+                                });
+                        }
 
-                            if (e.sender_id == this.userId && e.sender_type === 'user') return;
-                            if (e.is_whisper) return;
+                        window.Echo.private(`conversation.${this.conversationId}`)
+                            .listen('.message.sent', (e) => {
+                                this.lastActivity = Date.now();
+                                this.reminderSentCount = 0;
+                                const alreadyExists = this.messages.some(m => m.id === e.id);
+                                if (alreadyExists) return;
 
-                            this.messages.push({
-                                id: e.id,
-                                sender_id: e.sender_id,
-                                sender_type: e.sender_type,
-                                message_type: e.message_type,
-                                content: e.content,
-                                created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                            });
-                            
-                            if (this.isOpen) this.scrollToBottom();
-                            else this.unreadCount++;
-                        })
-                        .listen('.conversation.status.changed', (e) => {
-                            this.status = e.status;
-                            if (e.bot_phase) this.botPhase = e.bot_phase;
+                                if (e.sender_id == this.userId && e.sender_type === 'user') return;
+                                if (e.is_whisper) return;
 
-                            if (e.status === 'closed') {
-                                setTimeout(() => {
-                                    this.handleTimeout();
-                                }, 3000);
-                            }
-                        })
-                        .listen('.typing', (e) => {
-                            if (e.sender_type === 'admin') {
-                                this.isTyping = e.is_typing;
-                                this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
-                                clearTimeout(this.typingTimeout);
-                                if (this.isTyping) {
-                                    this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                this.messages.push({
+                                    id: e.id,
+                                    sender_id: e.sender_id,
+                                    sender_type: e.sender_type,
+                                    message_type: e.message_type,
+                                    content: e.content,
+                                    created_at: e.created_at ? new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+                                
+                                if (this.isOpen) this.scrollToBottom();
+                                else this.unreadCount++;
+                            })
+                            .listen('.conversation.status.changed', (e) => {
+                                this.status = e.status;
+                                if (e.bot_phase) this.botPhase = e.bot_phase;
+
+                                if (e.status === 'closed') {
+                                    setTimeout(() => {
+                                        this.handleTimeout();
+                                    }, 3000);
                                 }
-                            }
-                        });
+                            })
+                            .listen('.typing', (e) => {
+                                if (e.sender_type === 'admin') {
+                                    this.isTyping = e.is_typing;
+                                    this.typingMessage = (e.sender_role === 'super_admin') ? 'Admin sedang merespon' : 'Agent sedang merespon';
+                                    clearTimeout(this.typingTimeout);
+                                    if (this.isTyping) {
+                                        this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
+                                    }
+                                }
+                            });
+                    } catch (err) {
+                        console.error('Error setting up Echo listeners:', err);
+                    }
                 },
 
                 async sendMessage() {
