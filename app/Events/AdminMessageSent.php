@@ -22,6 +22,7 @@ class AdminMessageSent implements ShouldBroadcastNow
     {
         return [
             new PrivateChannel('admin_conversation.' . $this->message->admin_conversation_id),
+            new PrivateChannel('admin.dashboard'),
         ];
     }
 
@@ -31,6 +32,10 @@ class AdminMessageSent implements ShouldBroadcastNow
             'id' => $this->message->id,
             'admin_conversation_id' => $this->message->admin_conversation_id,
             'sender_id' => $this->message->sender_id,
+            'sender' => [
+                'id' => $this->message->sender->id,
+                'username' => $this->message->sender->username,
+            ],
             'message_type' => $this->message->message_type,
             'content' => $this->message->content,
             'created_at' => $this->message->created_at->toISOString(),
