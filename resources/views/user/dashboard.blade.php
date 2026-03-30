@@ -455,7 +455,12 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2">
+                    <!-- Loading state saat menu belum siap -->
+                    <div x-show="chat_main_menu.length === 0 && !isInitialized" class="flex items-center justify-center py-6">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                    </div>
+
+                    <div x-show="chat_main_menu.length > 0" class="grid grid-cols-1 gap-2">
                         <template x-for="item in chat_main_menu" :key="item.id">
                             <button @click="handleMenuClick(item.id)" 
                                     class="w-full text-left px-4 py-3 bg-white hover:bg-red-50 text-slate-700 hover:text-red-600 border border-slate-200 hover:border-red-300 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center justify-between group">
@@ -586,11 +591,7 @@
                 selectedOption: null,
                 showRegForm: false,
                 chat_greeting: 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
-                chat_main_menu: [
-                    {id: 'youtube', label: 'Youtube BRILLIAN.BIZ', action_type: 'link', action_value: 'https://youtube.com'},
-                    {id: 'hubungi_cs', label: 'Hubungi CS', action_type: 'connect_cs'},
-                    {id: 'jadwal_seminar', label: 'Jadwal seminar', action_type: 'link', action_value: '#'}
-                ],
+                chat_main_menu: [],
 
                 conversationId: null,
                 userId: null,
@@ -741,11 +742,14 @@
 
                             this.botSubmenus = menu.submenus || [];
                             if (this.botSubmenus.length === 0) {
-                                // Fallback jika tidak ada anak
-                                this.botSubmenus = [
-                                    {id: 'cs_umum', label: 'Customer service', action_type: 'connect_cs'},
-                                    {id: 'cs_voucher', label: 'CS Voucher', action_type: 'connect_cs'}
-                                ];
+                                this.messages.push({
+                                    id: 'local-bot-err-' + Date.now(),
+                                    sender_id: 0,
+                                    sender_type: 'admin',
+                                    content: "Maaf, submenu belum tersedia. Silakan refresh halaman atau hubungi admin.",
+                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+                                return;
                             }
                             this.botPhase = 'awaiting_submenu';
                             this.scrollToBottom();
