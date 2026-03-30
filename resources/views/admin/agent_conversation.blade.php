@@ -68,6 +68,15 @@
         /* Timestamp */
         .msg-time { font-size: 10px; color: #94a3b8; margin-top: 4px; padding: 0 4px; }
 
+        /* File Attachment */
+        .file-attachment { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+        .file-icon {
+            width: 38px; height: 38px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .bubble-me .file-icon { background: rgba(255,255,255,0.2); }
+        .bubble-other .file-icon { background: #f1f5f9; }
+
         /* Footer */
         .chat-footer {
             flex-shrink: 0; background: #ffffff;
@@ -89,6 +98,16 @@
             box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
             background: #fff;
         }
+
+        /* Icon buttons */
+        .input-icon-btn {
+            width: 32px; height: 32px; border-radius: 10px; border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+            background: transparent; color: #94a3b8;
+            padding: 0;
+        }
+        .input-icon-btn:hover { background: #f1f5f9; color: #475569; }
 
         .msg-textarea {
             flex: 1; border: none; background: transparent; resize: none;
@@ -128,9 +147,38 @@
                 <div class="msg-row" :class="msg.sender_id == adminId ? 'from-me' : 'from-other'">
                     <div class="sender-label" x-text="msg.sender_id == adminId ? 'Anda' : (msg.sender ? msg.sender.username : 'Agen')"></div>
 
-                    <div class="bubble" :class="msg.sender_id == adminId ? 'bubble-me' : 'bubble-other'">
-                        <span x-html="formatMessage(msg.content)"></span>
-                    </div>
+                    <!-- Image -->
+                    <template x-if="msg.message_type === 'image'">
+                        <div class="bubble" :class="msg.sender_id == adminId ? 'bubble-me' : 'bubble-other'" style="padding:6px;">
+                            <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:pointer;" class="hover:opacity-90 transition-opacity" @click="window.open(msg.content, '_blank')">
+                        </div>
+                    </template>
+
+                    <!-- File -->
+                    <template x-if="msg.message_type === 'file'">
+                        <div class="bubble" :class="msg.sender_id == adminId ? 'bubble-me' : 'bubble-other'">
+                            <div class="file-attachment">
+                                <div class="file-icon">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                </div>
+                                <div style="flex:1; min-width:0;">
+                                    <p style="margin:0 0 4px; font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="msg.content.split('/').pop()"></p>
+                                    <a :href="msg.content" target="_blank"
+                                       style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;"
+                                       :style="msg.sender_id == adminId ? 'color:rgba(255,255,255,0.85)' : 'color:#6366f1'">
+                                        Unduh File ↓
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Text -->
+                    <template x-if="msg.message_type === 'text' || !msg.message_type">
+                        <div class="bubble" :class="msg.sender_id == adminId ? 'bubble-me' : 'bubble-other'">
+                            <span x-html="formatMessage(msg.content)"></span>
+                        </div>
+                    </template>
 
                     <span class="msg-time" x-text="formatTime(msg.created_at)"></span>
                 </div>
@@ -143,6 +191,12 @@
     <div class="chat-footer">
         <form class="input-form" @submit.prevent="sendMessage">
             <div class="input-row">
+                <!-- File Upload -->
+                <button type="button" @click="$refs.fileInput.click()" class="input-icon-btn" title="Lampirkan Gambar / File">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                </button>
+                <input type="file" x-ref="fileInput" style="display:none;" @change="uploadFile">
+
                 <textarea x-model="newMessage" @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
                           placeholder="Ketik pesan ke agen..."
                           class="msg-textarea" rows="1"></textarea>
@@ -218,23 +272,25 @@
                     this.messages.push({
                         temp_id: tempId,
                         sender_id: this.adminId,
+                        message_type: 'text',
                         content: content,
                         created_at: new Date().toISOString()
                     });
                     this.scrollToBottom();
 
                     try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('content', content);
+                        formData.append('message_type', 'text');
+
                         const response = await fetch('/admin/agent-chat/send', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                                 'Accept': 'application/json'
                             },
-                            body: JSON.stringify({
-                                conversation_id: this.conversationId,
-                                content: content
-                            })
+                            body: formData
                         });
                         const data = await response.json();
                         if (!response.ok) throw new Error(data.error || 'Gagal mengirim pesan');
@@ -248,6 +304,60 @@
                         alert(e.message);
                     } finally {
                         this.isSending = false;
+                    }
+                },
+
+                async uploadFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    this.isSending = true;
+                    const tempId = Date.now();
+                    
+                    // Preview (if image)
+                    let previewUrl = '';
+                    let tempType = 'file';
+                    if (file.type.startsWith('image/')) {
+                        previewUrl = URL.createObjectURL(file);
+                        tempType = 'image';
+                    }
+
+                    this.messages.push({
+                        temp_id: tempId,
+                        sender_id: this.adminId,
+                        message_type: tempType,
+                        content: previewUrl || file.name,
+                        created_at: new Date().toISOString()
+                    });
+                    this.scrollToBottom();
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('file', file);
+
+                        const response = await fetch('/admin/agent-chat/send', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || data.message || 'Gagal mengunggah file');
+
+                        const index = this.messages.findIndex(m => m.temp_id === tempId);
+                        if (index !== -1) {
+                            this.messages[index] = data.message;
+                        }
+                    } catch (error) {
+                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        alert(error.message);
+                    } finally {
+                        this.isSending = false;
+                        e.target.value = ''; // Reset input
                     }
                 },
 

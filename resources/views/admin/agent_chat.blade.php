@@ -408,7 +408,7 @@
                                     <span class="ci-time" x-text="formatShortDateTime(chat.last_message_at || chat.created_at)"></span>
                                 </div>
                                 <div class="ci-row2">
-                                    <span class="ci-preview" x-text="chat.messages && chat.messages.length > 0 ? chat.messages[0].content : 'Belum ada pesan'"></span>
+                                    <span class="ci-preview" x-text="getPreview(chat)"></span>
                                 </div>
                             </div>
                         </a>
@@ -520,7 +520,7 @@
                 let echoCheckInterval = setInterval(() => {
                     if (window.Echo) {
                         window.Echo.private('admin.dashboard')
-                            .listen('.admin.message.sent', (e) => {
+                            .listen('.admin_message.sent', (e) => {
                                 this.fetchChats();
                             });
                         clearInterval(echoCheckInterval);
@@ -566,6 +566,14 @@
 
             getInitial(name) {
                 return (name || '?').charAt(0).toUpperCase();
+            },
+
+            getPreview(chat) {
+                if (!chat.messages || chat.messages.length === 0) return 'Belum ada pesan';
+                const msg = chat.messages[0];
+                if (msg.message_type === 'image') return '📷 Foto';
+                if (msg.message_type === 'file') return '📄 Dokumen';
+                return msg.content || 'Belum ada pesan';
             },
 
             selectChat(chat) {

@@ -104,7 +104,9 @@ class AgentChatController extends Controller
     {
         $request->validate([
             'conversation_id' => 'required|exists:admin_conversations,id',
-            'content' => 'required|string|max:2000',
+            'content'         => ['required_without:file', 'nullable', 'string', 'max:2000'],
+            'file'            => ['nullable', 'file', 'max:10240'], // Max 10MB
+            'message_type'    => ['nullable', 'in:text,image,file'],
         ]);
 
         $admin = Auth::guard('admin')->user();
@@ -114,11 +116,24 @@ class AgentChatController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        $messageType = $request->message_type ?? 'text';
+        $content = $request->content;
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $mime = $file->getMimeType();
+            $messageType = str_starts_with($mime, 'image/') ? 'image' : 'file';
+
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/chat', $fileName, 'public');
+            $content = asset('storage/' . $path);
+        }
+
         $message = AdminMessage::create([
             'admin_conversation_id' => $conversation->id,
-            'sender_id' => $admin->id,
-            'content' => $request->content,
-            'message_type' => 'text',
+            'sender_id'             => $admin->id,
+            'content'               => $content ?? '',
+            'message_type'          => $messageType,
         ]);
 
         $conversation->update(['last_message_at' => now()]);
