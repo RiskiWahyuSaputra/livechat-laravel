@@ -163,7 +163,7 @@
                                     </button>
                                     <button @click="selectOption('AGENT')" 
                                             class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[11px] font-bold transition-all shadow-md flex-1 text-center flex items-center justify-center gap-2">
-                                        <i class="fas fa-headset"></i> Hubungkan ke Agent
+                                        <i class="fas fa-headset"></i> Hubungi Agent
                                     </button>
                                 </div>
                             </template>
@@ -240,12 +240,29 @@
                 init() {
                     this.scrollToBottom();
                     this.listenForEvents();
+
+                    // Polling fallback: sync status dari server setiap 20 detik
+                    setInterval(async () => {
+                        if (this.status === 'closed') return;
+                        try {
+                            const res = await fetch('{{ route("chat.init") }}', {
+                                method: 'GET',
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            const data = await res.json();
+                            if (data.conversation && data.conversation.status !== this.status) {
+                                console.log('🔄 Polling sync: status berubah dari', this.status, '→', data.conversation.status);
+                                this.status = data.conversation.status;
+                                if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                            }
+                        } catch (e) { /* silent */ }
+                    }, 20000);
                 },
 
                 get statusText() {
-                    if (this.status === 'pending') return 'Menunggu Agen';
-                    if (this.status === 'queued') return 'Dalam Antrean';
-                    if (this.status === 'active') return 'Terhubung dengan Agen';
+                    if (this.status === 'pending') return 'Menunggu Agent';
+                    if (this.status === 'queued') return 'Sedang Dalam Antrian';
+                    if (this.status === 'active') return 'Terhubung dengan Agent';
                     return 'Sesi Ditutup';
                 },
 
@@ -266,6 +283,30 @@
 
                 listenForEvents() {
                     if (typeof window.Echo === 'undefined') return;
+
+                    // Catch-up setelah WebSocket reconnect
+                    if (window.Echo.connector && window.Echo.connector.pusher) {
+                        window.Echo.connector.pusher.connection.bind('connected', () => {
+                            console.log('🔄 WebSocket reconnect — sync ulang data chat');
+                            // Fetch ulang status dari server
+                            fetch('{{ route("chat.init") }}', {
+                                method: 'GET',
+                                headers: { 'Accept': 'application/json' }
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.conversation) {
+                                    this.status = data.conversation.status;
+                                    if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                                }
+                                if (data.messages) {
+                                    this.messages = data.messages;
+                                    this.scrollToBottom();
+                                }
+                            })
+                            .catch(e => console.warn('Reconnect sync failed:', e));
+                        });
+                    }
 
                     if (this.userId) {
                         window.Echo.private(`user.${this.userId}`)

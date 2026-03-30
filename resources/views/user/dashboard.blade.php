@@ -149,7 +149,7 @@
                     </p>
                     <div class="flex flex-wrap gap-4">
                         <button @click="isOpen = true" class="px-8 py-4 bg-red-600 text-white rounded-2xl font-bold shadow-xl shadow-red-600/20 hover:bg-red-700 transition-all transform hover:-translate-y-1 active:scale-95">
-                            Bantuan Langsung
+                            Chat dengan Kami
                         </button>
                         <a href="#solusi" class="px-8 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all transform hover:-translate-y-1">
                             Lihat Solusi
@@ -225,7 +225,7 @@
                 <p class="text-slate-400 max-w-2xl mx-auto font-medium">Tim Live Support kami siap membantu Anda mengenai pendaftaran, kendala sistem, atau informasi produk.</p>
                 <button @click="toggleChat" class="bg-red-600 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-red-600/30 hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 inline-flex items-center gap-3">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                    Chat Sekarang
+                    Mulai Chat
                 </button>
             </div>
         </section>
@@ -585,7 +585,7 @@
                 regError: '',
                 selectedOption: null,
                 showRegForm: false,
-                chat_greeting: 'Halo! Ada yang bisa kami bantu hari ini?',
+                chat_greeting: 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
                 chat_main_menu: [
                     {id: 'youtube', label: 'Youtube BRILLIAN.BIZ', action_type: 'link', action_value: 'https://youtube.com'},
                     {id: 'hubungi_cs', label: 'Hubungi CS', action_type: 'connect_cs'},
@@ -613,8 +613,8 @@
                 reminderSentCount: 0,
 
                 get statusText() {
-                    if (this.status === 'pending') return 'Menunggu Agen';
-                    if (this.status === 'queued') return 'Dalam Antrean';
+                    if (this.status === 'pending') return 'Menunggu Agent';
+                    if (this.status === 'queued') return 'Sedang Dalam Antrian';
                     if (this.status === 'active') return 'Terhubung';
                     return 'Sesi Ditutup';
                 },
@@ -673,6 +673,23 @@
                             }
                         }
                     }, 10000); // Cek setiap 10 detik agar lebih responsif
+
+                    // Polling fallback: sync status dari server setiap 20 detik (safety net jika WebSocket gagal)
+                    setInterval(async () => {
+                        if (!this.conversationId || this.status === 'closed') return;
+                        try {
+                            const res = await fetch('{{ route("chat.init") }}', {
+                                method: 'GET',
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            const data = await res.json();
+                            if (data.conversation && data.conversation.status !== this.status) {
+                                console.log('🔄 Polling sync: status berubah dari', this.status, '→', data.conversation.status);
+                                this.status = data.conversation.status;
+                                if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                            }
+                        } catch (e) { /* silent */ }
+                    }, 20000);
                 },
 
                 async handleTimeout() {
@@ -1022,9 +1039,14 @@
                 },
 
                 listenForEvents() {
-                    if (typeof window.Echo === 'undefined' || !this.conversationId) {
-                        console.warn('Echo or ConversationID not ready.');
-                        return;
+                    if (typeof window.Echo === 'undefined' || !this.conversationId) return;
+
+                    // Catch-up setelah WebSocket reconnect
+                    if (window.Echo.connector && window.Echo.connector.pusher) {
+                        window.Echo.connector.pusher.connection.bind('connected', () => {
+                            console.log('🔄 WebSocket reconnect — sync ulang data chat');
+                            this.fetchChatData();
+                        });
                     }
 
                     try {

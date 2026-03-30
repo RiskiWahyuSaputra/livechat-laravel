@@ -33,4 +33,12 @@ class SettingController extends Controller
 
         return redirect()->back()->with('success', 'Pengaturan berhasil diperbarui.');
     }
+
+    public function runCleanup()
+    {
+        $exitCode = Artisan::call('chat:cleanup-stale-data', ['--force' => true]);
+        $output = Artisan::output();
+
+        return redirect()->back()->with('success', 'Pembersihan berhasil dijalankan.' . ($output ? "\n" . trim($output) : ''));
+    }
 }

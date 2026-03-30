@@ -110,7 +110,7 @@ class ChatController extends Controller
         }
 
         // Set Cookie & Login
-        Cookie::queue('guest_chat_token', $user->email, 60);
+        Cookie::queue('guest_chat_token', $user->email, 35);
         Auth::guard('web')->login($user, true);
 
         // Pastikan conversation dan pesan otomatis dibuat
@@ -160,7 +160,7 @@ class ChatController extends Controller
         ]);
 
         // Set Cookie & Login
-        Cookie::queue('guest_chat_token', $user->email, 60);
+        Cookie::queue('guest_chat_token', $user->email, 35);
         Auth::guard('web')->login($user, true);
 
         // Pastikan conversation otomatis dibuat
@@ -172,7 +172,7 @@ class ChatController extends Controller
              if ($menu && $menu->action_type === 'submenu') {
                   $activeConversation->update(['bot_phase' => 'awaiting_submenu']);
                   $activeConversation->refresh();
-             } else if ($menu && $menu->label === 'Customer service') {
+             } else if ($menu && $menu->action_type === 'connect_cs' && $menu->action_value === 'General Support') {
                   $activeConversation->update(['bot_phase' => 'chatting_with_ai']);
                   $activeConversation->refresh();
              }
@@ -240,7 +240,7 @@ class ChatController extends Controller
                  'sender_id'       => 0,
                  'sender_type'     => 'admin',
                  'message_type'    => 'text',
-                 'content'         => "Terima kasih, data Anda telah dikonfirmasi. Anda kini berada di antrean ke-{$queueCount} untuk terhubung dengan Agent.",
+                 'content'         => "Terima kasih, datanya sudah dikonfirmasi. Kamu sekarang ada di antrean ke-{$queueCount} untuk terhubung dengan Agent.",
              ]);
         }
 
@@ -324,7 +324,7 @@ class ChatController extends Controller
             $token = $request->cookie('guest_chat_token');
             $publicData = [
                 'csrf_token'   => csrf_token(),
-                'chat_greeting' => \App\Models\Setting::get('chat_greeting', 'anda berapa di layanan whatsapp BRILLIAN.BIS kami terus melayani'),
+                'chat_greeting' => \App\Models\Setting::get('chat_greeting', 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?'),
                 'chat_main_menu' => \App\Models\BotMenu::with('children')->whereNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => [
                     'id' => $m->id,
                     'label' => $m->label,
@@ -552,14 +552,14 @@ class ChatController extends Controller
             $child = \App\Models\BotMenu::where('label', $userMessage)->first();
             if ($child) {
                 if ($child->action_type === 'connect_cs') {
-                    if ($child->label === 'Customer service') {
+                    if ($child->action_value === 'General Support') {
                         $conversation->update(['bot_phase' => 'chatting_with_ai']);
                         $newBotMessages[] = Message::create([
                             'conversation_id' => $conversation->id,
                             'sender_id'       => 0,
                             'sender_type'     => 'admin',
                             'message_type'    => 'text',
-                            'content'         => "Halo! Saya BEST AI. Silakan ceritakan kendala atau pertanyaan Anda, dan saya akan coba membantu terlebih dahulu.",
+                            'content'         => "Hai! Saya BEST AI, asisten virtual kamu. Ceritakan aja kendala atau pertanyaan kamu, nanti saya bantu sebisa saya.",
                         ]);
                     } else {
                         // Untuk CS Voucher dll
@@ -569,7 +569,7 @@ class ChatController extends Controller
                             'sender_id'       => 0,
                             'sender_type'     => 'admin',
                             'message_type'    => 'text',
-                            'content'         => $child->message_response ?? "Untuk terhubung dengan {$child->label}, silakan lengkapi form data diri Anda terlebih dahulu.",
+                            'content'         => $child->message_response ?? "Untuk {$child->label}, silakan lengkapi form data diri dulu ya.",
                         ]);
                     }
                 }
@@ -583,7 +583,7 @@ class ChatController extends Controller
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => "Baik, saya akan menghubungkan Anda dengan Agent kami. Silakan lengkapi form data diri yang muncul di layar terlebih dahulu.",
+                     'content'         => "Oke, saya sambungkan ke Agent ya. Silakan isi form data diri dulu di layar kamu.",
                 ]);
                 return $this->formatBotReplies($newBotMessages, $conversation);
             }
@@ -605,7 +605,7 @@ class ChatController extends Controller
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => "Apakah jawaban dari BEST AI sudah cukup membantu? 😊\n\nSilakan klik salah satu opsi di bawah:",
+                    'content'         => "Gimana, jawaban di atas cukup membantu? 😊\n\nKlik salah satu opsi di bawah ya:",
                 ]);
             }
         } elseif ($conversation->bot_phase === 'offer_agent_transfer') {
@@ -616,7 +616,7 @@ class ChatController extends Controller
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => "Baik, saya akan menghubungkan Anda dengan Agent kami. Silakan lengkapi form data diri yang muncul di layar terlebih dahulu.",
+                     'content'         => "Oke, saya sambungkan ke Agent ya. Silakan isi form data diri dulu di layar kamu.",
                 ]);
             } elseif (strtoupper(trim($userMessage)) === 'LANJUT') {
                 $newBotMessages[] = Message::create([
@@ -624,7 +624,7 @@ class ChatController extends Controller
                     'sender_id'       => 0,
                     'sender_type'     => 'admin',
                     'message_type'    => 'text',
-                    'content'         => "Silakan ajukan pertanyaan Anda kembali, saya siap membantu. 😊",
+                    'content'         => "Oke, silakan tanya lagi. Saya siap bantu! 😊",
                 ]);
                 $conversation->update(['bot_phase' => 'chatting_with_ai']);
             } else {
@@ -632,7 +632,7 @@ class ChatController extends Controller
                 // LOOP GUARD: Hitung berapa kali user mengabaikan opsi AGENT/LANJUT
                 $recentBotAsks = Message::where('conversation_id', $conversation->id)
                     ->where('sender_type', 'admin')
-                    ->where('content', 'LIKE', '%Apakah%BEST AI%sudah%cukup%membantu%')
+                    ->where('content', 'LIKE', '%cukup%membantu%')
                     ->orderBy('created_at', 'desc')
                     ->count();
 
@@ -655,7 +655,7 @@ class ChatController extends Controller
                         'sender_id'       => 0,
                         'sender_type'     => 'admin',
                         'message_type'    => 'text',
-                        'content'         => "Sepertinya Anda masih membutuhkan bantuan. Jika ingin berbicara dengan Agent manusia, silakan klik tombol **AGENT** di bawah. 😊",
+                        'content'         => "Kalau butuh bantuan lebih lanjut, kamu bisa langsung klik tombol **Hubungi Agent** di bawah ya.",
                     ]);
                 } elseif (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
                     $conversation->update(['bot_phase' => 'offer_agent_transfer']);
@@ -664,7 +664,7 @@ class ChatController extends Controller
                         'sender_id'       => 0,
                         'sender_type'     => 'admin',
                         'message_type'    => 'text',
-                        'content'         => "Apakah informasi dari BEST AI sudah cukup membantu? 😊\n\nSilakan klik salah satu opsi di bawah:",
+                        'content'         => "Gimana, jawaban di atas cukup membantu? 😊\n\nKlik salah satu opsi di bawah ya:",
                     ]);
                 } else {
                     // AI error, tetap di chatting_with_ai agar user bisa coba lagi
@@ -677,7 +677,7 @@ class ChatController extends Controller
                  'sender_id'       => 0,
                  'sender_type'     => 'admin',
                  'message_type'    => 'text',
-                 'content'         => "Silakan lengkapi form data diri Anda terlebih dahulu agar kami dapat menyambungkan Anda ke Agent.",
+                 'content'         => "Silakan isi form data diri dulu ya, biar bisa saya sambungkan ke Agent.",
              ]);
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = \App\Models\BotMenu::where('label', $userMessage)->whereNull('parent_id')->first();
@@ -803,7 +803,7 @@ class ChatController extends Controller
         if ($menu) {
             if ($menu->action_type === 'submenu') $botPhase = 'awaiting_submenu';
             elseif ($menu->action_type === 'connect_cs') {
-                if ($menu->label === 'Customer service') $botPhase = 'chatting_with_ai';
+                if ($menu->action_value === 'General Support') $botPhase = 'chatting_with_ai';
                 else $botPhase = 'off';
             }
         } else {
@@ -819,7 +819,7 @@ class ChatController extends Controller
         ]);
 
         // User intro
-        $isAnonymousCS = ($user->name === 'Guest' && $menu && $menu->label === 'Customer service');
+        $isAnonymousCS = ($user->name === 'Guest' && $menu && $menu->action_type === 'connect_cs' && $menu->action_value === 'General Support');
         $intro = null;
         if (!$isAnonymousCS) {
             $introLabel = ($menu ? $menu->label : 'Bantuan');
@@ -863,10 +863,10 @@ class ChatController extends Controller
                 // Also show main menu again for links
                 $conversation->update(['bot_phase' => 'awaiting_main_menu']);
                 $botReplies[] = "Pilih layanan kami lainnya:";
-            } elseif ($menu->action_type === 'connect_cs' && $menu->label === 'Customer service') {
+            } elseif ($menu->action_type === 'connect_cs' && $menu->action_value === 'General Support') {
                 if ($isAnonymousCS) {
                      $conversation->update(['bot_phase' => 'offer_agent_transfer']);
-                     $botReplies[] = "Halo! Saya BEST AI, asisten virtual Anda. Ada yang bisa saya bantu hari ini? Jika Anda ingin terhubung dengan Agent kami, silakan klik tombol **AGENT** di bawah.";
+                     $botReplies[] = "Hai! Saya BEST AI, asisten virtual kamu. Ceritakan aja kendala atau pertanyaan kamu, nanti saya bantu sebisa saya. Kalau mau langsung ngobrol sama Agent, klik tombol **Hubungi Agent** di bawah ya.";
                 } else {
                      $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
                      $botReplies[] = "Sebelum terhubung dengan Customer service kami apakah ada yang ingin ditanyakan ke BEST AI ketik \"YA\" jika tidak abaikan saja.\n\nAntrean Anda saat ini: ke-{$queueCount}.";

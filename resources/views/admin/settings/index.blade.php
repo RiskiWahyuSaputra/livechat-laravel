@@ -72,6 +72,21 @@
                                         <label class="form-label">Nama Aplikasi</label>
                                         <input type="text" name="app_name" class="form-control" value="{{ $settings['app_name'] ?? config('app.name') }}">
                                     </div>
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Waktu Pembersihan Otomatis</label>
+                                        <input type="time" name="cleanup_time" class="form-control" value="{{ $settings['cleanup_time'] ?? '03:00' }}">
+                                        <small class="text-muted">Data guest yang tidak aktif akan dibersihkan otomatis setiap hari pada jam ini.</small>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Pembersihan Manual</label>
+                                        <div>
+                                            <form action="{{ route('admin.settings.cleanup') }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menjalankan pembersihan sekarang? Data guest yang tidak aktif akan dihapus permanent.')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-warning btn-sm"><i class="fe fe-trash-2"></i> Bersihkan Sekarang</button>
+                                            </form>
+                                            <small class="text-muted d-block mt-2">Hapus semua data guest anonim yang tidak aktif tanpa menunggu jadwal.</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
