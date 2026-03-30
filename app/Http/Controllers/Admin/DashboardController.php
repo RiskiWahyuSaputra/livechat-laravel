@@ -258,6 +258,7 @@ class DashboardController extends Controller
             ->update([
                 'admin_id'       => $admin->id,
                 'status'         => 'active',
+                'bot_phase'      => 'off', // Matikan bot saat admin mengambil alih
                 'queue_position' => null,
             ]);
 

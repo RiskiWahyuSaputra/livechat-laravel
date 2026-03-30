@@ -629,10 +629,16 @@ class ChatController extends Controller
                 $conversation->update(['bot_phase' => 'chatting_with_ai']);
             } else {
                 // If they ask another question directly, keep chatting with AI
+                // LOOP GUARD: Hitung berapa kali user mengabaikan opsi AGENT/LANJUT
+                $recentBotAsks = Message::where('conversation_id', $conversation->id)
+                    ->where('sender_type', 'admin')
+                    ->where('content', 'LIKE', '%Apakah%BEST AI%sudah%cukup%membantu%')
+                    ->orderBy('created_at', 'desc')
+                    ->count();
+
                 $conversation->update(['bot_phase' => 'chatting_with_ai']);
                 $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan lanjutan ke BEST AI: ");
-                $conversation->update(['bot_phase' => 'offer_agent_transfer']);
-                
+
                 $newBotMessages[] = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id'       => 0,
@@ -640,8 +646,19 @@ class ChatController extends Controller
                     'message_type'    => 'text',
                     'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
                 ]);
-                
-                if (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+
+                if ($recentBotAsks >= 2 && !str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                    // Setelah 2x berturut-turut user abaikan opsi, tawarkan AGENT secara eksplisit tanpa loop
+                    $conversation->update(['bot_phase' => 'offer_agent_transfer']);
+                    $newBotMessages[] = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => "Sepertinya Anda masih membutuhkan bantuan. Jika ingin berbicara dengan Agent manusia, silakan klik tombol **AGENT** di bawah. 😊",
+                    ]);
+                } elseif (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                    $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id'       => 0,
@@ -649,6 +666,9 @@ class ChatController extends Controller
                         'message_type'    => 'text',
                         'content'         => "Apakah informasi dari BEST AI sudah cukup membantu? 😊\n\nSilakan klik salah satu opsi di bawah:",
                     ]);
+                } else {
+                    // AI error, tetap di chatting_with_ai agar user bisa coba lagi
+                    $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                 }
             }
         } elseif ($conversation->bot_phase === 'require_registration') {
@@ -845,6 +865,7 @@ class ChatController extends Controller
                 $botReplies[] = "Pilih layanan kami lainnya:";
             } elseif ($menu->action_type === 'connect_cs' && $menu->label === 'Customer service') {
                 if ($isAnonymousCS) {
+                     $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                      $botReplies[] = "Halo! Saya BEST AI, asisten virtual Anda. Ada yang bisa saya bantu hari ini? Jika Anda ingin terhubung dengan Agent kami, silakan klik tombol **AGENT** di bawah.";
                 } else {
                      $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
