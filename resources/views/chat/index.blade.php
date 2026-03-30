@@ -142,8 +142,8 @@
                             <!-- Timestamp -->
                             <span class="text-[9px] md:text-[10px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
 
-                            <!-- Bot Categories Inline (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah awaiting_category) -->
-                            <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_category' && index === messages.length - 1">
+                            <!-- Bot Categories Inline (Muncul di pesan bot terakhir saat fase awaiting_category) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_category' && isLastBotMessage(index, messages)">
                                 <div class="mt-3 flex flex-wrap gap-2 w-full">
                                     <template x-for="cat in botCategories" :key="cat">
                                         <button @click="selectCategory(cat)" 
@@ -154,8 +154,8 @@
                                 </div>
                             </template>
 
-                            <!-- Bot Transfer Options (Hanya muncul jika ini pesan bot terakhir dan fase bot adalah offer_agent_transfer) -->
-                            <template x-if="msg.sender_id == 0 && botPhase === 'offer_agent_transfer' && index === messages.length - 1">
+                            <!-- Bot Transfer Options (Muncul di pesan bot terakhir saat fase offer_agent_transfer) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'offer_agent_transfer' && isLastBotMessage(index, messages)">
                                 <div class="mt-3 flex flex-col sm:flex-row gap-2 w-full">
                                     <button @click="selectOption('LANJUT')" 
                                             class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-2">
@@ -464,6 +464,14 @@
                             is_typing: isTyping ? this.newMessage.length > 0 : false
                         })
                     });
+                },
+
+                // Cek apakah ini pesan bot terakhir (tidak ada pesan bot setelahnya)
+                isLastBotMessage(currentIndex, messages) {
+                    for (let i = currentIndex + 1; i < messages.length; i++) {
+                        if (messages[i].sender_id == 0) return false;
+                    }
+                    return true;
                 },
 
                 scrollToBottom() {
