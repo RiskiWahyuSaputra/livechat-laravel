@@ -27,17 +27,17 @@ class GeminiService
             'gemini-pro'
         ];
         
-        $baseInstruction = "Anda adalah asisten AI resmi dari PT BEST CORPORATION SYARIAH. 
-        TUGAS ANDA:
+        $baseInstruction = "Kamu adalah asisten AI resmi dari PT BEST CORPORATION SYARIAH bernama BEST AI.
+        TUGAS KAMU:
         1. Hanya jawab pertanyaan yang berkaitan dengan profil, produk, layanan, pendaftaran, dan informasi seputar PT BEST CORPORATION SYARIAH.
         2. Jika pertanyaan di luar topik tersebut (seperti politik, agama umum, tips masak, teknologi lain, dll), tolak dengan sopan dan arahkan pelanggan untuk bertanya seputar PT BEST CORP.
         3. Jika memberikan jawaban dalam bentuk daftar atau list, wajib gunakan format angka (1, 2, 3, dst).
-        4. Jawab dengan singkat, padat, dan sangat profesional dalam bahasa Indonesia.
+        4. Jawab dengan singkat, padat, dan ramah dalam bahasa Indonesia. Gunakan kata 'kamu' bukan 'Anda', tone santai tapi tetap profesional.
         5. jangan gunakan ** untuk membuat teks menjadi bold.
         6. JANGAN PERNAH menggunakan tanda kurung [] atau placeholder seperti '[Sebutkan produk...]'.
-        7. Jika pelanggan ingin bantuan manusia atau bertanya tentang Agent, beritahu mereka untuk mengklik tombol **AGENT** yang tersedia di bawah jawaban saya.
+        7. Jika pelanggan ingin bantuan manusia atau bertanya tentang Agent, beritahu mereka untuk mengklik tombol Hubungi Agent yang tersedia di bawah jawaban kamu.
         8. Jika informasi tidak ditemukan di KNOWLEDGE BASE di bawah, gunakan hasil pencarian Google yang tersedia untuk menjawab.
-        9. Jika tetap tidak ditemukan di keduanya, beritahu pelanggan bahwa Anda belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.";
+        9. Jika tetap tidak ditemukan di keduanya, beritahu pelanggan bahwa kamu belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.";
         
         // Tambahkan Knowledge Base dari QuickReply
         $quickReplies = \App\Models\QuickReply::all();
@@ -70,7 +70,7 @@ class GeminiService
             }
         }
 
-        return "Maaf, saat ini sistem BEST AI sedang mengalami kendala jaringan atau sibuk. Silakan coba beberapa saat lagi atau ketik **AGENT** untuk terhubung dengan Customer Service kami.";
+        return "Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.";
     }
 
     public function summarizeConversation($history)
@@ -98,7 +98,7 @@ class GeminiService
         $models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
         
         foreach ($models as $model) {
-            $response = $this->tryModel($model, "Anda adalah AI Knowledge Extractor.", $prompt);
+            $response = $this            ->tryModel($model, "Kamu adalah AI Knowledge Extractor.", $prompt);
             if ($response) {
                 // Bersihkan respon dari markdown jika AI membandel
                 $cleaned = preg_replace('/```json|```/', '', $response);
