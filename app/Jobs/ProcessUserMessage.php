@@ -59,6 +59,10 @@ class ProcessUserMessage implements ShouldQueue
             }
 
             // --- AI AUTO RESPONSE ---
+            // NOTE: Dinonaktifkan karena ChatController::handleBotResponse() sudah menangani
+            // ini secara sinkron. Mengaktifkan keduanya menyebabkan DUPLIKASI jawaban AI.
+            // Job ini hanya untuk WhatsApp notification.
+            /*
             if (!$conversation->admin_id && $messageType === 'text' && ($conversation->bot_phase === 'off' || !$conversation->bot_phase)) {
                 $aiAutoResponse = $geminiService->askGemini($content, "Berikan jawaban singkat:");
                 
@@ -78,6 +82,7 @@ class ProcessUserMessage implements ShouldQueue
                     }
                 }
             }
+            */
 
             // --- BOT RESPONSE HANDLER (Optional move) ---
             // If the message triggers a bot state change, we might want to handle it here too.
