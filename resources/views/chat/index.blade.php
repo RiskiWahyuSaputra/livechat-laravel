@@ -364,8 +364,9 @@
                                 this.scrollToBottom();
                             }
 
-                            if (this.botPhase === 'awaiting_explanation') {
-                                this.botPhase = 'off';
+                            // Sync botPhase dari response backend (SINGLE SOURCE OF TRUTH)
+                            if (data.bot_phase) {
+                                this.botPhase = data.bot_phase;
                             }
                         }
 
@@ -438,7 +439,8 @@
                     if (this.isSending || this.botPhase !== 'awaiting_category') return;
                     this.newMessage = category;
                     await this.sendMessage();
-                    this.botPhase = 'awaiting_explanation';
+                    // botPhase sudah di-sync dari data.bot_phase di sendMessage()
+                    // Tidak perlu hardcode lagi
                 },
 
                 async selectOption(option) {
