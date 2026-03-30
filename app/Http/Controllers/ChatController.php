@@ -865,6 +865,7 @@ class ChatController extends Controller
                 $botReplies[] = "Pilih layanan kami lainnya:";
             } elseif ($menu->action_type === 'connect_cs' && $menu->label === 'Customer service') {
                 if ($isAnonymousCS) {
+                     $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                      $botReplies[] = "Halo! Saya BEST AI, asisten virtual Anda. Ada yang bisa saya bantu hari ini? Jika Anda ingin terhubung dengan Agent kami, silakan klik tombol **AGENT** di bawah.";
                 } else {
                      $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
