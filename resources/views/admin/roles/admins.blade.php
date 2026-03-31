@@ -12,7 +12,7 @@ const adminRolesData = {
     availablePermissions: {{ Js::from($permissions) }},
     rolesList: {{ Js::from($rolesList) }},
     permissionGroups: {
-        'Modul Percakapan & Pelayanan': ['view_chat', 'view_history', 'manage_quick_replies'],
+        'Modul Percakapan & Pelayanan': ['view_chat', 'manage_quick_replies'],
         'Modul Pelanggan': ['manage_customers'],
         'Modul Sistem & Keamanan': ['manage_roles']
     },
