@@ -216,7 +216,8 @@
 }
 
 /* Modals di depan kanvas panzoom dll */
-.modal-backdrop, .modal { z-index: 1050 !important; }
+.modal-backdrop { z-index: 1040 !important; }
+.modal { z-index: 1050 !important; }
 
 /* Control Panel Zoom (Melayang Kritis) */
 .zoom-controls {
