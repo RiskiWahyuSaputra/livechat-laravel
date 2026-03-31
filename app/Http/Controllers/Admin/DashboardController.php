@@ -54,12 +54,18 @@ class DashboardController extends Controller
         $agentPerformance = $this->analyticsService->getAgentPerformance();
         $statusDistribution = $this->analyticsService->getStatusDistribution();
 
+        // Query dasar akun valid (bukan anonim raw guest)
+        $validUsersQuery = User::whereNot(function($q) {
+            $q->where('email', 'like', 'anon_%@livechat.best')
+              ->where('name', 'Guest');
+        });
+
         // Statistik Ringkas
         $stats = [
-            'total_users' => User::count(),
-            'online_users' => User::where('is_online', true)->count(),
-            'today_users' => User::whereDate('created_at', now()->today())->count(),
-            'yesterday_users' => User::whereDate('created_at', now()->yesterday())->count(),
+            'total_users' => (clone $validUsersQuery)->count(),
+            'online_users' => (clone $validUsersQuery)->where('is_online', true)->count(),
+            'today_users' => (clone $validUsersQuery)->whereDate('created_at', now()->today())->count(),
+            'yesterday_users' => (clone $validUsersQuery)->whereDate('created_at', now()->yesterday())->count(),
         ];
 
         // Data Grafik (7 hari terakhir)
@@ -68,13 +74,13 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
             $chartLabels[] = $date->format('d M');
-            $chartData[] = User::whereDate('created_at', $date->format('Y-m-d'))->count();
+            $chartData[] = (clone $validUsersQuery)->whereDate('created_at', $date->format('Y-m-d'))->count();
         }
         $stats['chart_data'] = $chartData;
         $stats['chart_labels'] = $chartLabels;
 
         // Filter Pelanggan
-        $query = User::query();
+        $query = (clone $validUsersQuery);
 
         if ($request->has('filter')) {
             switch ($request->filter) {
@@ -163,7 +169,14 @@ class DashboardController extends Controller
         $mainQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
                 $query->latest()->limit(1);
             }])
-            ->whereIn('status', ['pending', 'queued', 'active', 'closed']);
+            ->whereIn('status', ['pending', 'queued', 'active', 'closed'])
+            ->whereHas('customer', function ($q) {
+                // Sembunyikan 'Raw Guest' dari Chat Workspace Admin
+                $q->whereNot(function($sub) {
+                    $sub->where('email', 'like', 'anon_%@livechat.best')
+                        ->where('name', 'Guest');
+                });
+            });
 
         if ($search !== '') {
             $needle = '%' . mb_strtolower($search) . '%';
