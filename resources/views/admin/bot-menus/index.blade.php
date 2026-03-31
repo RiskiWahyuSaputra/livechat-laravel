@@ -3,22 +3,26 @@
 @section('title', 'Alur Chat Bot')
 
 @section('content')
+<!-- TAMBAHKAN PANZOOM LIBRARY -->
+<script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+
 <style>
 /* Latar Belakang Kotak Titik-titik (Dot Grid) ala Visual Builder */
-.tree-wrapper {
+.tree-wrapper-container {
     width: 100%;
-    min-height: 70vh;
-    overflow: auto;
-    padding: 40px 20px;
+    min-height: 75vh;
+    overflow: hidden; /* Sembunyikan scrollbar OS karena kita pakai Panzoom */
     background-color: #f8fafc;
     background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
     background-size: 25px 25px;
     border-radius: 12px;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+    position: relative;
     cursor: grab;
+    z-index: 10;
 }
 
-.tree-wrapper:active {
+.tree-wrapper-container:active {
     cursor: grabbing;
 }
 
@@ -27,6 +31,9 @@
     text-align: center;
     white-space: nowrap;
     margin: 0 auto;
+    /* Memberi ruang nafas luas agar saat digeser tidak terpotong */
+    padding: 100px 300px;
+    transform-origin: 0 0;
 }
 
 .tf-tree ul {
@@ -35,6 +42,7 @@
     display: inline-flex;
     justify-content: center;
     padding-left: 0;
+    margin-bottom: 0;
 }
 
 .tf-tree li {
@@ -42,7 +50,7 @@
     text-align: center;
     list-style-type: none;
     position: relative;
-    padding: 30px 10px 0 10px;
+    padding: 30px 15px 0 15px; /* Jarak antar ranting horisontal */
 }
 
 /* Connector Lines yang Tegas & Lurus (Warna Abu-Abu) */
@@ -83,8 +91,8 @@
     background: #f1f5f9;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    padding: 6px 10px;
-    min-width: 140px;
+    padding: 6px 12px;
+    min-width: 150px;
     max-width: 200px;
     margin: 0 auto 15px auto;
     text-align: left;
@@ -109,12 +117,13 @@
     color: #64748b;
     font-weight: 600;
     margin-bottom: 2px;
+    text-transform: uppercase;
 }
 
 .input-value {
-    font-size: 12px;
+    font-size: 13px;
     color: #334155;
-    font-weight: 500;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -125,10 +134,9 @@
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    width: 240px;
+    width: 250px;
     margin: 0 auto;
     text-align: left;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
     position: relative;
@@ -140,8 +148,8 @@
     padding: 8px 12px;
     border-bottom: 1px solid #e2e8f0;
     border-radius: 8px 8px 0 0;
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     color: #1e40af;
     display: flex;
     justify-content: space-between;
@@ -162,43 +170,76 @@
     min-height: 40px;
 }
 
-/* Action Area (Inline Button) */
+/* Action Area (Tampil Permanen, Tidak Pakai Hover) */
 .node-actions-hover {
     padding: 8px 12px;
     background: #f8fafc;
-    border-top: 1px dashed #cbd5e1;
+    border-top: 1px solid #e2e8f0;
     border-radius: 0 0 8px 8px;
     display: flex;
-    justify-content: flex-end;
-    gap: 5px;
+    justify-content: flex-end; /* Jika Mau Rata Kanan */
+    gap: 6px;
+    opacity: 1 !important; /* Mencegah disembunyikan CSS lain */
+    visibility: visible !important;
 }
 
 .btn-mini {
-    padding: 4px 8px;
+    padding: 5px 8px;
     font-size: 11px;
     border-radius: 4px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     background: white;
-    color: #64748b;
+    color: #475569;
     text-decoration: none;
     cursor: pointer;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
-.btn-mini:hover { background: #f1f5f9; }
-.btn-mini.add { color: #10b981; }
-.btn-mini.edit { color: #3b82f6; }
-.btn-mini.delete { color: #ef4444; }
+.btn-mini:hover { background: #f1f5f9; filter: brightness(0.95); }
+.btn-mini.add { color: #059669; border-color: #a7f3d0; background: #f0fdf4;}
+.btn-mini.edit { color: #2563eb; border-color: #bfdbfe; background: #eff6ff;}
+.btn-mini.delete { color: #dc2626; border-color: #fecaca; background: #fef2f2;}
 
 /* Root Styles (Start Point) */
 .root-point {
-    background: #475569;
+    background: #334155;
     color: white;
-    font-size: 10px;
-    padding: 4px 14px;
-    border-radius: 12px;
+    font-size: 11px;
+    padding: 6px 16px;
+    border-radius: 20px;
     display: inline-block;
-    margin-bottom: 12px;
-    font-weight: 600;
+    margin-bottom: 15px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+
+/* Modals di depan kanvas panzoom dll */
+.modal-backdrop, .modal { z-index: 1050 !important; }
+
+/* Control Panel Zoom (Melayang Kritis) */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: white;
+    padding: 5px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.zoom-btn {
+    width: 36px; height: 36px;
+    border: none; background: transparent;
+    border-radius: 5px; cursor: pointer;
+    color: #475569; font-size: 16px;
+}
+.zoom-btn:hover { background: #f1f5f9; color: #0f172a; }
 
 </style>
 
@@ -227,10 +268,10 @@
     <div class="page-header">
         <div class="row align-items-center">
             <div class="col">
-                <h3 class="page-title">Alur Percakapan (Bot Flow Builder)</h3>
+                <h3 class="page-title">Alur Percakapan Cerdas (Bot Canvas Builder)</h3>
             </div>
             <div class="col-auto">
-                <button onclick="window.location.reload()" class="btn btn-white btn-sm"><i class="fas fa-sync-alt"></i> Refresh Canvas</button>
+                <p class="text-xs text-muted mb-0"><i class="fas fa-mouse me-1"></i> <i>Scroll Wheel</i> untuk Zoom In/Out | Klik Tahan untuk Geser</p>
             </div>
         </div>
     </div>
@@ -241,15 +282,25 @@
                 <div class="alert alert-success border-0 shadow-sm"><i class="feather-check-circle me-1"></i> {{ session('success') }}</div>
             @endif
 
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-0">
-                    <div class="tree-wrapper" id="canvas-container">
-                        <div class="tf-tree">
+            <div class="card shadow rounded-3 border-0 overflow-hidden">
+                <div class="card-body p-0 position-relative">
+                    
+                    {{-- TOMBOL KONTROL ZOOM MENGAPUNG --}}
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" id="zoomInBtn" title="Zoom In"><i class="fas fa-plus"></i></button>
+                        <button class="zoom-btn" id="zoomOutBtn" title="Zoom Out"><i class="fas fa-minus"></i></button>
+                        <button class="zoom-btn" id="resetBtn" title="Tengahkan Canvas"><i class="fas fa-expand"></i></button>
+                    </div>
+
+                    {{-- RUANG KANVAS PEMBUNGKUS TREE --}}
+                    <div class="tree-wrapper-container" id="panzoom-container">
+                        <div class="tf-tree" id="panzoom-element">
+                            <!-- STRUKTUR UTAMA POHON -->
                             <ul>
                                 <li>
                                     <!-- ROOT NODE (Start Point) -->
                                     <div class="root-point">Start point</div>
-                                    <div class="bot-node-box shadow-sm">
+                                    <div class="bot-node-box shadow-lg border-0">
                                         <div class="node-header-band node-header-root">
                                             <span>BEST-Greeting (Root)</span>
                                         </div>
@@ -257,105 +308,17 @@
                                             Halo! Saya BEST AI... Pilih menu di bawah ini:<br><br>
                                             <em class="text-muted" style="font-size: 10px;">(Pilihan bot default)</em>
                                         </div>
-                                        <div class="node-actions-hover">
-                                            <button @click="openCreate()" class="btn-mini add w-100 text-center fw-bold"><i class="fas fa-plus"></i> Tambah Menu Utama</button>
+                                        <div class="node-actions-hover bg-light">
+                                            <button type="button" @click="openCreate()" class="btn-mini add w-100 text-center fw-bold" style="padding: 8px;"><i class="fas fa-plus me-1"></i> Tambah Pilihan Menu Utama</button>
                                         </div>
                                     </div>
 
                                     @if(count($menus) > 0)
+                                    <!-- ANAK CABANG KE Menu Utama Berulang Rekursif -->
                                     <ul>
                                         @foreach($menus as $menu)
-                                        <li>
-                                            <!-- USER INPUT KOTAK KECIL -->
-                                            <div class="user-input-box">
-                                                <div class="input-header">User input</div>
-                                                <div class="input-value">
-                                                    @if($menu->action_type === 'submenu') <i class="fas fa-bars text-secondary"></i> @endif
-                                                    @if($menu->action_type === 'link') <i class="fas fa-link text-danger"></i> @endif
-                                                    @if($menu->action_type === 'connect_cs') <i class="fas fa-headset text-success"></i> @endif
-                                                    {{ $menu->label }}
-                                                </div>
-                                            </div>
-
-                                            <!-- BOT ACTION KOTAK BESAR -->
-                                            <div class="bot-node-box">
-                                                <div class="node-header-band 
-                                                    {{ $menu->action_type === 'link' ? 'type-link' : '' }}
-                                                    {{ $menu->action_type === 'connect_cs' ? 'type-cs' : '' }}">
-                                                    <span>{{ strtoupper($menu->action_type) }}</span>
-                                                </div>
-                                                <div class="node-body">
-                                                    @if($menu->message_response)
-                                                        {{ Str::limit($menu->message_response, 80) }}
-                                                    @endif
-
-                                                    @if($menu->action_value)
-                                                        <div class="mt-2 p-1 bg-light rounded" style="font-size: 10px; word-break: break-all;">
-                                                            <strong>Aksi/Tujuan:</strong> {{ $menu->action_value }}
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                                <div class="node-actions-hover">
-                                                    @if($menu->action_type === 'submenu')
-                                                        <button @click="openCreate({{ $menu->id }})" class="btn-mini add" title="Tambah Cabang"><i class="fas fa-plus"></i></button>
-                                                    @endif
-                                                    <button @click="openEdit({{ $menu->toJson() }})" class="btn-mini edit" title="Edit"><i class="fas fa-pen"></i></button>
-                                                    
-                                                    <form action="{{ route('admin.bot-menus.destroy', $menu->id) }}" method="POST" class="m-0 p-0" onsubmit="return confirm('Hapus seluruh cabang ini?')">
-                                                        @csrf @method('DELETE')
-                                                        <button type="submit" class="btn-mini delete"><i class="fas fa-trash"></i></button>
-                                                    </form>
-                                                </div>
-                                            </div>
-
-                                            <!-- REKURSIF SUBMENU LEVEL BAWAH -->
-                                            @if($menu->action_type === 'submenu' && count($menu->children) > 0)
-                                            <ul>
-                                                @foreach($menu->children as $child)
-                                                <li>
-                                                    <!-- USER INPUT KOTAK KECIL -->
-                                                    <div class="user-input-box">
-                                                        <div class="input-header">User input</div>
-                                                        <div class="input-value">
-                                                            @if($child->action_type === 'submenu') <i class="fas fa-bars text-secondary"></i> @endif
-                                                            @if($child->action_type === 'link') <i class="fas fa-link text-danger"></i> @endif
-                                                            @if($child->action_type === 'connect_cs') <i class="fas fa-headset text-success"></i> @endif
-                                                            {{ $child->label }}
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- BOT ACTION KOTAK BESAR -->
-                                                    <div class="bot-node-box">
-                                                        <div class="node-header-band 
-                                                            {{ $child->action_type === 'link' ? 'type-link' : '' }}
-                                                            {{ $child->action_type === 'connect_cs' ? 'type-cs' : '' }}">
-                                                            <span>{{ strtoupper($child->action_type) }}</span>
-                                                        </div>
-                                                        <div class="node-body">
-                                                            @if($child->message_response)
-                                                                {{ Str::limit($child->message_response, 80) }}
-                                                            @endif
-
-                                                            @if($child->action_value)
-                                                                <div class="mt-2 p-1 bg-light rounded" style="font-size: 10px; word-break: break-all;">
-                                                                    <strong>Aksi/Tujuan:</strong> {{ $child->action_value }}
-                                                                </div>
-                                                            @endif
-                                                        </div>
-                                                        <div class="node-actions-hover">
-                                                            <button @click="openEdit({{ $child->toJson() }})" class="btn-mini edit" title="Edit"><i class="fas fa-pen"></i></button>
-                                                            
-                                                            <form action="{{ route('admin.bot-menus.destroy', $child->id) }}" method="POST" class="m-0 p-0" onsubmit="return confirm('Hapus menu ini?')">
-                                                                @csrf @method('DELETE')
-                                                                <button type="submit" class="btn-mini delete"><i class="fas fa-trash"></i></button>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                                @endforeach
-                                            </ul>
-                                            @endif
-                                        </li>
+                                            <!-- Kita pisah view komponen partial -->
+                                            @include('admin.bot-menus.partials.tree_node', ['menu' => $menu])
                                         @endforeach
                                     </ul>
                                     @endif
@@ -371,48 +334,49 @@
     <!-- Modal Form Alpine tetep utuh di bawah sini -->
     <div class="modal fade" :class="showModal ? 'show d-block' : ''" tabindex="-1" x-show="showModal" x-cloak>
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0 rounded-3">
+            <div class="modal-content shadow-lg border-0 rounded-4">
                 <form :action="isEdit ? '/admin/bot-menus/' + form.id : '/admin/bot-menus'" method="POST">
                     @csrf
                     <template x-if="isEdit"><input type="hidden" name="_method" value="PUT"></template>
                     <input type="hidden" name="parent_id" x-model="form.parent_id">
 
-                    <div class="modal-header bg-light">
-                        <h5 class="modal-title font-weight-bold text-dark" x-text="isEdit ? 'Node Settings' : 'Create New Node'"></h5>
+                    <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4">
+                        <h5 class="modal-title fw-bolder text-dark" x-text="isEdit ? 'Pengaturan Cabang Node' : 'Ciptakan Jalur Baru'"></h5>
                         <button type="button" class="btn-close" @click="showModal = false"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="form-group mb-3">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Input Pelanggan (Label Menu)</label>
-                            <input type="text" name="label" x-model="form.label" class="form-control bg-light" placeholder="Masukkan tulisan di tombol..." required>
+                    <div class="modal-body px-4 pt-4">
+                        <div class="form-group mb-4">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Nama Tombol Menu <span class="text-danger">*</span></label>
+                            <input type="text" name="label" x-model="form.label" class="form-control form-control-lg bg-light" placeholder="Misal: 'Hubungi CS', 'Layanan Bantuan'" required>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Tipe Node (Aksi)</label>
+                        <div class="form-group mb-4">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Tipe Node (Aksi Lanjutan) <span class="text-danger">*</span></label>
                             <select name="action_type" x-model="form.action_type" class="form-select bg-light" required>
-                                <option value="submenu">Flow Bercabang (Submenu)</option>
-                                <option value="link">Aksi Buka URL Eksternal</option>
-                                <option value="connect_cs">Aksi Transfer ke Agent CS</option>
+                                <option value="submenu">Buka Submenu Lanjutan (Tambah Pilihan Baru)</option>
+                                <option value="link">Kirim URL Eksternal (User Keluar Web)</option>
+                                <option value="connect_cs">Minta Dialihkan ke Agent Manusia</option>
                             </select>
                         </div>
 
-                        <div class="form-group mb-3 position-relative">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Balasan AI (Text Response)</label>
-                            <textarea name="message_response" x-model="form.message_response" class="form-control bg-light" rows="3" placeholder="Apa respon bot ketika ini dipencet?"></textarea>
+                        <div class="form-group mb-4 position-relative">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Balasan Spesifik AI (Opsional)</label>
+                            <textarea name="message_response" x-model="form.message_response" class="form-control bg-light" rows="3" placeholder="Apa respon gelembung bot ketika menu ini dipencet pelanggan?"></textarea>
                         </div>
 
-                        <div class="form-group mb-3" x-show="form.action_type === 'link'">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Tujuan URL</label>
-                            <input type="url" name="action_value" x-model="form.action_value" class="form-control bg-light" placeholder="https://...">
+                        <div class="form-group mb-4" x-show="form.action_type === 'link'">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Destinasi URL Valid</label>
+                            <input type="url" name="action_value" x-model="form.action_value" class="form-control bg-light" placeholder="https://youtube.com/...">
                         </div>
 
-                        <div class="form-group mb-3" x-show="form.action_type === 'connect_cs'">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Routing Agent (Opsional)</label>
-                            <input type="text" name="action_value" x-model="form.action_value" class="form-control bg-light" placeholder="Departemen Tujuan...">
+                        <div class="form-group mb-4" x-show="form.action_type === 'connect_cs'">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Kategori Departemen Tujuan (Opsional)</label>
+                            <input type="text" name="action_value" x-model="form.action_value" class="form-control bg-light" placeholder="Contoh: Tim Sales / Tim Teknisi...">
                         </div>
                     </div>
-                    <div class="modal-footer pb-3 border-top-0">
-                        <button type="submit" class="btn btn-primary w-100" x-text="isEdit ? 'Save Node Configuration' : 'Create Flow Node'"></button>
+                    <div class="modal-footer px-4 pb-4 border-top-0 bg-white rounded-bottom-4">
+                        <button type="button" class="btn btn-light rounded-pill px-4" @click="showModal = false">Batal</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 shadow-sm fw-bold" x-text="isEdit ? 'Simpan Node' : 'Tumbuhkan Node'"></button>
                     </div>
                 </form>
             </div>
@@ -422,27 +386,41 @@
 </div>
 
 <script>
+    // Inisialisasi PANZOOM (Penyihir Canvas Masa Kini)
     document.addEventListener('DOMContentLoaded', function() {
-        const slider = document.getElementById('canvas-container');
-        let isDown = false, startX, scrollLeft;
-        if (slider) {
-            slider.addEventListener('mousedown', (e) => {
-                // Hindari grab saat mengklik tombol dalam kotak
-                if(e.target.closest('.bot-node-box') || e.target.closest('.user-input-box')) return;
-                isDown = true; slider.style.cursor = 'grabbing';
-                startX = e.pageX - slider.offsetLeft; scrollLeft = slider.scrollLeft;
-            });
-            slider.addEventListener('mouseleave', () => { isDown = false; slider.style.cursor = 'grab'; });
-            slider.addEventListener('mouseup', () => { isDown = false; slider.style.cursor = 'grab'; });
-            slider.addEventListener('mousemove', (e) => {
-                if (!isDown) return; e.preventDefault();
-                const x = e.pageX - slider.offsetLeft; const walk = (x - startX) * 2;
-                slider.scrollLeft = scrollLeft - walk;
-            });
-            
-            // Auto scroll to center
-            slider.scrollLeft = (slider.scrollWidth - slider.clientWidth) / 2;
-        }
+        // Ambil elemen kanvas utamanya
+        const elem = document.getElementById('panzoom-element');
+        const container = document.getElementById('panzoom-container');
+
+        // Nyalakan plugin Panzoom (Cukup 1 baris kode sakti ini)
+        const panzoom = Panzoom(elem, {
+            maxScale: 3,
+            minScale: 0.2,
+            step: 0.1,
+            cursor: 'grab',
+            animate: true
+        });
+
+        // 1. Dukungan Zoom In / Out memakai Scroll/Roda Mouse!
+        elem.parentElement.addEventListener('wheel', panzoom.zoomWithWheel);
+
+        // 2. Tombol Aksi Kanan Bawah
+        document.getElementById('zoomInBtn').addEventListener('click', panzoom.zoomIn);
+        document.getElementById('zoomOutBtn').addEventListener('click', panzoom.zoomOut);
+        document.getElementById('resetBtn').addEventListener('click', panzoom.reset);
+
+        // 3. Modifikasi Intervensi Input/Klik di dalam Panzoom Element
+        // Mencegah Panzoom mendeteksi / mengambil alih event ketika user menekan Tombol atau mengetik Form Modal (Krusial Bug Fix)
+        elem.addEventListener('panzoomstart', (event) => {
+            if (event.target.tagName.toLowerCase() === 'button' || 
+                event.target.closest('button') || 
+                event.target.closest('.modal')) {
+                event.preventDefault(); // Matikan grab ketika lagi mijit tombol Alpine
+            }
+        });
+        
+        // Geser Diagram sedikit ke tengah layar pada saat awal Load
+        setTimeout(() => { panzoom.pan(0, 50); }, 500);
     });
 </script>
 @endsection
