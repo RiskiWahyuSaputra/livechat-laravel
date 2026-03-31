@@ -33,18 +33,27 @@ class RoleController extends Controller
 
     private function syncLegacyRoles()
     {
-        $defaultDescriptions = [
-            'super_admin' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
-            'agent' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
+        $defaultRoles = [
+            'super_admin' => [
+                'name' => 'Superadmin',
+                'description' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
+                'level' => 1
+            ],
+            'agent' => [
+                'name' => 'Agent',
+                'description' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
+                'level' => 2
+            ],
         ];
 
-        // Pastikan role default ada dengan deskripsi
-        foreach ($defaultDescriptions as $slug => $desc) {
+        // Pastikan role default ada dengan deskripsi dan level
+        foreach ($defaultRoles as $slug => $data) {
             Role::updateOrCreate(
                 ['slug' => $slug],
                 [
-                    'name' => Str::title(str_replace('_', ' ', $slug)),
-                    'description' => $desc
+                    'name' => $data['name'],
+                    'description' => $data['description'],
+                    'level' => $data['level']
                 ]
             );
         }
@@ -66,11 +75,20 @@ class RoleController extends Controller
             'password' => 'required|string|min:8',
             'role' => 'required|string', // Ini sekarang slug role
             'permissions' => 'nullable|array',
+            'level' => 'required|integer|min:1',
         ]);
 
         $role = Role::where('slug', $request->role)->first();
         $is_superadmin = $request->role === 'super_admin';
         $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
+        
+        // Level otomatis berdasarkan Role, atau input manual jika diberikan
+        $level = $request->level;
+        if ($is_superadmin) {
+            $level = 1;
+        } elseif ($role) {
+            $level = $role->level;
+        }
 
         Admin::create([
             'username' => $request->username,
@@ -80,6 +98,7 @@ class RoleController extends Controller
             'role' => $request->role, // simpan slug sebagai fallback
             'is_superadmin' => $is_superadmin,
             'permissions' => $permissions,
+            'level' => $level,
         ]);
 
         return redirect()->route('admin.admins.index')->with('success', 'Admin baru berhasil ditambahkan.');
@@ -93,11 +112,20 @@ class RoleController extends Controller
             'password' => 'nullable|string|min:8',
             'role' => 'required|string',
             'permissions' => 'nullable|array',
+            'level' => 'required|integer|min:1',
         ]);
 
         $role = Role::where('slug', $request->role)->first();
         $is_superadmin = $request->role === 'super_admin';
         $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
+
+        // Level otomatis berdasarkan Role, atau input manual jika diberikan
+        $level = $request->level;
+        if ($is_superadmin) {
+            $level = 1;
+        } elseif ($role) {
+            $level = $role->level;
+        }
 
         $data = [
             'username' => $request->username,
@@ -106,6 +134,7 @@ class RoleController extends Controller
             'role' => $request->role,
             'is_superadmin' => $is_superadmin,
             'permissions' => $permissions,
+            'level' => $level,
         ];
 
         if ($request->filled('password')) {
