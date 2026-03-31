@@ -10,7 +10,8 @@
 /* Latar Belakang Kotak Titik-titik (Dot Grid) ala Visual Builder */
 .tree-wrapper-container {
     width: 100%;
-    min-height: 75vh;
+    height: 60vh;
+    min-height: 400px;
     overflow: hidden; /* Sembunyikan scrollbar OS karena kita pakai Panzoom */
     background-color: #f8fafc;
     background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
