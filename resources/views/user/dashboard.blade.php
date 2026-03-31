@@ -430,6 +430,20 @@
                                                 </template>
                                             </div>
                                         </template>
+
+                                        <!-- Phase: offer_agent_transfer -->
+                                        <template x-if="botPhase === 'offer_agent_transfer'">
+                                            <div class="flex flex-col sm:flex-row gap-1.5 w-full">
+                                                <button @click="newMessage = 'LANJUT'; sendMessage()" 
+                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
+                                                    <i class="fas fa-comment-dots"></i> Tanya Lagi
+                                                </button>
+                                                <button @click="newMessage = 'AGENT'; sendMessage()" 
+                                                        class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
+                                                    <i class="fas fa-headset"></i> Hubungi Agent
+                                                </button>
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
