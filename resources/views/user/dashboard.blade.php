@@ -604,7 +604,7 @@
                 regError: '',
                 selectedOption: null,
                 showRegForm: false,
-                chat_greeting: 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
+                chat_greeting: '{!! addslashes(\App\Models\Setting::get("bot_greeting_message", "Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?")) !!}',
                 chat_main_menu: [],
 
                 conversationId: null,

@@ -245,8 +245,10 @@
 
 <div x-data="{
     showModal: false,
+    showGreetingModal: false,
     isEdit: false,
     form: { id: '', parent_id: '', label: '', message_response: '', action_type: 'submenu', action_value: '' },
+    greetingForm: { message: `{!! addslashes(\App\Models\Setting::get('bot_greeting_message', 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?')) !!}` },
     openCreate(parentId = null) {
         this.isEdit = false;
         this.form = { id: '', parent_id: parentId, label: '', message_response: '', action_type: 'submenu', action_value: '' };
@@ -305,11 +307,12 @@
                                             <span>BEST-Greeting (Root)</span>
                                         </div>
                                         <div class="node-body">
-                                            Halo! Saya BEST AI... Pilih menu di bawah ini:<br><br>
-                                            <em class="text-muted" style="font-size: 10px;">(Pilihan bot default)</em>
+                                            {{ \App\Models\Setting::get('bot_greeting_message', 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?') }}<br><br>
+                                            <em class="text-muted" style="font-size: 10px;">(Pesan Pembuka Dinamis)</em>
                                         </div>
-                                        <div class="node-actions-hover bg-light">
-                                            <button type="button" @click="openCreate()" class="btn-mini add w-100 text-center fw-bold" style="padding: 8px;"><i class="fas fa-plus me-1"></i> Tambah Pilihan Menu Utama</button>
+                                        <div class="node-actions-hover bg-light d-flex border-top" style="padding: 6px; gap: 6px;">
+                                            <button type="button" @click="showGreetingModal = true" class="btn-mini edit flex-fill justify-content-center" style="padding: 8px;"><i class="fas fa-pen me-1"></i> Edit Sapaan</button>
+                                            <button type="button" @click="openCreate()" class="btn-mini add flex-fill justify-content-center" style="padding: 8px;"><i class="fas fa-plus me-1"></i> Tambah Menu</button>
                                         </div>
                                     </div>
 
@@ -383,6 +386,32 @@
         </div>
     </div>
     <div class="modal-backdrop fade" :class="showModal ? 'show d-block' : ''" x-show="showModal" x-cloak></div>
+    <div class="modal fade" :class="showGreetingModal ? 'show d-block' : ''" tabindex="-1" x-show="showGreetingModal" x-cloak>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0 rounded-4">
+                <form action="{{ route('admin.bot-menus.greeting') }}" method="POST">
+                    @csrf
+                    <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4">
+                        <h5 class="modal-title fw-bolder text-dark">Pengaturan Sapaan Awal (Root Node)</h5>
+                        <button type="button" class="btn-close" @click="showGreetingModal = false"></button>
+                    </div>
+                    <div class="modal-body px-4 pt-4">
+                        <div class="form-group mb-4">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Teks Gelembung Pembuka <span class="text-danger">*</span></label>
+                            <textarea name="bot_greeting_message" x-model="greetingForm.message" class="form-control bg-light" rows="4" required placeholder="Tuliskan respon pertama bot di sini..."></textarea>
+                            <small class="text-muted mt-2 d-block">Pesan ini menimpa sapaan bawaan pada Livechat user dan akan langsung tersinkronisasi realtime.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer px-4 pb-4 border-top-0 bg-white rounded-bottom-4">
+                        <button type="button" class="btn btn-light rounded-pill px-4" @click="showGreetingModal = false">Batal</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 shadow-sm fw-bold">Simpan Sapaan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade" :class="showGreetingModal ? 'show d-block' : ''" x-show="showGreetingModal" x-cloak></div>
+
 </div>
 
 <script>

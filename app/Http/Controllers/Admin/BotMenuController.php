@@ -43,6 +43,17 @@ class BotMenuController extends Controller
         return redirect()->back()->with('success', 'Menu berhasil diperbarui.');
     }
 
+    public function updateGreeting(Request $request)
+    {
+        $request->validate([
+            'bot_greeting_message' => 'required|string'
+        ]);
+
+        \App\Models\Setting::set('bot_greeting_message', $request->bot_greeting_message, 'bot');
+
+        return redirect()->back()->with('success', 'Pesan Sapaan Awal (Root Node) berhasil diperbarui.');
+    }
+
     public function destroy(BotMenu $botMenu)
     {
         $botMenu->delete();
