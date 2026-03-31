@@ -149,7 +149,7 @@
                     </p>
                     <div class="flex flex-wrap gap-4">
                         <button @click="isOpen = true" class="px-8 py-4 bg-red-600 text-white rounded-2xl font-bold shadow-xl shadow-red-600/20 hover:bg-red-700 transition-all transform hover:-translate-y-1 active:scale-95">
-                            Bantuan Langsung
+                            Chat dengan Kami
                         </button>
                         <a href="#solusi" class="px-8 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all transform hover:-translate-y-1">
                             Lihat Solusi
@@ -225,7 +225,7 @@
                 <p class="text-slate-400 max-w-2xl mx-auto font-medium">Tim Live Support kami siap membantu Anda mengenai pendaftaran, kendala sistem, atau informasi produk.</p>
                 <button @click="toggleChat" class="bg-red-600 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-red-600/30 hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 inline-flex items-center gap-3">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                    Chat Sekarang
+                    Mulai Chat
                 </button>
             </div>
         </section>
@@ -430,6 +430,20 @@
                                                 </template>
                                             </div>
                                         </template>
+
+                                        <!-- Phase: offer_agent_transfer -->
+                                        <template x-if="botPhase === 'offer_agent_transfer'">
+                                            <div class="flex flex-col sm:flex-row gap-1.5 w-full">
+                                                <button @click="newMessage = 'LANJUT'; sendMessage()" 
+                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
+                                                    <i class="fas fa-comment-dots"></i> Tanya Lagi
+                                                </button>
+                                                <button @click="newMessage = 'AGENT'; sendMessage()" 
+                                                        class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
+                                                    <i class="fas fa-headset"></i> Hubungi Agent
+                                                </button>
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
@@ -455,7 +469,12 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2">
+                    <!-- Loading state saat menu belum siap -->
+                    <div x-show="chat_main_menu.length === 0 && !isInitialized" class="flex items-center justify-center py-6">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                    </div>
+
+                    <div x-show="chat_main_menu.length > 0" class="grid grid-cols-1 gap-2">
                         <template x-for="item in chat_main_menu" :key="item.id">
                             <button @click="handleMenuClick(item.id)" 
                                     class="w-full text-left px-4 py-3 bg-white hover:bg-red-50 text-slate-700 hover:text-red-600 border border-slate-200 hover:border-red-300 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center justify-between group">
@@ -585,12 +604,8 @@
                 regError: '',
                 selectedOption: null,
                 showRegForm: false,
-                chat_greeting: 'Halo! Ada yang bisa kami bantu hari ini?',
-                chat_main_menu: [
-                    {id: 'youtube', label: 'Youtube BRILLIAN.BIZ', action_type: 'link', action_value: 'https://youtube.com'},
-                    {id: 'hubungi_cs', label: 'Hubungi CS', action_type: 'connect_cs'},
-                    {id: 'jadwal_seminar', label: 'Jadwal seminar', action_type: 'link', action_value: '#'}
-                ],
+                chat_greeting: 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
+                chat_main_menu: [],
 
                 conversationId: null,
                 userId: null,
@@ -613,15 +628,27 @@
                 reminderSentCount: 0,
 
                 get statusText() {
-                    if (this.status === 'pending') return 'Menunggu Agen';
-                    if (this.status === 'queued') return 'Dalam Antrean';
+                    if (this.status === 'pending') return 'Menunggu Agent';
+                    if (this.status === 'queued') return 'Sedang Dalam Antrian';
                     if (this.status === 'active') return 'Terhubung';
                     return 'Sesi Ditutup';
                 },
 
                 formatMessage(text) {
                     if (!text) return '';
-                    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\n/g, '<br>');
+                    
+                    const badge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                    
+                    if (String(text).includes(badge)) {
+                        let parts = String(text).split(badge);
+                        let safeParts = parts.map(p => String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                        let joined = safeParts.join(badge).replace(/\n/g, '<br>');
+                        return joined.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    }
+
+                    let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                    let withBr = safeText.replace(/\n/g, '<br>');
+                    return withBr.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 },
 
                 initWidget() {
@@ -673,6 +700,23 @@
                             }
                         }
                     }, 10000); // Cek setiap 10 detik agar lebih responsif
+
+                    // Polling fallback: sync status dari server setiap 20 detik (safety net jika WebSocket gagal)
+                    setInterval(async () => {
+                        if (!this.conversationId || this.status === 'closed') return;
+                        try {
+                            const res = await fetch('{{ route("chat.init") }}', {
+                                method: 'GET',
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            const data = await res.json();
+                            if (data.conversation && data.conversation.status !== this.status) {
+                                console.log('🔄 Polling sync: status berubah dari', this.status, '→', data.conversation.status);
+                                this.status = data.conversation.status;
+                                if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                            }
+                        } catch (e) { /* silent */ }
+                    }, 20000);
                 },
 
                 async handleTimeout() {
@@ -724,11 +768,14 @@
 
                             this.botSubmenus = menu.submenus || [];
                             if (this.botSubmenus.length === 0) {
-                                // Fallback jika tidak ada anak
-                                this.botSubmenus = [
-                                    {id: 'cs_umum', label: 'Customer service', action_type: 'connect_cs'},
-                                    {id: 'cs_voucher', label: 'CS Voucher', action_type: 'connect_cs'}
-                                ];
+                                this.messages.push({
+                                    id: 'local-bot-err-' + Date.now(),
+                                    sender_id: 0,
+                                    sender_type: 'admin',
+                                    content: "Maaf, submenu belum tersedia. Silakan refresh halaman atau hubungi admin.",
+                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+                                return;
                             }
                             this.botPhase = 'awaiting_submenu';
                             this.scrollToBottom();
@@ -1022,9 +1069,14 @@
                 },
 
                 listenForEvents() {
-                    if (typeof window.Echo === 'undefined' || !this.conversationId) {
-                        console.warn('Echo or ConversationID not ready.');
-                        return;
+                    if (typeof window.Echo === 'undefined' || !this.conversationId) return;
+
+                    // Catch-up setelah WebSocket reconnect
+                    if (window.Echo.connector && window.Echo.connector.pusher) {
+                        window.Echo.connector.pusher.connection.bind('connected', () => {
+                            console.log('🔄 WebSocket reconnect — sync ulang data chat');
+                            this.fetchChatData();
+                        });
                     }
 
                     try {
