@@ -108,6 +108,7 @@ class AnalyticsService
                 'role' => $agent->role,
                 'status' => $agent->status,
                 'closed_chats' => $closedChats,
+                'level' => $agent->level,
                 'avg_response_time' => $closedChats > 0 ? $this->calculateAvgResponseTime($agent->id) : 0,
                 'avg_duration' => $closedChats > 0 ? $this->calculateAvgChatDuration($agent->id) : 0,
                 'is_superadmin' => $agent->is_superadmin,
@@ -149,6 +150,7 @@ class AnalyticsService
                 'avg_duration' => $avgDuration,
                 'score' => $score,
                 'status' => $agent->status,
+                'level' => $agent->level,
             ];
         }
 

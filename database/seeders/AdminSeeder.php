@@ -27,6 +27,7 @@ class AdminSeeder extends Seeder
                 'permissions' => null,
                 'status' => 'offline',
                 'max_active_chats' => 10,
+                'level' => 1,
             ]);
             $this->command->info('Super admin user created successfully!');
             $this->command->info('Email: admin@example.com, Password: password');
@@ -45,6 +46,7 @@ class AdminSeeder extends Seeder
                 'permissions' => null,
                 'status' => 'offline',
                 'max_active_chats' => 5,
+                'level' => 2,
             ]);
             $this->command->info('Agent user created successfully!');
             $this->command->info('Email: agent@example.com, Password: password');
