@@ -123,6 +123,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/settings/cleanup', [App\Http\Controllers\Admin\SettingController::class, 'runCleanup'])->name('settings.cleanup');
 
             // --- Menu 10: Bot Menus Management ---
+            Route::post('/bot-menus/greeting', [App\Http\Controllers\Admin\BotMenuController::class, 'updateGreeting'])->name('bot-menus.greeting');
             Route::resource('/bot-menus', App\Http\Controllers\Admin\BotMenuController::class)->except(['show', 'create', 'edit']);
         }
         );
