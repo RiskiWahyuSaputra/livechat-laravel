@@ -80,10 +80,7 @@
                                     <div class="form-group mb-3">
                                         <label class="form-label">Pembersihan Manual</label>
                                         <div>
-                                            <form action="{{ route('admin.settings.cleanup') }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menjalankan pembersihan sekarang? Data guest yang tidak aktif akan dihapus permanent.')">
-                                                @csrf
-                                                <button type="submit" class="btn btn-warning btn-sm"><i class="fe fe-trash-2"></i> Bersihkan Sekarang</button>
-                                            </form>
+                                            <button type="submit" form="cleanup-form" class="btn btn-warning btn-sm" onclick="return confirm('Yakin ingin menjalankan pembersihan sekarang? Data guest yang tidak aktif akan dihapus permanent.')"><i class="fe fe-trash-2"></i> Bersihkan Sekarang</button>
                                             <small class="text-muted d-block mt-2">Hapus semua data guest anonim yang tidak aktif tanpa menunggu jadwal.</small>
                                         </div>
                                     </div>
@@ -100,4 +97,8 @@
         </div>
     </div>
 </div>
+
+<form id="cleanup-form" action="{{ route('admin.settings.cleanup') }}" method="POST" class="d-none">
+    @csrf
+</form>
 @endsection
