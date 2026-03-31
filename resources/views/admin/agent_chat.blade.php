@@ -41,10 +41,9 @@
         }
 
         .chat-window {
-            height: calc(100vh - 100px);
-            /* Adjust to give room */
+            height: calc(100vh - 60px);
             position: relative;
-            margin: 0;
+            margin-top: 60px !important;
             padding: 0;
         }
 
@@ -90,6 +89,15 @@
         .card-body {
             height: 100%;
             overflow: hidden;
+        }
+        
+        .sidebar-header-actions .btn {
+            width: 36px !important;
+            height: 36px !important;
+            font-size: 1rem !important;
+            background: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #475569 !important;
         }
     }
 
@@ -363,10 +371,10 @@
                         <p class="subtitle" x-text="filteredChats.length + ' percakapan'"></p>
                     </div>
                     <div class="sidebar-header-actions">
-                        <button class="btn" @click="showStartChatModal = true" title="Chat Baru">
+                        <button type="button" class="btn" @click="showStartChatModal = true" aria-label="Chat Baru" style="position: relative; z-index: 999;">
                             <i class="fe fe-plus"></i>
                         </button>
-                        <button class="btn" @click="fetchChats()" title="Refresh">
+                        <button type="button" class="btn" @click="fetchChats()" aria-label="Refresh" style="position: relative; z-index: 999;">
                             <i class="fe fe-refresh-cw"></i>
                         </button>
                     </div>
@@ -473,29 +481,31 @@
           
 
     <!-- Start Chat Modal -->
-    <div class="modal fade" :class="showStartChatModal ? 'show d-block' : ''" tabindex="-1" x-show="showStartChatModal" x-cloak>
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Mulai Chat dengan Agen</h5>
-                    <button type="button" class="btn-close" @click="showStartChatModal = false"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="list-group">
-                        <template x-for="other in otherAdmins" :key="other.id">
-                            <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" @click="startChat(other.id)">
-                                <div class="avatar avatar-xs me-2">
-                                    <div class="avatar-title rounded-circle bg-secondary text-white" x-text="getInitial(other.username)"></div>
-                                </div>
-                                <span x-text="other.username"></span>
-                                <span class="ms-auto badge" :class="other.status === 'online' ? 'bg-success' : 'bg-secondary'" x-text="other.status"></span>
-                            </button>
-                        </template>
+    <template x-teleport="body">
+        <div class="modal" :class="showStartChatModal ? 'show d-block' : 'd-none'" tabindex="-1" x-show="showStartChatModal" x-cloak style="background-color: rgba(0,0,0,0.6); z-index: 1000000 !important;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Mulai Chat dengan Agen</h5>
+                        <button type="button" class="btn-close" @click="showStartChatModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="list-group">
+                            <template x-for="other in otherAdmins" :key="other.id">
+                                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" @click="startChat(other.id)">
+                                    <div class="avatar avatar-xs me-2">
+                                        <div class="avatar-title rounded-circle bg-secondary text-white" x-text="getInitial(other.username)"></div>
+                                    </div>
+                                    <span x-text="other.username"></span>
+                                    <span class="ms-auto badge" :class="other.status === 'online' ? 'bg-success' : 'bg-secondary'" x-text="other.status"></span>
+                                </button>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </template>
 </div>
 @endsection
 
@@ -556,7 +566,7 @@
                 const query = this.searchQuery.toLowerCase();
                 return this.chats.filter(c => {
                     const other = this.getOtherAdmin(c);
-                    return other.username.toLowerCase().includes(query);
+                    return other && other.username && other.username.toLowerCase().includes(query);
                 });
             },
 
