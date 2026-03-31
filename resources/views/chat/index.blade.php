@@ -274,11 +274,13 @@
                     if (String(text).includes(badge)) {
                         let parts = String(text).split(badge);
                         let safeParts = parts.map(p => String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
-                        return safeParts.join(badge).replace(/\n/g, '<br>');
+                        let joined = safeParts.join(badge).replace(/\n/g, '<br>');
+                        return joined.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                     }
 
                     let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                    return safeText.replace(/\n/g, '<br>');
+                    let withBr = safeText.replace(/\n/g, '<br>');
+                    return withBr.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 },
 
                 listenForEvents() {
