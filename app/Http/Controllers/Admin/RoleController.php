@@ -36,6 +36,8 @@ class RoleController extends Controller
         $defaultDescriptions = [
             'super_admin' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
             'agent' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
+            'agent1' => 'Atasan/Supervisor Agent - Memiliki wewenang untuk menangani eskalasi dari Agent 2.',
+            'agent2' => 'Staff Agent - Menangani percakapan awal dan dapat melakukan eskalasi ke Agent 1.',
         ];
 
         // Pastikan role default ada dengan deskripsi
