@@ -622,7 +622,7 @@
 @endpush
 
 @section('content')
-<div x-data="adminChat({{ $admin->id }}, {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }}, {{ Js::from($closedConversations) }})">
+<div x-data="adminChat({{ $admin->id }}, '{{ $admin->role }}', {{ Js::from($pendingConversations) }}, {{ Js::from($activeConversations) }}, {{ Js::from($closedConversations) }})">
     <div class="row chat-window">
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
@@ -888,8 +888,9 @@
                                         </button>
                                     </li>
                                 </template>
-                                <template x-if="selectedChat && selectedChat.status === 'active' && selectedChat.admin_id === adminId">
+                                <template x-if="selectedChat && selectedChat.status === 'active' && (selectedChat.admin_id === adminId || adminRole === 'super_admin' || adminRole === 'agent1')">
                                     <li class="d-flex ms-2">
+                                        <button class="btn btn-sm btn-outline-warning me-1" @click="showEscalationModal = true" title="Eskalasi Chat"><i class="fe fe-trending-up"></i></button>
                                         <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
                                         <button class="btn btn-sm btn-outline-success me-1" @click="confirmCloseChat()" :disabled="isSubmitting" title="Selesaikan"><i class="fe fe-check"></i></button>
                                         <button class="btn btn-sm btn-outline-danger" @click="blockUser(selectedChat.id)" title="Blokir"><i class="fe fe-slash"></i></button>
@@ -918,7 +919,7 @@
     </div>
 </div>
 
-<!-- Modals -->
+<!-- Handover Modal -->
 <div class="modal fade" :class="showHandoverModal ? 'show d-block' : ''" tabindex="-1" x-show="showHandoverModal" x-cloak>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -948,14 +949,51 @@
         </div>
     </div>
 </div>
+
+<!-- Escalation Modal -->
+<div class="modal fade" :class="showEscalationModal ? 'show d-block' : ''" tabindex="-1" x-show="showEscalationModal" x-cloak>
+    <div class="modal-dialog">
+        <div class="modal-content border-warning">
+            <div class="modal-header bg-warning-light">
+                <h5 class="modal-title text-warning">Eskalasi ke Supervisor</h5>
+                <button type="button" class="btn-close" @click="showEscalationModal = false"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small">
+                    <i class="fe fe-info me-1"></i> Gunakan eskalasi jika pertanyaan user membutuhkan bantuan atasan (Agent 1).
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Pilih Supervisor (Agent 1)</label>
+                    <select x-model="escalationToAdminId" class="form-select">
+                        <option value="">-- Pilih Supervisor --</option>
+                        @foreach($otherAdmins as $other)
+                            @if($other->role === 'super_admin' || $other->role === 'agent1')
+                                <option value="{{ $other->id }}">{{ $other->username }} ({{ ucfirst($other->status) }})</option>
+                            @endif
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Catatan Eskalasi</label>
+                    <textarea x-model="escalationNote" class="form-control" rows="3" placeholder="Jelaskan kendala yang dialami..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @click="showEscalationModal = false">Batal</button>
+                <button type="button" class="btn btn-warning text-white" @click="escalateChat()" :disabled="!escalationToAdminId || isSubmitting">Eskalasi Sekarang</button>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('adminChat', (adminId, initPending, initActive, initClosed) => ({
+        Alpine.data('adminChat', (adminId, adminRole, initPending, initActive, initClosed) => ({
             adminId: adminId,
+            adminRole: adminRole,
             chats: [...(initPending || []), ...(initActive || []), ...(initClosed || [])],
             currentTime: Date.now(),
             sidebarCollapsed: false,
@@ -965,8 +1003,11 @@
             isClaiming: false,
             isSubmitting: false,
             showHandoverModal: false,
+            showEscalationModal: false,
             handoverToAdminId: '',
             handoverNote: '',
+            escalationToAdminId: '',
+            escalationNote: '',
             audioUnlocked: false,
             notificationSound: null,
             iframeLoaded: false,
@@ -1434,6 +1475,32 @@
                         })
                     });
                     if (!res.ok) throw new Error('Gagal mengoper chat');
+                    window.location.reload();
+                } catch (e) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: e.message
+                    });
+                } finally {
+                    this.isSubmitting = false;
+                }
+            },
+
+            async escalateChat() {
+                this.isSubmitting = true;
+                try {
+                    const res = await fetch(`/admin/conversation/${this.selectedChat.id}/escalate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            to_admin_id: this.escalationToAdminId,
+                            internal_note: this.escalationNote
+                        })
+                    });
+                    if (!res.ok) throw new Error('Gagal mengeskalasi chat');
                     window.location.reload();
                 } catch (e) {
                     Toast.fire({
