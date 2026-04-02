@@ -84,7 +84,7 @@
 							</a>
 							<a id="menu_close" class="menu-close" href="javascript:void(0);"> <i class="fas fa-times"></i></a>
 						</div>
-						<ul class="main-nav">
+						<ul class="main-nav" style="margin: 0 auto !important; display: flex; float: none !important;">
 							<li class="active">
 								<a href="{{ route('user.home') }}">Beranda</a>
 							</li>
@@ -103,38 +103,6 @@
 							</li>
 						</ul>
 					</div>
-					<ul class="nav header-navbar-rht" x-show="isInitialized" x-cloak>
-                        <template x-if="!isAuthenticated || user.name === 'Guest'">
-                            <li class="nav-item">
-                                <a class="nav-link header-reg" href="javascript:void(0);" @click="isOpen = true; showRegForm = true"></a>
-                            </li>
-                        </template>
-                        <template x-if="isAuthenticated && user.name !== 'Guest'">
-                            <li class="nav-item dropdown has-arrow account-item">
-                                <a href="#" class="dropdown-toggle nav-link" data-bs-toggle="dropdown">
-                                    <div class="user-infos">
-                                        <span class="user-img">
-                                            <div class="w-8 h-8 rounded-circle bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                                                <span x-text="user.initial"></span>
-                                            </div>
-                                        </span>
-                                        <div class="user-info">
-                                            <h6 x-text="user.name"></h6>
-                                            <p>Customer</p>
-                                        </div>
-                                    </div>
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-end emp">
-                                    <form method="POST" action="{{ route('chat.logout') }}">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item">
-                                            <i class="feather-log-out me-2"></i> Logout
-                                        </button>
-                                    </form>
-                                </div>
-                            </li>
-                        </template>
-					</ul>
 				</nav>
 			</div>
 		</header>
