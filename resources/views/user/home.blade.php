@@ -291,11 +291,11 @@
 
     <!-- Floating Action Button (FAB) -->
     <a href="{{ route('chat.init') }}" 
-       class="fixed bottom-8 left-8 w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-2xl shadow-blue-600/40 hover:bg-blue-700 transition-all transform hover:scale-110 active:scale-95 z-[60] fab-pulse group"
+       class="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-2xl shadow-blue-600/40 hover:bg-blue-700 transition-all transform hover:scale-110 active:scale-95 z-[60] fab-pulse group"
        style="border-radius: 50% !important;">
         <svg class="w-8 h-8 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
         <!-- Tooltip -->
-        <span class="absolute left-20 bg-[#0a1d37] text-white text-[10px] font-bold py-2 px-4 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl pointer-events-none uppercase tracking-widest">
+        <span class="absolute right-20 bg-[#0a1d37] text-white text-[10px] font-bold py-2 px-4 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl pointer-events-none uppercase tracking-widest">
             Chat dengan CS Kami
         </span>
     </a>

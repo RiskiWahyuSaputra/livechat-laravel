@@ -46,6 +46,11 @@
         .rounded-full {
             border-radius: 9999px !important;
         }
+        /* Move Scroll Up to Left */
+        .progress-wrap {
+            left: 30px !important;
+            right: auto !important;
+        }
     </style>
 </head>
 
@@ -445,14 +450,14 @@
 	</div>
 
     <!-- Chat Widget Container -->
-    <div class="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-50 flex flex-col items-start chat-widget-container">
+    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end chat-widget-container">
         
         <!-- Chat Popup Window -->
         <div x-show="isOpen" x-cloak
-             x-transition:enter="transition ease-out duration-300 transform origin-bottom-left"
+             x-transition:enter="transition ease-out duration-300 transform origin-bottom-right"
              x-transition:enter-start="opacity-0 scale-50 translate-y-4"
              x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-             x-transition:leave="transition ease-in duration-200 transform origin-bottom-left"
+             x-transition:leave="transition ease-in duration-200 transform origin-bottom-right"
              x-transition:leave-start="opacity-100 scale-100 translate-y-0"
              x-transition:leave-end="opacity-0 scale-50 translate-y-4"
              class="bg-white w-[340px] sm:w-[380px] h-[500px] max-h-[75vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden mb-4 relative"
@@ -762,7 +767,7 @@
 
         <!-- Float Button (FAB) -->
         <button @click="toggleChat" 
-           class="fixed bottom-8 left-8 w-16 h-16 rounded-full bg-blue-600 fab-pulse flex items-center justify-center text-white shadow-2xl shadow-blue-600/40 hover:bg-blue-700 transition-all transform hover:scale-110 active:scale-95 z-[60] group"
+           class="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-blue-600 fab-pulse flex items-center justify-center text-white shadow-2xl shadow-blue-600/40 hover:bg-blue-700 transition-all transform hover:scale-110 active:scale-95 z-[60] group"
            style="border-radius: 50% !important;"
            :aria-label="isOpen ? 'Tutup Chat' : 'Buka Chat'">
             <svg x-show="!isOpen" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
