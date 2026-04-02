@@ -11,12 +11,12 @@
     <title>@yield('title', 'Admin Dashboard') | LiveChat BEST</title>
 
     <!-- Favicons -->
-    <link rel="shortcut icon" href="{{ asset('images/best-logo-1.png') }}">
+    <link rel="shortcut icon" href="{{ asset('images/logo-brilian-min2.png') }}">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ asset('manifest-admin.json') }}">
     <meta name="theme-color" content="#ffffff">
-    <link rel="apple-touch-icon" href="{{ asset('images/best-logo-1.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo-brilian-min2.png') }}">
 
     <!-- Vite Assets (for Laravel Echo/Reverb) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -452,10 +452,10 @@
         <div class="header">
             <div class="header-left">
                 <a href="{{ route('admin.dashboard') }}" class="logo">
-                    <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" width="30" height="30">
+                    <img src="{{ asset('images/logo-brilian-min2.png') }}" alt="Logo" width="30" height="30">
                 </a>
                 <a href="{{ route('admin.dashboard') }}" class=" logo-small">
-                    <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" width="30" height="30">
+                    <img src="{{ asset('images/logo-brilian-min2.png') }}" alt="Logo" width="30" height="30">
                 </a>
             </div>
             <a class="mobile_btn" id="mobile_btn" href="javascript:void(0);">
@@ -529,10 +529,10 @@
             <div class="sidebar-header">
                 <div class="sidebar-logo">
                     <a href="{{ route('admin.dashboard') }}">
-                        <img src="{{ asset('images/best-logo-1.png') }}" class="img-fluid logo" alt="Logo BEST">
+                        <img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid logo" alt="Logo BRILLIAN BIZ">
                     </a>
                     <a href="{{ route('admin.dashboard') }}">
-                        <img src="{{ asset('images/best-logo-1.png') }}" class="img-fluid logo-small" alt="Logo BEST">
+                        <img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid logo-small" alt="Logo BRILLIAN BIZ">
                     </a>
                 </div>
             </div>
