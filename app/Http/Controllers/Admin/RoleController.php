@@ -33,17 +33,11 @@ class RoleController extends Controller
 
     private function syncLegacyRoles()
     {
-        $defaultRoles = [
-            'super_admin' => [
-                'name' => 'Superadmin',
-                'description' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
-                'level' => 1
-            ],
-            'agent' => [
-                'name' => 'Agent',
-                'description' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
-                'level' => 2
-            ],
+        $defaultDescriptions = [
+            'super_admin' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
+            'agent' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
+            'agent1' => 'Atasan/Supervisor Agent - Memiliki wewenang untuk menangani eskalasi dari Agent 2.',
+            'agent2' => 'Staff Agent - Menangani percakapan awal dan dapat melakukan eskalasi ke Agent 1.',
         ];
 
         // Pastikan role default ada dengan deskripsi dan level
@@ -81,7 +75,7 @@ class RoleController extends Controller
         $role = Role::where('slug', $request->role)->first();
         $is_superadmin = $request->role === 'super_admin';
         $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
-        
+
         // Level otomatis berdasarkan Role, atau input manual jika diberikan
         $level = $request->level;
         if ($is_superadmin) {

@@ -37,7 +37,8 @@ class GeminiService
         6. JANGAN PERNAH menggunakan tanda kurung [] atau placeholder seperti '[Sebutkan produk...]'.
         7. Jika pelanggan ingin bantuan manusia atau bertanya tentang Agent, beritahu mereka untuk mengklik tombol Hubungi Agent yang tersedia di bawah jawaban kamu.
         8. Jika informasi tidak ditemukan di KNOWLEDGE BASE di bawah, gunakan hasil pencarian Google yang tersedia untuk menjawab.
-        9. Jika tetap tidak ditemukan di keduanya, beritahu pelanggan bahwa kamu belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.";
+        9. Jika tetap tidak ditemukan di keduanya, beritahu pelanggan bahwa kamu belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.
+        10. PENTING: JANGAN PERNAH memberikan kalimat salam pembuka (seperti 'Halo!', 'Selamat pagi', 'Terima kasih telah menghubungi kami', dll) di awal jawabanmu, karena sistem sudah menyapanya di layar chatbot. Langsung jawab intinya saja.";
         
         // Tambahkan Knowledge Base dari QuickReply
         $quickReplies = \App\Models\QuickReply::all();

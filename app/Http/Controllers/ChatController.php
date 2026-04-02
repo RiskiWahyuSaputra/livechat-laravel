@@ -321,7 +321,7 @@ class ChatController extends Controller
             $token = $request->cookie('guest_chat_token');
             $publicData = [
                 'csrf_token'   => csrf_token(),
-                'chat_greeting' => \App\Models\Setting::get('chat_greeting', 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?'),
+                'chat_greeting' => \App\Models\Setting::get('bot_greeting_message', 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?'),
                 'chat_main_menu' => \App\Models\BotMenu::with('children')->whereNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => [
                     'id' => $m->id,
                     'label' => $m->label,

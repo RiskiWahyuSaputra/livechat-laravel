@@ -60,6 +60,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/chat/typing', [DashboardController::class , 'typing'])->name('chat.typing');
                 Route::post('/conversation/{conversation}/claim', [DashboardController::class , 'claimConversation'])->name('conversation.claim');
                 Route::post('/conversation/{conversation}/handover', [DashboardController::class , 'handoverConversation'])->name('conversation.handover');
+                Route::post('/conversation/{conversation}/escalate', [DashboardController::class , 'escalateConversation'])->name('conversation.escalate');
                 Route::post('/conversation/{conversation}/close', [DashboardController::class , 'closeConversation'])->name('conversation.close');
                 Route::post('/conversation/{conversation}/block', [DashboardController::class , 'blockUser'])->name('conversation.block');
             });
@@ -123,6 +124,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/settings/cleanup', [App\Http\Controllers\Admin\SettingController::class, 'runCleanup'])->name('settings.cleanup');
 
             // --- Menu 10: Bot Menus Management ---
+            Route::post('/bot-menus/greeting', [App\Http\Controllers\Admin\BotMenuController::class, 'updateGreeting'])->name('bot-menus.greeting');
             Route::resource('/bot-menus', App\Http\Controllers\Admin\BotMenuController::class)->except(['show', 'create', 'edit']);
         }
         );
