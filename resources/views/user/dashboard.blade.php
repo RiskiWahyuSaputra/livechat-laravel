@@ -101,7 +101,7 @@
 					<ul class="nav header-navbar-rht" x-show="isInitialized" x-cloak>
                         <template x-if="!isAuthenticated || user.name === 'Guest'">
                             <li class="nav-item">
-                                <a class="nav-link header-reg" href="javascript:void(0);" @click="isOpen = true; showRegForm = true">Register Chat</a>
+                                <a class="nav-link header-reg" href="javascript:void(0);" @click="isOpen = true; showRegForm = true"></a>
                             </li>
                         </template>
                         <template x-if="isAuthenticated && user.name !== 'Guest'">
