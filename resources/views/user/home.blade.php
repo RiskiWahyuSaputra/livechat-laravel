@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="shortcut icon" href="{{ asset('images/best-logo-1.png') }}">
-    <title>BEST CORPORATION - Solusi Ekosistem Bisnis Digital & Syariah</title>
+    <link rel="shortcut icon" href="{{ asset('images/logo-brilian-min2.png') }}">
+    <title>BRILLIAN.BIS - Solusi Ekosistem Bisnis Digital & Syariah</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -56,9 +56,9 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
                 <div class="flex items-center gap-3">
-                    <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="w-10 h-10 object-contain">
+                    <img src="{{ asset('images/logo-brilian-min2.png') }}" alt="Logo" class="w-10 h-10 object-contain">
                     <div>
-                        <span class="text-xl font-extrabold tracking-tighter text-slate-900">BEST <span class="text-blue-600">CORP</span></span>
+                        <span class="text-xl font-extrabold tracking-tighter text-slate-900">BRILLIAN <span class="text-blue-600">CORP</span></span>
                     </div>
                 </div>
                 
@@ -210,7 +210,7 @@
                             Hubungi CS Sekarang
                         </a>
                         <a href="#tentang" class="px-8 py-4 bg-white/10 text-white border border-white/20 rounded-2xl font-bold hover:bg-white/20 transition-all">
-                            Tentang BEST CORP
+                            Tentang BRILLIAN.BIS
                         </a>
                     </div>
                 </div>
@@ -246,11 +246,11 @@
             <div class="grid md:grid-cols-4 gap-12 mb-16">
                 <div class="col-span-2 space-y-6">
                     <div class="flex items-center gap-3">
-                        <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="w-10 h-10 object-contain">
-                        <span class="text-2xl font-extrabold tracking-tighter text-slate-900">BEST <span class="text-blue-600">CORP</span></span>
+                        <img src="{{ asset('images/logo-brilian-min2.png') }}" alt="Logo" class="w-10 h-10 object-contain">
+                        <span class="text-2xl font-extrabold tracking-tighter text-slate-900">BRILLIAN <span class="text-blue-600">CORP</span></span>
                     </div>
                     <p class="text-slate-500 font-medium max-w-sm">
-                        PT. Bandung Ekosistem Teknologi adalah perusahaan yang bergerak di bidang penjualan langsung yang memasarkan produk-produk berkualitas dari karya anak bangsa.
+                        BRILLIAN.BIS menghadirkan solusi cerdas untuk pertumbuhan bisnis Anda melalui ekosistem digital yang modern dan syariah.
                     </p>
                     <div class="flex gap-4">
                         <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div>
@@ -283,7 +283,7 @@
             </div>
             <div class="pt-8 border-t border-slate-200 text-center">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    &copy; 2026 PT. Bandung Ekosistem Teknologi. All Rights Reserved.
+                    &copy; 2026 BRILLIAN.BIS. All Rights Reserved.
                 </p>
             </div>
         </div>

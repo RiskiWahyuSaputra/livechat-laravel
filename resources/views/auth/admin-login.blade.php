@@ -6,7 +6,7 @@
     <title>Login Admin - LiveChat</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="icon" type="image/x-icon" href="{{ asset('images/best-logo-1.png') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/logo-brilian-min2.png') }}">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -64,7 +64,7 @@
                         Ganti 'images/logo.png' dengan path dan nama file logo Anda yang sebenarnya.
                         Pastikan file logo tersebut disimpan di dalam folder: public/images/
                     -->
-                    <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="max-h-full max-w-full object-contain drop-shadow-sm" onerror="this.outerHTML='<div class=\'text-sm text-slate-400 border border-dashed border-slate-300 rounded p-2 text-center\'>Masukkan gambar logo.png<br/>di folder public/images/</div>'">
+                    <img src="{{ asset('images/logo-brilian-min2.png') }}" alt="Logo" class="max-h-full max-w-full object-contain drop-shadow-sm" onerror="this.outerHTML='<div class=\'text-sm text-slate-400 border border-dashed border-slate-300 rounded p-2 text-center\'>Masukkan gambar logo.png<br/>di folder public/images/</div>'">
                 </div>
 
                 <h2 class="text-2xl font-bold tracking-tight text-[#0f2a4a]">Welcome back!</h2>
@@ -152,7 +152,7 @@
         <!-- Bottom Footer of the Card -->
         <div class="bg-slate-50 border-t border-slate-100 px-8 py-5 sm:px-10 text-center">
             <p class="text-xs text-slate-500 font-medium">
-                Admin Console by <span class="font-bold text-[#0f2a4a]">BEST CORPORATION</span>
+                Admin Console by <span class="font-bold text-[#0f2a4a]">BRILLIAN BIZ</span>
             </p>
         </div>
     </div>

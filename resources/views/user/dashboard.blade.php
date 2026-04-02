@@ -71,16 +71,16 @@
 							</span>
 						</a>
 						<a href="{{ route('user.home') }}" class="navbar-brand logo">
-							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
+							<img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
 						</a>
 						<a href="{{ route('user.home') }}" class="navbar-brand logo-small">
-							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 35px;">
+							<img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid" alt="Logo" style="max-height: 35px;">
 						</a>
 					</div>
 					<div class="main-menu-wrapper">
 						<div class="menu-header">
 							<a href="{{ route('user.home') }}" class="menu-logo">
-								<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
+								<img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
 							</a>
 							<a id="menu_close" class="menu-close" href="javascript:void(0);"> <i class="fas fa-times"></i></a>
 						</div>
@@ -332,7 +332,7 @@
 							<!-- Footer Widget -->
 							<div class="footer-widget">
 								<div class="footer-logo">
-									<a href="{{ route('user.home') }}"><img src="{{ asset('images/logo-brilian-min.png') }}" alt="logo" style="max-height: 50px;"></a>
+									<a href="{{ route('user.home') }}"><img src="{{ asset('images/logo-brilian-min2.png') }}" alt="logo" style="max-height: 50px;"></a>
 								</div>
 								<div class="footer-content">
 									<p>BRILLIAN BIZ adalah perusahaan yang memasarkan produk-produk berkualitas dengan konsep direct selling atau penjualan langsung. </p>
