@@ -10,8 +10,11 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query();
-
+        // Sembunyikan pengunjung Anonim (Guest) yang belum mengisi data diri
+        $query = User::whereNot(function($q) {
+            $q->where('email', 'like', 'anon_%@livechat.best')
+              ->where('name', 'Guest');
+        });
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {

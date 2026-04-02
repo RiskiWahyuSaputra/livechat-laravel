@@ -53,5 +53,39 @@ class AdminSeeder extends Seeder
         } else {
             $this->command->info('Agent user already exists, skipping...');
         }
+
+        // Create Agent 1 (Supervisor)
+        if (!Admin::where('username', 'agent1')->exists()) {
+            $role = \App\Models\Role::where('slug', 'agent1')->first();
+            Admin::create([
+                'username' => 'agent1',
+                'email' => 'agent1@example.com',
+                'password' => Hash::make('password'),
+                'role' => 'agent1',
+                'role_id' => $role ? $role->id : null,
+                'is_superadmin' => false,
+                'permissions' => ['view_chat', 'view_history', 'manage_quick_replies', 'manage_customers'],
+                'status' => 'offline',
+                'max_active_chats' => 10,
+            ]);
+            $this->command->info('Agent 1 created successfully!');
+        }
+
+        // Create Agent 2 (Staff)
+        if (!Admin::where('username', 'agent2')->exists()) {
+            $role = \App\Models\Role::where('slug', 'agent2')->first();
+            Admin::create([
+                'username' => 'agent2',
+                'email' => 'agent2@example.com',
+                'password' => Hash::make('password'),
+                'role' => 'agent2',
+                'role_id' => $role ? $role->id : null,
+                'is_superadmin' => false,
+                'permissions' => ['view_chat', 'view_history'],
+                'status' => 'offline',
+                'max_active_chats' => 5,
+            ]);
+            $this->command->info('Agent 2 created successfully!');
+        }
     }
 }

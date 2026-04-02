@@ -54,12 +54,18 @@ class DashboardController extends Controller
         $agentPerformance = $this->analyticsService->getAgentPerformance();
         $statusDistribution = $this->analyticsService->getStatusDistribution();
 
+        // Query dasar akun valid (bukan anonim raw guest)
+        $validUsersQuery = User::whereNot(function($q) {
+            $q->where('email', 'like', 'anon_%@livechat.best')
+              ->where('name', 'Guest');
+        });
+
         // Statistik Ringkas
         $stats = [
-            'total_users' => User::count(),
-            'online_users' => User::where('is_online', true)->count(),
-            'today_users' => User::whereDate('created_at', now()->today())->count(),
-            'yesterday_users' => User::whereDate('created_at', now()->yesterday())->count(),
+            'total_users' => (clone $validUsersQuery)->count(),
+            'online_users' => (clone $validUsersQuery)->where('is_online', true)->count(),
+            'today_users' => (clone $validUsersQuery)->whereDate('created_at', now()->today())->count(),
+            'yesterday_users' => (clone $validUsersQuery)->whereDate('created_at', now()->yesterday())->count(),
         ];
 
         // Data Grafik (7 hari terakhir)
@@ -68,13 +74,13 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
             $chartLabels[] = $date->format('d M');
-            $chartData[] = User::whereDate('created_at', $date->format('Y-m-d'))->count();
+            $chartData[] = (clone $validUsersQuery)->whereDate('created_at', $date->format('Y-m-d'))->count();
         }
         $stats['chart_data'] = $chartData;
         $stats['chart_labels'] = $chartLabels;
 
         // Filter Pelanggan
-        $query = User::query();
+        $query = (clone $validUsersQuery);
 
         if ($request->has('filter')) {
             switch ($request->filter) {
@@ -163,7 +169,14 @@ class DashboardController extends Controller
         $mainQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
                 $query->latest()->limit(1);
             }])
-            ->whereIn('status', ['pending', 'queued', 'active', 'closed']);
+            ->whereIn('status', ['pending', 'queued', 'active', 'closed'])
+            ->whereHas('customer', function ($q) {
+                // Sembunyikan 'Raw Guest' dari Chat Workspace Admin
+                $q->whereNot(function($sub) {
+                    $sub->where('email', 'like', 'anon_%@livechat.best')
+                        ->where('name', 'Guest');
+                });
+            });
 
         if ($search !== '') {
             $needle = '%' . mb_strtolower($search) . '%';
@@ -320,8 +333,8 @@ class DashboardController extends Controller
         }
 
         // Pastikan admin ini yang menangani conversation ini (kecuali whisper bisa semua admin)
-        // Gunakan non-strict comparison agar aman
-        if ($request->message_type !== 'whisper' && $conversation->admin_id != $admin->id) {
+        // Supervisor dan Superadmin diperbolehkan ikut campur (jump-in)
+        if ($request->message_type !== 'whisper' && $conversation->admin_id != $admin->id && !$admin->is_superadmin && $admin->role !== 'agent1') {
             return response()->json(['error' => 'Anda tidak memiliki akses tulis ke chat ini.'], 403);
         }
 
@@ -390,8 +403,8 @@ class DashboardController extends Controller
         $fromAdmin = Auth::guard('admin')->user();
         $toAdmin   = \App\Models\Admin::findOrFail($request->to_admin_id);
 
-        if ($conversation->admin_id !== $fromAdmin->id) {
-            return response()->json(['error' => 'Anda bukan penanganan chat ini.'], 403);
+        if ($conversation->admin_id !== $fromAdmin->id && !$fromAdmin->is_superadmin && $fromAdmin->role !== 'agent1') {
+            return response()->json(['error' => 'Anda tidak memiliki wewenang untuk menangani chat ini.'], 403);
         }
 
         // Kirim whisper note jika ada
@@ -424,6 +437,51 @@ class DashboardController extends Controller
     }
 
     /**
+     * Escalation (eskalasi) chat ke admin1 (supervisor).
+     */
+    public function escalateConversation(Request $request, Conversation $conversation)
+    {
+        $request->validate([
+            'to_admin_id' => ['required', 'exists:admins,id'],
+            'internal_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $fromAdmin = Auth::guard('admin')->user();
+        $toAdmin   = \App\Models\Admin::findOrFail($request->to_admin_id);
+
+        if ($conversation->admin_id !== $fromAdmin->id && !$fromAdmin->is_superadmin && $fromAdmin->role !== 'agent1') {
+            return response()->json(['error' => 'Anda tidak memiliki wewenang untuk menangani chat ini.'], 403);
+        }
+
+        // Kirim whisper note sebagai catatan eskalasi
+        $content = "Eskalasi: " . ($request->internal_note ?: "Membutuhkan bantuan atasan.");
+        $note = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => $fromAdmin->id,
+            'sender_type'     => 'admin',
+            'message_type'    => 'whisper',
+            'content'         => $content,
+        ]);
+        broadcast(new MessageSent($note));
+
+        $conversation->update(['admin_id' => $toAdmin->id]);
+
+        // Pesan sistem tentang eskalasi
+        $sysMessage = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => 0,
+            'sender_type'     => 'system',
+            'message_type'    => 'text',
+            'content'         => "Chat dieskalasi dari {$fromAdmin->username} ke {$toAdmin->username}.",
+        ]);
+
+        broadcast(new MessageSent($sysMessage));
+        broadcast(new ConversationStatusChanged($conversation, $fromAdmin->username));
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Tutup conversation + isi kategori masalah.
      */
     public function closeConversation(Request $request, Conversation $conversation)
@@ -440,8 +498,10 @@ class DashboardController extends Controller
         $conversation->update([
             'status'           => 'closed',
             'problem_category' => $category,
-            'deleted_at'       => null,
         ]);
+
+        // Soft delete the conversation to move it to history
+        $conversation->delete();
 
         // Trigger Auto-Learning background job
         \App\Jobs\AutoLearnChat::dispatch($conversation->id);
@@ -477,8 +537,9 @@ class DashboardController extends Controller
 
         $conversation->update([
             'status'     => 'closed',
-            'deleted_at' => null,
         ]);
+
+        $conversation->delete();
 
         Message::create([
             'conversation_id' => $conversation->id,

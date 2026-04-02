@@ -1,272 +1,424 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="shortcut icon" href="{{ asset('images/best-logo-1.png') }}">
+    <link rel="shortcut icon" href="{{ asset('images/logo-brilian-min2.png') }}">
     <script>
         window.broadcastingAuth = "{{ url('/broadcasting/auth') }}";
     </script>
-    <title>Dashboard User - BEST CORPORATION</title>
+	<title>Dashboard User - BRILLIAN BIZ</title>
+
+	<!-- Favicon -->
+	
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="{{ asset('template/assets/css/bootstrap.min.css') }}">
+
+	<!-- Fontawesome CSS -->
+	<link rel="stylesheet" href="{{ asset('template/assets/plugins/fontawesome/css/fontawesome.min.css') }}">
+	<link rel="stylesheet" href="{{ asset('template/assets/plugins/fontawesome/css/all.min.css') }}">
+
+	<!-- Fearther CSS -->
+	<link rel="stylesheet" href="{{ asset('template/assets/css/feather.css') }}">
+
+	<!-- select CSS -->
+	<link rel="stylesheet" href="{{ asset('template/assets/plugins/select2/css/select2.min.css') }}">
+		
+	<!-- Owl carousel CSS -->
+	<link rel="stylesheet" href="{{ asset('template/assets/css/owl.carousel.min.css') }}">
+	
+	<!-- Aos CSS -->
+	<link rel="stylesheet" href="{{ asset('template/assets/plugins/aos/aos.css') }}">
+
+	<!-- Main CSS -->
+	<link rel="stylesheet" href="{{ asset('template/assets/css/style.css') }}">
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- AOS Animation -->
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <!-- Fontawesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+
     <style>
-        html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; width: 100%; position: relative; }
         [x-cloak] { display: none !important; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
-        .glass-nav {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        .chat-widget-container {
+            z-index: 9999;
         }
-        .blob {
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            max-width: 100vw;
-            background: rgba(220, 38, 38, 0.05);
-            filter: blur(80px);
-            border-radius: 50%;
-            z-index: -1;
-            pointer-events: none;
+        /* Ensure circle shape */
+        .rounded-full {
+            border-radius: 9999px !important;
         }
-        /* Page Load Animation */
-        .fade-in-down {
-            animation: fadeInDown 0.8s ease-out both;
-        }
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Move Scroll Up to Left */
+        .progress-wrap {
+            left: 30px !important;
+            right: auto !important;
         }
     </style>
 </head>
-<body x-data="chatWidget()" x-init="initWidget()" class="bg-[#f8fafc] text-slate-800 font-sans antialiased flex flex-col relative overflow-x-hidden">
 
-    <!-- Blobs Background -->
-    <div class="blob top-[-10%] left-[-10%] animate-pulse"></div>
-    <div class="blob bottom-[20%] right-[-10%] bg-blue-500/5 animate-pulse" style="animation-delay: 1s"></div>
+<body x-data="chatWidget()" x-init="initWidget()">
 
-    <!-- Header -->
-    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-sm fade-in-down">
-        <div class="flex items-center gap-3 md:gap-4">
-            <div class="flex items-center gap-2 md:gap-3">
-                <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1 border border-slate-100 shadow-sm transform hover:scale-110 transition-transform">
-                    <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="w-full h-full object-contain">
-                </div>
-                <div>
-                    <h1 class="font-black text-slate-900 text-sm md:text-base tracking-tighter leading-none">BEST <span class="text-red-600">CORP</span></h1>
-                    <span class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1 block">CUSTOMER SUPPORT</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="flex items-center gap-4">
-            <!-- Nav Links Hidden on Mobile -->
-            <div class="hidden lg:flex items-center gap-6 mr-6">
-                <a href="#home" class="text-xs font-bold text-slate-500 hover:text-red-600 uppercase tracking-widest transition-colors relative group">
-                    Beranda
-                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all group-hover:w-full"></span>
-                </a>
-                <a href="#solusi" class="text-xs font-bold text-slate-500 hover:text-red-600 uppercase tracking-widest transition-colors relative group">
-                    Solusi
-                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all group-hover:w-full"></span>
-                </a>
-                <a href="#produk" class="text-xs font-bold text-slate-500 hover:text-red-600 uppercase tracking-widest transition-colors relative group">
-                    Produk
-                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all group-hover:w-full"></span>
-                </a>
-            </div>
+	<div class="main-wrapper">
+	
+		<!-- Header -->
+		<header class="header">
+			<div class="container">
+				<nav class="navbar navbar-expand-lg header-nav">
+					<div class="navbar-header">
+						<a id="mobile_btn" href="javascript:void(0);">
+							<span class="bar-icon">
+								<span></span>
+								<span></span>
+								<span></span>
+							</span>
+						</a>
+						<a href="{{ route('user.home') }}" class="navbar-brand logo">
+							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
+						</a>
+						<a href="{{ route('user.home') }}" class="navbar-brand logo-small">
+							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 35px;">
+						</a>
+					</div>
+					<div class="main-menu-wrapper">
+						<div class="menu-header">
+							<a href="{{ route('user.home') }}" class="menu-logo">
+								<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
+							</a>
+							<a id="menu_close" class="menu-close" href="javascript:void(0);"> <i class="fas fa-times"></i></a>
+						</div>
+						<ul class="main-nav" style="margin: 0 auto !important; display: flex; float: none !important;">
+							<li class="active">
+								<a href="{{ route('user.home') }}">Beranda</a>
+							</li>
+							<li>
+								<a href="#solusi">Solusi</a>
+							</li>
+                            <li>
+								<a href="#produk">Produk</a>
+							</li>
+							<li class="has-submenu">
+								<a href="javascript:void(0);">Pages <i class="fas fa-chevron-down"></i></a>
+								<ul class="submenu">
+									<li><a href="javascript:void(0);">About Us</a></li>
+									<li><a href="javascript:void(0);">Contact Us</a></li>
+								</ul>
+							</li>
+						</ul>
+					</div>
+				</nav>
+			</div>
+		</header>
+		<!-- /Header -->
+		
+		<!-- Hero Section -->
+		<section class="hero-section">			
+			<div class="container">
+				<div class="home-banner">
+					<div class="row align-items-center w-100">
+						<div class="col-lg-7 col-md-10 mx-auto">
+							<div class="section-search aos" data-aos="fade-up">
+								<h1>Wujudkan <span class="text-primary">Kebebasan</span> Finansial Anda.</h1>
+								<p>Selamat datang di portal dukungan BRILLIAN BIZ. Kami menyediakan ekosistem bisnis syariah.</p>
+								<div class="search-box">
+                                    <div class="search-btn w-100">
+                                        <button class="btn btn-primary w-100" type="button" @click="isOpen = true"><i class="feather-message-square me-2"></i>Chat dengan Kami</button>
+                                    </div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-5">
+							<div class="banner-imgs">
+								<div class="banner-1 shape-1">
+									<img class="img-fluid" alt="banner" src="{{ asset('images/logo-biz.png') }}">
+								</div>
+								<div class="banner-2 shape-3">
+									<img class="img-fluid" alt="banner" src="{{ asset('images/seminar.png') }}">
+								</div>
+								<div class="banner-3 shape-3">
+									<img class="img-fluid" alt="banner" src="{{ asset('images/produk-best.png') }}">
+								</div>
+								<div class="banner-4 shape-2">
+									<img class="img-responsive" alt="banner" src="{{ asset('images/gedung.png') }}">
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>	
+			</div>
+		</section>
+		<!-- /Hero Section -->
+		
+		<!-- Feature Section -->
+		<section class="feature-section" id="produk">			
+			<div class="container">			
+				<div class="section-heading">
+					<div class="row">
+						<div class="col-md-6 aos" data-aos="fade-up">
+							<h2>Kategori Unggulan</h2>
+							<p>Temukan solusi terbaik untuk Anda</p>
+						</div>
+						<div class="col-md-6 text-md-end aos" data-aos="fade-up">
+							<a href="javascript:void(0);" class="btn btn-primary btn-view">Lihat Semua<i class="feather-arrow-right-circle"></i></a>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-6 col-lg-3">
+						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
+							<div class="feature-icon">
+								<span>
+									<img src="{{ asset('template/assets/img/icons/feature-icon-01.svg') }}" alt="img">
+								</span>
+							</div>
+							<h5>Pertanian</h5>
+							<div class="feature-overlay">
+								<img src="{{ asset('images/produk-pertanian.png') }}" alt="img">
+							</div>
+						</a>
+					</div>
+					<div class="col-md-6 col-lg-3">
+						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
+							<div class="feature-icon">
+								<span>
+									<img src="{{ asset('template/assets/img/icons/feature-icon-02.svg') }}" alt="img">
+								</span>
+							</div>
+							<h5>Otomotif</h5>
+							<div class="feature-overlay">
+								<img src="{{ asset('images/produk-otomotif.png') }}" alt="img">
+							</div>
+						</a>
+					</div>
+					<div class="col-md-6 col-lg-3">
+						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
+							<div class="feature-icon">
+								<span>
+									<img src="{{ asset('template/assets/img/icons/feature-icon-03.svg') }}" alt="img">
+								</span>
+							</div>
+							<h5>Kesehatan</h5>
+							<div class="feature-overlay">
+								<img src="{{ asset('images/produk-kesehatan.png') }}" alt="img">
+							</div>
+						</a>
+					</div>
+					<div class="col-md-6 col-lg-3">
+						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
+							<div class="feature-icon">
+								<span>
+									<img src="{{ asset('template/assets/img/icons/feature-icon-04.svg') }}" alt="img">
+								</span>
+							</div>
+							<h5>Kecantikan</h5>
+							<div class="feature-overlay">
+								<img src="{{ asset('images/produk-kecantikan.png') }}" alt="img">
+							</div>
+						</a>
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- /Feature Section -->
+		
+		<!-- Service Section -->
+		<section class="service-section" id="solusi">			
+			<div class="container">
+				<div class="section-heading">
+					<div class="row">
+						<div class="col-md-6 aos" data-aos="fade-up">						
+							<h2>Solusi Bisnis</h2>
+							<p>Ekosistem bisnis syariah terintegrasi</p>
+						</div>
+						<div class="col-md-6 text-md-end aos" data-aos="fade-up">
+							<div class="owl-nav mynav"></div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="owl-carousel service-slider">
+							<div class="service-widget aos" data-aos="fade-up">
+								<div class="service-img">
+									<a href="javascript:void(0);">
+										<img class="img-fluid serv-img" alt="Service Image" src="{{ asset('images/seminar.png') }}">
+									</a>
+								</div>
+								<div class="service-content">
+									<h3 class="title">
+										<a href="javascript:void(0);">Pendampingan Bisnis</a>
+									</h3>
+									<p><i class="feather-map-pin"></i>Seluruh Indonesia</p>
+								</div>
+							</div>
+							<div class="service-widget aos" data-aos="fade-up">
+								<div class="service-img">
+									<a href="javascript:void(0);">
+										<img class="img-fluid serv-img" alt="Service Image" src="{{ asset('images/produk-best2.png') }}">
+									</a>
+								</div>
+								<div class="service-content">
+									<h3 class="title">
+										<a href="javascript:void(0);">Produk Berkualitas</a>
+									</h3>
+									<p><i class="feather-map-pin"></i>Teruji & Terbukti</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- /Service Section -->
 
-            <!-- Guest Profile (Reactive with Alpine) -->
-            <div x-show="isAuthenticated && userId" x-cloak class="flex items-center gap-4">
-                <div @click="open = !open" 
-                     class="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-3 rounded-2xl transition-all border border-transparent hover:bg-slate-50 cursor-pointer relative">
-                    <div class="relative">
-                        <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#0a1d37] flex items-center justify-center font-bold text-white shadow-md border-2 border-white text-sm">
-                            <span x-text="user.initial"></span>
-                        </div>
-                    </div>
-                    <div class="text-left hidden sm:block">
-                        <p class="text-xs font-bold text-slate-900 leading-none mb-1" x-text="user.name"></p>
-                        <div class="flex items-center gap-1">
-                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                            <p class="text-[9px] md:text-[10px] text-slate-500 font-bold leading-none uppercase tracking-tighter">Online</p>
-                        </div>
-                    </div>
-                    <svg class="w-4 h-4 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
+		<!-- Work Section -->
+		<section class="work-section pt-0">		
+			<div class="container">
+				<div class="row">
+					<div class="col-md-12 text-center">
+						<div class="section-heading aos" data-aos="fade-up">
+							<h2>Cara Kerja</h2>
+							<p>Langkah mudah memulai perubahan</p>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="work-box aos" data-aos="fade-up">
+							<div class="work-icon">
+								<span>
+									<img src="{{ asset('template/assets/img/icons/work-icon.svg') }}" alt="img">
+								</span>
+							</div>
+							<h5>Daftar Mitra</h5>
+							<p>Bergabunglah dengan komunitas bisnis kami yang berkembang pesat.</p>
+							<h4>01</h4>
+						</div>						
+					</div>
+					<div class="col-md-4">
+						<div class="work-box aos" data-aos="fade-up">
+							<div class="work-icon">
+								<span>
+									<img src="{{ asset('template/assets/img/icons/find-icon.svg') }}" alt="img">
+								</span>
+							</div>
+							<h5>Pilih Produk</h5>
+							<p>Gunakan dan pasarkan produk-produk unggulan dari BRILLIAN BIZ.</p>
+							<h4>02</h4>
+						</div>						
+					</div>
+					<div class="col-md-4">
+						<div class="work-box aos" data-aos="fade-up">
+							<div class="work-icon">
+								<span>
+									<img src="{{ asset('template/assets/img/icons/place-icon.svg') }}" alt="img">
+								</span>
+							</div>
+							<h5>Raih Reward</h5>
+							<p>Dapatkan manfaat finansial dan reward prestasi yang luar biasa.</p>
+							<h4>03</h4>
+						</div>						
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- /Work Section -->
 
-                    <!-- Dropdown Menu -->
-                    <div x-show="open" @click.away="open = false" @click.stop x-cloak
-                         x-transition:enter="transition ease-out duration-100"
-                         x-transition:enter-start="opacity-0 scale-95"
-                         x-transition:enter-end="opacity-100 scale-100"
-                         x-transition:leave="transition ease-in duration-75"
-                         x-transition:leave-start="opacity-100 scale-100"
-                         x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute right-0 top-full mt-4 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 origin-top-right">
-                        
-                        <form method="POST" action="{{ route('chat.logout') }}">
-                            @csrf
-                            <button type="submit" class="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                                </svg>
-                                Logout Sesi
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <main class="flex-1 w-full max-w-7xl mx-auto">
-        <!-- Hero Section -->
-        <section id="home" class="py-16 md:py-24 px-4 md:px-6">
-            <div class="grid lg:grid-cols-2 gap-12 items-center">
-                <div class="space-y-8" data-aos="fade-right" data-aos-duration="1000">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 border border-red-100 text-red-600">
-                        <span class="text-xs font-bold uppercase tracking-wider">Ekosistem Bisnis Digital</span>
-                    </div>
-                    <h2 class="text-4xl md:text-6xl font-extrabold text-[#0a1d37] leading-[1.1] tracking-tight">
-                        Wujudkan <span class="text-red-600">Kebebasan</span> Finansial Anda.
-                    </h2>
-                    <p class="text-lg text-slate-500 font-medium leading-relaxed max-w-xl">
-                        Selamat datang di portal dukungan BEST CORPORATION. Kami menyediakan ekosistem bisnis syariah untuk membantu masyarakat meraih keberkahan dan kesuksesan finansial.
-                    </p>
-                    <div class="flex flex-wrap gap-4">
-                        <button @click="isOpen = true" class="px-8 py-4 bg-red-600 text-white rounded-2xl font-bold shadow-xl shadow-red-600/20 hover:bg-red-700 transition-all transform hover:-translate-y-1 active:scale-95">
-                            Chat dengan Kami
-                        </button>
-                        <a href="#solusi" class="px-8 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all transform hover:-translate-y-1">
-                            Lihat Solusi
-                        </a>
-                    </div>
-                </div>
-                <div class="relative hidden lg:block" data-aos="fade-left" data-aos-duration="1200">
-                    <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=800" alt="Support" class="rounded-[2.5rem] shadow-2xl border-4 border-white transition-transform hover:scale-[1.02] duration-500">
-                    <div class="absolute -bottom-6 -left-6 bg-white p-6 rounded-3xl shadow-xl border border-slate-100 max-w-[200px]" data-aos="zoom-in" data-aos-delay="600">
-                        <p class="text-xs font-bold text-red-600 uppercase mb-2">CS Online</p>
-                        <p class="text-sm font-bold text-[#0a1d37]">Siap melayani pertanyaan Anda 24/7.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Stats -->
-        <div class="px-4 md:px-6 pb-20 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-center transform hover:-translate-y-2 transition-transform duration-300" data-aos="fade-up" data-aos-delay="100">
-                <p class="text-2xl font-black text-[#0a1d37]">100K+</p>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Mitra Aktif</p>
-            </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-center transform hover:-translate-y-2 transition-transform duration-300" data-aos="fade-up" data-aos-delay="200">
-                <p class="text-2xl font-black text-[#0a1d37]">50+</p>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Produk</p>
-            </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-center transform hover:-translate-y-2 transition-transform duration-300" data-aos="fade-up" data-aos-delay="300">
-                <p class="text-2xl font-black text-[#0a1d37]">24/7</p>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Support</p>
-            </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-center transform hover:-translate-y-2 transition-transform duration-300" data-aos="fade-up" data-aos-delay="400">
-                <p class="text-2xl font-black text-[#0a1d37]">100%</p>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Amanah</p>
-            </div>
-        </div>
-
-        <!-- Solutions Section -->
-        <section id="solusi" class="py-20 px-4 md:px-6 bg-white rounded-[3rem] shadow-sm border border-slate-100 mb-20 overflow-hidden">
-            <div class="text-center max-w-3xl mx-auto mb-16 space-y-4" data-aos="fade-up">
-                <h3 class="text-3xl md:text-4xl font-extrabold text-[#0a1d37] tracking-tight">Solusi Bisnis <span class="text-red-600">Terintegrasi</span></h3>
-                <p class="text-slate-500 font-medium text-sm">Kami menyediakan semua instrumen yang Anda butuhkan untuk memulai bisnis dengan mudah.</p>
-            </div>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="space-y-4 p-6 rounded-3xl hover:bg-slate-50 transition-colors group" data-aos="fade-up" data-aos-delay="100">
-                    <div class="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0a1d37]">Dashboard Digital</h4>
-                    <p class="text-sm text-slate-500 leading-relaxed">Kelola poin, reward, dan jaringan Anda melalui sistem dashboard yang canggih dan transparan.</p>
-                </div>
-                <div class="space-y-4 p-6 rounded-3xl hover:bg-slate-50 transition-colors group" data-aos="fade-up" data-aos-delay="200">
-                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0a1d37]">Bimbingan Mentor</h4>
-                    <p class="text-sm text-slate-500 leading-relaxed">Dapatkan pelatihan rutin dari para leader yang telah sukses meraih reward motor, mobil, hingga rumah.</p>
-                </div>
-                <div class="space-y-4 p-6 rounded-3xl hover:bg-slate-50 transition-colors group" data-aos="fade-up" data-aos-delay="300">
-                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0a1d37]">Produk Inovatif</h4>
-                    <p class="text-sm text-slate-500 leading-relaxed">Akses ke produk pupuk organik, aditif bahan bakar, dan suplemen kesehatan yang sudah teruji kualitasnya.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- CTA Section -->
-        <section id="produk" class="mb-20 px-4 md:px-6" data-aos="zoom-in-up">
-            <div class="bg-[#0a1d37] rounded-[3rem] p-8 md:p-16 text-center space-y-8 relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-1000 pointer-events-none"></div>
-                <h3 class="text-3xl md:text-5xl font-black text-white">Butuh Bantuan Lebih Lanjut?</h3>
-                <p class="text-slate-400 max-w-2xl mx-auto font-medium">Tim Live Support kami siap membantu Anda mengenai pendaftaran, kendala sistem, atau informasi produk.</p>
-                <button @click="toggleChat" class="bg-red-600 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-red-600/30 hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 inline-flex items-center gap-3">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                    Mulai Chat
-                </button>
-            </div>
-        </section>
-    </main>
-
-    <footer class="bg-white border-t border-slate-200 py-12 px-4 md:px-6" data-aos="fade-in">
-        <div class="max-w-7xl mx-auto text-center">
-            <div class="flex items-center justify-center gap-3 mb-6">
-                <img src="{{ asset('images/best-logo-1.png') }}" alt="Logo" class="w-8 h-8 object-contain">
-                <span class="text-xl font-black tracking-tighter text-slate-900">BEST <span class="text-red-600">CORP</span></span>
-            </div>
-            <p class="text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mb-4">PT. Bandung Ekosistem Teknologi</p>
-            <div class="flex justify-center gap-6 mb-8 text-slate-400">
-                <a href="#" class="hover:text-red-600 transition-colors transform hover:scale-125 transition-transform">FB</a>
-                <a href="#" class="hover:text-red-600 transition-colors transform hover:scale-125 transition-transform">IG</a>
-                <a href="#" class="hover:text-red-600 transition-colors transform hover:scale-125 transition-transform">YT</a>
-            </div>
-            <p class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">&copy; 2026 BEST CORPORATION. All Rights Reserved.</p>
-        </div>
-    </footer>
-
-    <!-- Scripts -->
-    <!-- Footer Hidden Logout Form -->
-    <form id="global-logout-form" action="{{ route('chat.logout') }}" method="POST" class="hidden">
-        @csrf
-    </form>
-
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            AOS.init({
-                once: false,
-                mirror: true,
-                duration: 800,
-                easing: 'ease-out-quad',
-            });
-        });
-    </script>
+		<!-- Footer -->
+		<footer class="footer">
+		
+			<!-- Footer Top -->
+			<div class="footer-top aos" data-aos="fade-up">
+				<div class="container">
+					<div class="row">
+						<div class="col-lg-4 col-md-6">
+							<!-- Footer Widget -->
+							<div class="footer-widget">
+								<div class="footer-logo">
+									<a href="{{ route('user.home') }}"><img src="{{ asset('images/logo-brilian-min.png') }}" alt="logo" style="max-height: 50px;"></a>
+								</div>
+								<div class="footer-content">
+									<p>BRILLIAN BIZ adalah perusahaan yang memasarkan produk-produk berkualitas dengan konsep direct selling atau penjualan langsung. </p>
+								</div>
+							</div>
+							<!-- /Footer Widget -->
+						</div>
+						<div class="col-lg-2 col-md-6">
+							<!-- Footer Widget -->
+							<div class="footer-widget footer-menu">
+								<h2 class="footer-title">Tautan Cepat</h2>
+								<ul>
+									<li><a href="javascript:void(0);">Tentang Kami</a></li>
+									<li><a href="javascript:void(0);">Kontak</a></li>
+									<li><a href="javascript:void(0);">Produk</a></li>
+								</ul>
+							</div>
+							<!-- /Footer Widget -->
+						</div>
+						<div class="col-lg-3 col-md-6">
+							<!-- Footer Widget -->
+							<div class="footer-widget footer-contact">
+								<h2 class="footer-title">Hubungi Kami</h2>
+								<div class="footer-contact-info">
+									<div class="footer-address">
+										<p><span><i class="feather-map-pin"></i></span> Bandung, Jawa Barat, Indonesia</p>
+									</div>
+									<p><span><i class="feather-phone"></i></span> +62 812-3456-7890</p>
+									<p class="mb-0"><span><i class="feather-mail"></i></span> support@brillian.id</p>
+								</div>
+							</div>
+							<!-- /Footer Widget -->
+						</div>
+						<div class="col-lg-3 col-md-6">
+							<!-- Footer Widget -->
+							<div class="footer-widget">
+								<h2 class="footer-title">Ikuti Kami</h2>
+								<div class="social-icon">
+									<ul>
+										<li><a href="#" target="_blank"><i class="fa-brands fa-facebook"></i> </a></li>
+										<li><a href="#" target="_blank"><i class="fab fa-twitter"></i> </a></li>
+										<li><a href="#" target="_blank"><i class="fa-brands fa-instagram"></i></a></li>
+									</ul>
+								</div>
+							</div>
+							<!-- /Footer Widget -->
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- /Footer Top -->
+			
+			<!-- Footer Bottom -->
+			<div class="footer-bottom">
+				<div class="container">
+					<!-- Copyright -->
+					<div class="copyright">
+						<div class="row align-items-center">
+							<div class="col-md-6">
+								<div class="copyright-text">
+									<p class="mb-0">Copyright &copy; 2026 BRILLIAN BIZ. All Rights Reserved.</p>
+								</div>
+							</div>
+							<div class="col-md-6 text-md-end">
+								<!-- Copyright Menu -->
+								<div class="copyright-menu">
+									<ul class="policy-menu">
+										<li><a href="javascript:void(0);">Privacy Policy</a></li>
+										<li><a href="javascript:void(0);">Terms & Conditions</a></li>
+									</ul>
+								</div>
+								<!-- /Copyright Menu -->
+							</div>
+						</div>
+					</div>
+					<!-- /Copyright -->
+				</div>
+			</div>
+			<!-- /Footer Bottom -->
+			
+		</footer>
+		<!-- /Footer -->
+	</div>
 
     <!-- Chat Widget Container -->
-    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end">
+    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end chat-widget-container">
         
         <!-- Chat Popup Window -->
         <div x-show="isOpen" x-cloak
@@ -281,28 +433,28 @@
             
             <!-- Loading Overlay -->
             <div x-show="isLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
 
             <!-- Header -->
-            <header class="bg-white px-4 py-3 flex items-center justify-between shrink-0 shadow-sm relative border-b border-slate-100">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-red-600"></div>
-                <div class="flex items-center gap-3 mt-1">
-                    <div class="w-10 h-10 rounded-xl bg-[#0a1d37] flex items-center justify-center shadow-md">
-                        <span class="font-black text-white text-lg">CS</span>
+            <header class="bg-white px-3 py-2 flex items-center justify-between shrink-0 shadow-sm relative border-b border-slate-100" style="background: white !important;">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-blue-600"></div>
+                <div class="flex items-center gap-2.5 mt-0.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#0a1d37] flex items-center justify-center shadow-sm">
+                        <span class="font-black text-white text-base">CS</span>
                     </div>
                     <div>
-                        <h3 class="font-black text-[#0a1d37] text-sm leading-tight">Layanan Pelanggan</h3>
-                        <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        <h3 class="font-black text-[#0a1d37] text-xs leading-tight">Layanan Pelanggan</h3>
+                        <div class="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                             <span class="flex items-center gap-1 shrink-0"
                                 :class="{
-                                    'text-red-500': status === 'pending' || status === 'queued',
+                                    'text-blue-500': status === 'pending' || status === 'queued',
                                     'text-emerald-500': status === 'active',
                                     'text-slate-400': status === 'closed'
                                 }">
                                 <div class="w-1.5 h-1.5 rounded-full"
                                     :class="{
-                                        'bg-red-500 animate-pulse': status === 'pending' || status === 'queued',
+                                        'bg-blue-500 animate-pulse': status === 'pending' || status === 'queued',
                                         'bg-emerald-500': status === 'active',
                                         'bg-slate-400': status === 'closed'
                                     }"></div>
@@ -313,10 +465,14 @@
                 </div>
             </header>
 
-            <!-- Messages Area (Show if authenticated) -->
-            <div x-show="isAuthenticated && !showRegForm" id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
-                <div class="text-center mb-4">
-                    <span class="text-slate-400 font-medium text-[10px] text-center w-full inline-block">Percakapan Dimulai</span>
+            <!-- Messages Area (Show if chatting and NOT in registration form) -->
+            <div x-show="isChatting && !showRegForm" id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
+                <div class="flex justify-between items-center mb-4">
+                    <button @click="isChatting = false" class="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        Menu Utama
+                    </button>
+                    <span class="text-slate-400 font-medium text-[10px]">Percakapan Dimulai</span>
                 </div>
 
                 <template x-for="(msg, index) in messages" :key="msg.id || msg.temp_id">
@@ -325,7 +481,7 @@
                         <!-- System Message -->
                         <template x-if="msg.sender_type === 'system'">
                             <div class="w-full flex justify-center my-2">
-                                <div class="bg-red-50 text-red-800 text-[10px] px-3 py-1.5 rounded-lg border border-red-100 text-center max-w-[85%] shadow-sm">
+                                <div class="bg-blue-50 text-blue-800 text-[10px] px-3 py-1.5 rounded-lg border border-blue-100 text-center max-w-[85%] shadow-sm">
                                     <span class="block font-medium" x-text="msg.content"></span>
                                 </div>
                             </div>
@@ -338,7 +494,7 @@
 
                                 <div class="px-3 py-2 md:px-3.5 md:py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm relative overflow-hidden min-w-0 max-w-full"
                                     :class="msg.sender_type === 'user' 
-                                        ? 'bg-red-600 text-white rounded-br-sm' 
+                                        ? 'bg-blue-600 text-white rounded-br-sm' 
                                         : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'">
 
                                     <!-- Pesan Teks -->
@@ -387,7 +543,7 @@
                                         <template x-if="botPhase === 'awaiting_category'">
                                             <template x-for="cat in botCategories" :key="cat">
                                                 <button @click="selectCategory(cat)" 
-                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
+                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 min-w-[100px] text-center">
                                                     <span x-text="cat"></span>
                                                 </button>
                                             </template>
@@ -397,11 +553,11 @@
                                         <template x-if="botPhase === 'awaiting_cs_type'">
                                             <div class="flex flex-wrap gap-1.5 w-full">
                                                 <button @click="newMessage = 'Customer service'; sendMessage()" 
-                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center">
+                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center">
                                                     Customer service
                                                 </button>
                                                 <button @click="newMessage = 'CS Voucher'; sendMessage()" 
-                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center">
+                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center">
                                                     CS Voucher
                                                 </button>
                                             </div>
@@ -412,7 +568,7 @@
                                             <div class="flex flex-wrap gap-1.5 w-full">
                                                 <template x-for="child in botSubmenus" :key="child.id">
                                                     <button @click="handleSubmenuClick(child)" 
-                                                            class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
+                                                            class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 min-w-[100px] text-center">
                                                         <span x-text="child.label"></span>
                                                     </button>
                                                 </template>
@@ -423,8 +579,8 @@
                                         <template x-if="botPhase === 'awaiting_main_menu'">
                                             <div class="flex flex-wrap gap-1.5 w-full">
                                                 <template x-for="item in chat_main_menu" :key="item.id">
-                                                    <button @click="newMessage = item.label; sendMessage()" 
-                                                            class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 min-w-[120px] text-center">
+                                                    <button @click="handleMenuClick(item.id)" 
+                                                            class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 min-w-[100px] text-center">
                                                         <span x-text="item.label"></span>
                                                     </button>
                                                 </template>
@@ -435,12 +591,11 @@
                                         <template x-if="botPhase === 'offer_agent_transfer'">
                                             <div class="flex flex-col sm:flex-row gap-1.5 w-full">
                                                 <button @click="newMessage = 'LANJUT'; sendMessage()" 
-                                                        class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
+                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
                                                     <i class="fas fa-comment-dots"></i> Tanya Lagi
                                                 </button>
                                                 <button @click="newMessage = 'AGENT'; sendMessage()" 
-                                                        class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[10px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
-                                                    <i class="fas fa-headset"></i> Hubungi Agent
+                                                        class="px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">                                                    <i class="fas fa-headset"></i> Hubungi Agent
                                                 </button>
                                             </div>
                                         </template>
@@ -454,13 +609,13 @@
                 <div id="widget-scroll-anchor" class="h-1"></div>
             </div>
 
-            <!-- Registration & Greeting (Show if NOT authenticated) -->
-            <div x-show="!isAuthenticated || showRegForm" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col">
+            <!-- Registration & Greeting -->
+            <div x-show="!isChatting || showRegForm" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col">
                 <!-- Step 1: Greeting & Buttons -->
                 <div x-show="!showRegForm" class="flex-1 flex flex-col justify-center">
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6">
                         <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
                                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                             </div>
                             <div>
@@ -471,28 +626,38 @@
 
                     <!-- Loading state saat menu belum siap -->
                     <div x-show="chat_main_menu.length === 0 && !isInitialized" class="flex items-center justify-center py-6">
-                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                     </div>
 
-                    <div x-show="chat_main_menu.length > 0" class="grid grid-cols-1 gap-2">
+                    <!-- Debug info -->
+                    <div class="text-xs text-slate-500 mb-2">
+                        Debug: isInitialized: <span x-text="isInitialized"></span>, 
+                        menu length: <span x-text="chat_main_menu.length"></span>,
+                        showRegForm: <span x-text="showRegForm"></span>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-1.5">
                         <template x-for="item in chat_main_menu" :key="item.id">
                             <button @click="handleMenuClick(item.id)" 
-                                    class="w-full text-left px-4 py-3 bg-white hover:bg-red-50 text-slate-700 hover:text-red-600 border border-slate-200 hover:border-red-300 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center justify-between group">
+                                    class="w-full text-left px-3.5 py-2.5 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-2xl text-[12px] font-bold transition-all shadow-sm flex items-center justify-between group">
                                 <span x-text="item.label"></span>
-                                <svg class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                             </button>
                         </template>
+                        <div x-show="chat_main_menu.length === 0" class="text-xs text-blue-500">
+                            Menu belum dimuat atau kosong
+                        </div>
                     </div>
                 </div>
 
                 <!-- Step 2: Data Entry -->
                 <div x-show="showRegForm" x-cloak class="flex-1 flex flex-col justify-center">
-                    <button x-show="!isAuthenticated" @click="showRegForm = false" class="inline-flex items-center text-xs text-slate-500 hover:text-red-600 mb-4 transition-colors">
+                    <button x-show="!isAuthenticated" @click="showRegForm = false" class="inline-flex items-center text-xs text-slate-500 hover:text-blue-600 mb-4 transition-colors">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         Kembali ke Menu
                     </button>
                     <!-- Tombol Batal untuk kembali membatalkan ke CS jika sudah Auth -->
-                    <button x-show="isAuthenticated" @click="cancelRegistration" class="inline-flex items-center text-xs text-slate-500 hover:text-red-600 mb-4 transition-colors">
+                    <button x-show="isAuthenticated" @click="cancelRegistration" class="inline-flex items-center text-xs text-slate-500 hover:text-blue-600 mb-4 transition-colors">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         Batal
                     </button>
@@ -504,30 +669,30 @@
 
                     <form @submit.prevent="submitRegistration" class="space-y-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
-                            <input type="text" x-model="regForm.name" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Masukkan nama Anda">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-blue-500">*</span></label>
+                            <input type="text" x-model="regForm.name" required class="form-control" placeholder="Masukkan nama Anda" style="border-radius: 12px;">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">No. Handphone <span class="text-red-500">*</span></label>
-                            <input type="text" x-model="regForm.contact" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Contoh: 08123456789">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">No. Handphone <span class="text-blue-500">*</span></label>
+                            <input type="text" x-model="regForm.contact" required class="form-control" placeholder="Contoh: 08123456789" style="border-radius: 12px;">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Asal / Instansi <span class="text-red-500">*</span></label>
-                            <input type="text" x-model="regForm.origin" required class="w-full bg-white border border-slate-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors outline-none" placeholder="Nama perusahaan atau asal Anda">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Asal / Instansi <span class="text-blue-500">*</span></label>
+                            <input type="text" x-model="regForm.origin" required class="form-control" placeholder="Nama perusahaan atau asal Anda" style="border-radius: 12px;">
                         </div>
 
-                        <button type="submit" :disabled="isLoading" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex justify-center items-center gap-2">
+                        <button type="submit" :disabled="isLoading" class="btn btn-primary w-100 py-2 mt-2" style="border-radius: 12px; font-weight: bold;">
                             <span x-show="!isLoading">Mulai Chat</span>
-                            <div x-show="isLoading" class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+                            <div x-show="isLoading" class="spinner-border spinner-border-sm" role="status"></div>
                         </button>
                         
-                        <div x-show="regError" x-text="regError" class="text-xs text-red-500 text-center font-medium mt-2"></div>
+                        <div x-show="regError" x-text="regError" class="text-xs text-danger text-center font-medium mt-2"></div>
                     </form>
                 </div>
             </div>
 
             <!-- Typing Indicator & Footer -->
-            <div x-show="isAuthenticated && !showRegForm" class="shrink-0 bg-white">
+            <div x-show="isChatting && !showRegForm" class="shrink-0 bg-white">
                 <div x-show="isTyping" x-cloak class="px-4 py-1.5 flex items-center gap-2 bg-slate-50/80 border-t border-slate-100">
                     <span class="text-[10px] italic text-slate-400 font-medium" x-text="typingMessage"></span>
                     <div class="flex gap-1">
@@ -545,9 +710,9 @@
                       x-show="status !== 'closed'" class="border-t border-slate-200 p-2.5 bg-white flex items-end gap-2 relative">
                     <button type="button" 
                             @click="$refs.fileInput.click()"
-                            class="shrink-0 w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 focus:outline-none transition-all"
-                            title="Unggah Gambar atau File">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            class="btn btn-light shrink-0 w-10 h-10 d-flex align-items-center justify-center"
+                            title="Unggah Gambar atau File" style="border-radius: 12px;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </button>
                     <input type="file" x-ref="fileInput" class="hidden" @change="uploadFile">
 
@@ -556,12 +721,13 @@
                             @input="sendTypingEvent"
                             @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
                             placeholder="Ketik balasan Anda..." 
-                            class="flex-1 max-h-24 min-h-[40px] bg-slate-100 border-transparent focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl px-3 py-2 text-sm transition-colors resize-none overflow-y-auto"
+                            class="form-control flex-1 resize-none"
+                            style="border-radius: 12px; background: #f8f9fa; border: none;"
                             rows="1"></textarea>
                     <button type="submit" 
                             :disabled="!newMessage.trim() || isSending || isLoading"
-                            class="shrink-0 w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                        <svg class="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                            class="btn btn-primary shrink-0 w-10 h-10 d-flex align-items-center justify-center" style="border-radius: 12px;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                     </button>
                 </form>
             </div>
@@ -569,20 +735,53 @@
 
         <!-- Float Button (FAB) -->
         <button @click="toggleChat" 
-           class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-red-600 flex items-center justify-center text-white shadow-xl shadow-red-600/30 hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 z-50 relative group">
-            
-            <svg x-show="!isOpen" class="w-7 h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-            <svg x-show="isOpen" style="display: none;" class="w-7 h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            
+           class="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-blue-600 fab-pulse flex items-center justify-center text-white shadow-2xl shadow-blue-600/40 hover:bg-blue-700 transition-all transform hover:scale-110 active:scale-95 z-[60] group"
+           style="border-radius: 50% !important;"
+           :aria-label="isOpen ? 'Tutup Chat' : 'Buka Chat'">
+            <svg x-show="!isOpen" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <svg x-show="isOpen" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             <!-- Unread Badge -->
-            <div x-show="unreadCount > 0 && !isOpen" class="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#0a1d37] text-[10px] font-black text-white shadow-sm border-2 border-white">
+            <div x-show="unreadCount > 0 && !isOpen" class="absolute -top-2 -right-2 bg-blue-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold border-2 border-white">
                 <span x-text="unreadCount"></span>
             </div>
         </button>
     </div>
 
+	<!-- scrollToTop start -->
+	<div class="progress-wrap active-progress">
+		<svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+		<path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"></path>
+		</svg>
+	</div>
+	<!-- scrollToTop end -->
+
+	<!-- jQuery -->
+	<script src="{{ asset('template/assets/js/jquery-3.6.1.min.js') }}"></script>
+
+	<!-- Bootstrap Core JS -->
+	<script src="{{ asset('template/assets/js/bootstrap.bundle.min.js') }}"></script>
+
+	<!-- Fearther JS -->
+	<script src="{{ asset('template/assets/js/feather.min.js') }}"></script>
+		
+	<!-- Owl Carousel JS -->
+	<script src="{{ asset('template/assets/js/owl.carousel.min.js') }}"></script>
+
+	<!-- select JS -->
+	<script src="{{ asset('template/assets/plugins/select2/js/select2.min.js') }}"></script>
+	
+	<!-- Aos -->
+	<script src="{{ asset('template/assets/plugins/aos/aos.js') }}"></script>
+	
+	<!-- Top JS -->
+	<script src="{{ asset('template/assets/js/backToTop.js') }}"></script>
+
+	<!-- Custom JS -->
+	<script src="{{ asset('template/assets/js/script.js') }}"></script>
+
     <script>
         document.addEventListener('alpine:init', () => {
+            console.log('Alpine.js initialized');
             Alpine.data('chatWidget', () => ({
                 open: false,
                 isOpen: false,
@@ -591,277 +790,210 @@
                 isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
                 csrfToken: '{{ csrf_token() }}',
                 user: {
-                    name: @json(Auth::check() ? Auth::user()->name : ($isAuthenticated ? 'Guest User' : '')),
+                    name: @json(Auth::check() ? Auth::user()->name : ($isAuthenticated ? 'Guest' : '')),
                     initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : ($isAuthenticated ? 'G' : '') }}'
                 },
-                
+
                 // Form Data
                 regForm: {
                     name: '',
                     contact: '',
                     origin: ''
                 },
-                regError: '',
                 selectedOption: null,
                 showRegForm: false,
-                chat_greeting: 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
+                regError: '',
+                chat_greeting: '{!! addslashes(\App\Models\Setting::get("bot_greeting_message", "Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?")) !!}',
                 chat_main_menu: [],
 
-                conversationId: null,
-                userId: null,
-                status: 'pending',
-                botPhase: 'off',
-                botSubmenus: [],
+                // Chat Data
                 messages: [],
                 newMessage: '',
                 isSending: false,
-                isTyping: false,
-                typingMessage: 'Agen sedang merespon',
-                typingTimeout: null,
+                conversationId: null,
+                userId: null,
+                status: 'pending',
                 unreadCount: 0,
-                botCategories: ['Pendaftaran & Aktivasi', 'Dukungan Teknis', 'Masalah Pembayaran', 'Komplain / Keluhan', 'Lain-lain'],
+                isTyping: false,
+                isChatting: false,
+                typingMessage: '',
+                typingTimeout: null,
 
-                // Inactivity Timer (30 Menit)
-                lastActivity: Date.now(),
-                inactivityTimeout: 30 * 60 * 1000, 
-                checkInterval: 60 * 1000, 
-                reminderSentCount: 0,
-
-                get statusText() {
-                    if (this.status === 'pending') return 'Menunggu Agent';
-                    if (this.status === 'queued') return 'Sedang Dalam Antrian';
-                    if (this.status === 'active') return 'Terhubung';
-                    return 'Sesi Ditutup';
-                },
-
-                formatMessage(text) {
-                    if (!text) return '';
-                    
-                    const badge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
-                    
-                    if (String(text).includes(badge)) {
-                        let parts = String(text).split(badge);
-                        let safeParts = parts.map(p => String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
-                        let joined = safeParts.join(badge).replace(/\n/g, '<br>');
-                        return joined.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                    }
-
-                    let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                    let withBr = safeText.replace(/\n/g, '<br>');
-                    return withBr.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                },
+                // Bot Settings
+                botPhase: 'off',
+                botCategories: ['Pertanyaan Umum', 'Masalah Teknis', 'Layanan Produk', 'Lainnya'],
+                botSubmenus: [],
 
                 initWidget() {
-                    console.log("🕒 Inactivity Timer diaktifkan. Batas waktu: 30 Menit.");
+                    console.log('initWidget called');
+                    this.fetchChatData();
                     
-                    // Pantau aktivitas user (gerakan mouse, klik, ketik)
-                    ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
-                        window.addEventListener(event, () => {
-                            if (this.isAuthenticated) {
-                                if (this.reminderSentCount > 0) {
-                                    this.reminderSentCount = 0;
-                                    console.log("✅ Aktivitas terdeteksi. Reset pengingat.");
-                                }
-                                this.lastActivity = Date.now();
-                            }
-                        }, { passive: true });
-                    });
-
-                    // Interval untuk mengecek ketidakaktifan (PENGINGAT USER)
+                    // Polling sederhana untuk pesan baru jika Echo tidak tersedia
                     setInterval(() => {
-                        if (this.isAuthenticated && this.status !== 'closed') {
-                            const now = Date.now();
-                            const diff = now - this.lastActivity;
-                            
-                            // Cek pengingat setiap 5 menit (300.000 ms)
-                            const intervalMs = 5 * 60 * 1000;
-                            const expectedReminders = Math.floor(diff / intervalMs);
-                            
-                            if (expectedReminders > this.reminderSentCount && expectedReminders < 6) {
-                                this.reminderSentCount = expectedReminders;
-                                const remainingMinutes = 30 - (expectedReminders * 5);
-                                
-                                // Tambahkan bubble chat pengingat (lokal ke user)
-                                this.messages.push({
-                                    id: 'reminder-' + Date.now(),
-                                    sender_type: 'system',
-                                    content: `💡 PENGINGAT: Sesi chat akan berakhir dalam ${remainingMinutes} menit jika tidak ada aktivitas.`,
-                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                                });
-                                
-                                this.$nextTick(() => { this.scrollToBottom(); });
-                                if (!this.isOpen) this.unreadCount++;
-                                
-                                console.log(`⚠️ User inactivity reminder triggered: ${expectedReminders}x`);
-                            }
-
-                            if (diff > this.inactivityTimeout) {
-                                this.handleTimeout();
-                            }
+                        if (this.isAuthenticated && !window.Echo) {
+                            this.fetchChatData();
                         }
-                    }, 10000); // Cek setiap 10 detik agar lebih responsif
-
-                    // Polling fallback: sync status dari server setiap 20 detik (safety net jika WebSocket gagal)
-                    setInterval(async () => {
-                        if (!this.conversationId || this.status === 'closed') return;
-                        try {
-                            const res = await fetch('{{ route("chat.init") }}', {
-                                method: 'GET',
-                                headers: { 'Accept': 'application/json' }
-                            });
-                            const data = await res.json();
-                            if (data.conversation && data.conversation.status !== this.status) {
-                                console.log('🔄 Polling sync: status berubah dari', this.status, '→', data.conversation.status);
-                                this.status = data.conversation.status;
-                                if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
-                            }
-                        } catch (e) { /* silent */ }
-                    }, 20000);
+                    }, 30000);
                 },
 
-                async handleTimeout() {
-                    console.log("⚠️ Sesi berakhir. Mengeluarkan user secara total...");
-                    
-                    // Hapus cookie guest secara proaktif
-                    document.cookie = "guest_chat_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                    
-                    // Gunakan redirect GET ke rute logout untuk membersihkan sesi dan heading
-                    window.location.href = '{{ route('chat.logout') }}';
-                },
-
-                async toggleChat() {
+                toggleChat() {
                     this.isOpen = !this.isOpen;
                     if (this.isOpen) {
                         this.unreadCount = 0;
-                        if (!this.isInitialized) await this.fetchChatData();
-                        else this.scrollToBottom();
+                        this.$nextTick(() => {
+                            this.scrollToBottom();
+                            if (this.$refs.messageInput) this.$refs.messageInput.focus();
+                        });
+                    }
+                },
+
+                formatMessage(content) {
+                    if (!content) return '';
+                    return content.replace(/\n/g, '<br>');
+                },
+
+                get statusText() {
+                    switch(this.status) {
+                        case 'pending': return 'Menunggu';
+                        case 'queued': return 'Dalam Antrian';
+                        case 'active': return 'Terhubung';
+                        case 'closed': return 'Selesai';
+                        default: return 'Online';
                     }
                 },
 
                 async handleMenuClick(id) {
-                    this.selectedOption = id;
-                    const menu = this.chat_main_menu.find(m => m.id === id);
-                    if (!menu) return;
-                    
-                    const actionType = menu.action_type || 'connect_cs';
-                    
-                    if (actionType === 'submenu') {
-                        // LOCAL MODE for Submenu
-                        this.isAuthenticated = true; 
-                        this.isInitialized = true;
+                    console.log("Menu clicked:", id);
+                    this.isLoading = true;
+                    try {
+                        this.selectedOption = id;
+                        const menu = this.chat_main_menu.find(m => m.id == id);
+                        if (!menu) {
+                            console.error("Menu not found for ID:", id);
+                            return;
+                        }
+                        console.log("Menu action type:", menu.action_type);
                         
-                        this.messages.push({
-                            id: 'local-user-' + Date.now(),
-                            sender_type: 'user',
-                            content: "Saya memilih: " + menu.label,
-                            created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                        });
-
-                        setTimeout(() => {
+                        const actionType = menu.action_type || 'connect_cs';
+                        
+                        // Aktifkan mode chat agar bubble pesan terlihat
+                        this.isChatting = true;
+                        
+                        if (actionType === 'submenu') {
                             this.messages.push({
-                                id: 'local-bot-' + Date.now(),
-                                sender_id: 0,
-                                sender_type: 'admin',
-                                content: menu.message_response || "Pilih layanan yang Anda inginkan:",
+                                id: 'local-user-' + Date.now(),
+                                sender_type: 'user',
+                                content: "Saya memilih: " + menu.label,
                                 created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                             });
 
-                            this.botSubmenus = menu.submenus || [];
-                            if (this.botSubmenus.length === 0) {
+                            setTimeout(() => {
                                 this.messages.push({
-                                    id: 'local-bot-err-' + Date.now(),
+                                    id: 'local-bot-' + Date.now(),
                                     sender_id: 0,
                                     sender_type: 'admin',
-                                    content: "Maaf, submenu belum tersedia. Silakan refresh halaman atau hubungi admin.",
+                                    content: menu.message_response || "Pilih layanan yang Anda inginkan:",
                                     created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                                 });
-                                return;
-                            }
-                            this.botPhase = 'awaiting_submenu';
-                            this.scrollToBottom();
-                        }, 600);
-                        
-                    } else if (actionType === 'connect_cs') {
-                        this.handleConnectCS(menu);
-                    } else if (actionType === 'link') {
-                        // LOCAL MODE for simple Links: No database records
-                        this.isAuthenticated = true; 
-                        this.isInitialized = true;
-                        
-                        this.messages.push({
-                            id: 'local-user-' + Date.now(),
-                            sender_type: 'user',
-                            content: "Saya ingin melihat: " + menu.label,
-                            created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                        });
 
-                        setTimeout(() => {
-                            // Show the message from database
-                            let content = menu.message_response || "Memproses permintaan Anda...";
+                                this.botSubmenus = menu.submenus || [];
+                                this.botPhase = 'awaiting_submenu';
+                                this.scrollToBottom();
+                            }, 400);
                             
-                            // If it's a link, append the button HTML locally
-                            if (actionType === 'link' && menu.action_value) {
-                                const isYoutube = menu.action_value.toLowerCase().includes('youtube.com') || menu.action_value.toLowerCase().includes('youtu.be');
-                                if (isYoutube) {
-                                    let embedUrl = false;
-                                    const match = menu.action_value.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-                                    if (match) {
-                                        embedUrl = `https://www.youtube.com/embed/${match[1]}`;
-                                    }
-                                    
-                                    if (embedUrl) {
-                                        content += `<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]">
-                                            <div class="relative w-full" style="padding-bottom: 56.25%;">
-                                                <iframe class="absolute top-0 left-0 w-full h-full" src="${embedUrl}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-                                            </div>
-                                            <div class="p-2 bg-white">
-                                                <a href="${menu.action_value}" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;">
-                                                    <i class="fab fa-youtube"></i> Buka di YouTube
-                                                </a>
-                                            </div>
-                                        </div>`;
+                        } else if (actionType === 'link') {
+                            this.messages.push({
+                                id: 'local-user-' + Date.now(),
+                                sender_type: 'user',
+                                content: "Saya ingin melihat: " + menu.label,
+                                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
+
+                            setTimeout(() => {
+                                let content = menu.message_response || "Memproses permintaan Anda...";
+                                if (menu.action_value) {
+                                    const isYoutube = menu.action_value.toLowerCase().includes('youtube.com') || menu.action_value.toLowerCase().includes('youtu.be');
+                                    if (isYoutube) {
+                                        content += `<div class="mt-2"><a href="${menu.action_value}" target="_blank" class="btn btn-danger btn-sm rounded-pill px-3"><i class="fab fa-youtube me-1"></i> Buka YouTube</a></div>`;
                                     } else {
-                                        content += `<div class="mt-2 flex">
-                                            <a href="${menu.action_value}" target="_blank" 
-                                               class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-bold no-underline shadow-md hover:bg-red-700 transition-all active:scale-95" 
-                                               style="font-size: 11px; text-decoration: none !important; color: white !important;">
-                                                <i class="fab fa-youtube"></i> Kunjungi Channel
-                                            </a>
-                                        </div>`;
+                                        content += `<div class="mt-2"><a href="${menu.action_value}" target="_blank" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-external-link-alt me-1"></i> Lihat Detail</a></div>`;
                                     }
+                                }
+
+                                this.messages.push({
+                                    id: 'local-bot-' + Date.now(),
+                                    sender_id: 0,
+                                    sender_type: 'admin',
+                                    content: content,
+                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+
+                                this.messages.push({
+                                    id: 'local-bot-menu-' + Date.now(),
+                                    sender_id: 0,
+                                    sender_type: 'admin',
+                                    content: "Ada lagi yang bisa kami bantu?",
+                                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                });
+                                this.botPhase = 'awaiting_main_menu';
+                                this.scrollToBottom();
+                            }, 400);
+                        } else {
+                            // Default: connect_cs
+                            await this.handleConnectCS(menu);
+                        }
+                    } catch (e) {
+                        console.error("Menu click error:", e);
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                async handleConnectCS(menu) {
+                    if (!this.conversationId) {
+                        try {
+                            if (menu.label.toLowerCase().includes('voucher')) {
+                                this.showRegForm = true;
+                                this.isAuthenticated = false;
+                            } else {
+                                this.isLoading = true;
+                                const response = await fetch('{{ route('chat.registerAnonymous') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': this.csrfToken,
+                                        'Accept': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        selected_option: menu.id
+                                    })
+                                });
+
+                                const data = await response.json();
+                                if (response.ok && data.success) {
+                                    this.isAuthenticated = true;
+                                    if (data.user) {
+                                        this.user.name = data.user.name;
+                                        this.user.initial = data.user.name.charAt(0).toUpperCase();
+                                    }
+                                    if (data.bot_phase) {
+                                        this.botPhase = data.bot_phase;
+                                    }
+                                    await this.fetchChatData();
                                 } else {
-                                    const btnLabel = menu.label.toLowerCase().includes('youtube') ? 'Buka YouTube' : 'Lihat Detail';
-                                    const iconClass = menu.label.toLowerCase().includes('youtube') ? 'fab fa-youtube' : 'fas fa-external-link-alt';
-                                    
-                                    content += `<div class="mt-2 flex">
-                                        <a href="${menu.action_value}" target="_blank" 
-                                           class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-bold no-underline shadow-md hover:bg-red-700 transition-all active:scale-95" 
-                                           style="font-size: 11px; text-decoration: none !important; color: white !important;">
-                                            <i class="${iconClass}"></i> ${btnLabel}
-                                        </a>
-                                    </div>`;
+                                    this.showRegForm = true;
                                 }
                             }
-
-                            this.messages.push({
-                                id: 'local-bot-' + Date.now(),
-                                sender_id: 0,
-                                sender_type: 'admin',
-                                content: content,
-                                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                            });
-
-                            // Show main menu buttons again
-                            this.messages.push({
-                                id: 'local-bot-menu-' + Date.now(),
-                                sender_id: 0,
-                                sender_type: 'admin',
-                                content: "Pilih layanan kami lainnya:",
-                                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                            });
-                            this.botPhase = 'awaiting_main_menu';
-                            this.scrollToBottom();
-                        }, 600);
+                        } catch (e) {
+                            console.error(e);
+                            this.showRegForm = true;
+                        } finally {
+                            this.isLoading = false;
+                        }
+                    } else {
+                        // Already authenticated, send as regular message
+                        this.newMessage = menu.label;
+                        await this.sendMessage();
                     }
                 },
 
@@ -887,12 +1019,12 @@
                         if (child.action_type === 'connect_cs') {
                              this.handleConnectCS(child);
                         } else if (child.action_type === 'link') {
-                             // Same logic for link if needed, but usually submenus are just connect_cs
+                             // Show link locally
                              this.messages.push({
                                 id: 'local-bot-' + Date.now(),
                                 sender_id: 0,
                                 sender_type: 'admin',
-                                content: "Aksi tidak dikenal.",
+                                content: "Silakan buka tautan berikut: " + child.action_value,
                                 created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                             });
                             this.scrollToBottom();
@@ -900,69 +1032,15 @@
                     }, 500);
                 },
 
-                async handleConnectCS(menu) {
-                    if (!this.conversationId) {
-                        try {
-                            if (menu.label.toLowerCase().includes('voucher')) {
-                                this.showRegForm = true;
-                                this.isAuthenticated = false; // Tampilkan form saja
-                            } else {
-                                this.isLoading = true;
-                                const response = await fetch('{{ route('chat.registerAnonymous') }}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': this.csrfToken,
-                                        'Accept': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        selected_option: menu.id
-                                    })
-                                });
-
-                                const data = await response.json();
-                                if (response.ok && data.success) {
-                                    this.isAuthenticated = true;
-                                    if (data.user) {
-                                        this.user.name = data.user.name;
-                                        this.user.initial = data.user.name.charAt(0).toUpperCase();
-                                    }
-                                    if (data.bot_phase) {
-                                        this.botPhase = data.bot_phase;
-                                        this.showRegForm = (data.bot_phase === 'require_registration');
-                                    }
-                                    if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
-                                    this.messages = []; // Clear local UI and fetch db UI
-                                    await this.fetchChatData();
-                                }
-                            }
-                        } catch (error) {
-                            console.error("Anon Registration Error:", error);
-                        } finally {
-                            this.isLoading = false;
-                        }
-                    } else {
-                        // Jika sudah ada conversationId
-                        if (menu.label.toLowerCase().includes('voucher')) {
-                            this.showRegForm = true;
-                        } else {
-                            this.newMessage = menu.label;
-                            this.sendMessage();
-                        }
-                    }
-                },
-
                 async submitRegistration() {
                     this.isLoading = true;
                     this.regError = '';
-                    
                     try {
-                        const targetEndpoint = this.isAuthenticated ? '{{ route('chat.updateProfile') }}' : '{{ route('chat.register') }}';
-                        const response = await fetch(targetEndpoint, {
+                        const response = await fetch('{{ route('chat.register') }}', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': this.csrfToken,
+                                'Content-Type': 'application/json',
                                 'Accept': 'application/json'
                             },
                             body: JSON.stringify({
@@ -970,33 +1048,11 @@
                                 selected_option: this.selectedOption
                             })
                         });
-
-                        if (response.status === 419) {
-                            // CSRF token mismatch, let's refresh token and retry once
-                            console.warn("CSRF mismatch, refreshing token...");
-                            await this.fetchChatData();
-                            return this.submitRegistration();
-                        }
-
-                        const data = await response.json();
                         
-                        if (response.ok && data.success) {
-                            if (data.csrf_token) this.csrfToken = data.csrf_token;
+                        const data = await response.json();
+                        if (data.success) {
+                            this.showRegForm = false;
                             this.isAuthenticated = true;
-                            
-                            // Update User Data reaktif
-                            if (data.user) {
-                                this.user.name = data.user.name;
-                                this.user.initial = data.user.name.charAt(0).toUpperCase();
-                            }
-
-                            if (data.bot_phase) {
-                                this.botPhase = data.bot_phase;
-                                this.showRegForm = (data.bot_phase === 'require_registration');
-                            }
-                            if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
-                            
-                            this.regForm = { name: '', contact: '', origin: '' };
                             await this.fetchChatData();
                         } else {
                             this.regError = data.message || 'Terjadi kesalahan validasi data.';
@@ -1015,6 +1071,7 @@
                 },
 
                 async fetchChatData() {
+                    console.log('fetchChatData called');
                     this.isLoading = true;
                     try {
                         const response = await fetch('{{ route('chat.init') }}', {
@@ -1023,13 +1080,15 @@
                         });
                         
                         const data = await response.json();
+                        console.log('Chat data received:', data);
                         if (data.csrf_token) this.csrfToken = data.csrf_token;
 
-                        // Update Settings (Greeting & Menu)
                         if (data.chat_greeting) this.chat_greeting = data.chat_greeting;
-                        if (data.chat_main_menu) this.chat_main_menu = data.chat_main_menu;
+                        if (data.chat_main_menu) {
+                            this.chat_main_menu = data.chat_main_menu;
+                            console.log('Chat main menu set:', this.chat_main_menu);
+                        }
 
-                        // Jika user sudah login/punya session
                         if (data.conversation) {
                             this.conversationId = data.conversation.id;
                             this.userId = data.user_id;
@@ -1038,7 +1097,6 @@
                             if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                             this.isAuthenticated = true;
 
-                            // Update User Data
                             if (data.user) {
                                 this.user.name = data.user.name;
                                 this.user.initial = data.user.name ? data.user.name.charAt(0).toUpperCase() : 'G';
@@ -1053,9 +1111,19 @@
                                 created_at: m.created_at
                             }));
 
+                            if (this.messages.length > 0 && this.user.name !== 'Guest') {
+                                // Jika ada pesan dan bukan guest, anggap sedang chatting
+                                this.isChatting = true;
+                            } else if (data.status === 'active' || data.status === 'pending' || data.status === 'queued') {
+                                // Jika ada percakapan aktif di server, tampilkan area chatting
+                                this.isChatting = true;
+                            } else {
+                                // Selain itu tampilkan menu utama
+                                this.isChatting = false;
+                            }
+
                             this.listenForEvents();
                         } else {
-                            // User belum registrasi, biarkan tetap di mode sapaan
                             this.isAuthenticated = false;
                         }
 
@@ -1071,29 +1139,16 @@
                 listenForEvents() {
                     if (typeof window.Echo === 'undefined' || !this.conversationId) return;
 
-                    // Catch-up setelah WebSocket reconnect
-                    if (window.Echo.connector && window.Echo.connector.pusher) {
-                        window.Echo.connector.pusher.connection.bind('connected', () => {
-                            console.log('🔄 WebSocket reconnect — sync ulang data chat');
-                            this.fetchChatData();
-                        });
-                    }
-
                     try {
-                        // Personal User Channel for Global Events (Logout/Blocked)
                         if (this.userId) {
                             window.Echo.private(`user.${this.userId}`)
                                 .listen('.user.logged.out', (e) => {
-                                    setTimeout(() => {
-                                        this.handleTimeout();
-                                    }, 3000);
+                                    location.reload();
                                 });
                         }
 
                         window.Echo.private(`conversation.${this.conversationId}`)
                             .listen('.message.sent', (e) => {
-                                this.lastActivity = Date.now();
-                                this.reminderSentCount = 0;
                                 const alreadyExists = this.messages.some(m => m.id === e.id);
                                 if (alreadyExists) return;
 
@@ -1115,12 +1170,6 @@
                             .listen('.conversation.status.changed', (e) => {
                                 this.status = e.status;
                                 if (e.bot_phase) this.botPhase = e.bot_phase;
-
-                                if (e.status === 'closed') {
-                                    setTimeout(() => {
-                                        this.handleTimeout();
-                                    }, 3000);
-                                }
                             })
                             .listen('.typing', (e) => {
                                 if (e.sender_type === 'admin') {
@@ -1143,7 +1192,6 @@
                     const content = this.newMessage;
                     this.newMessage = ''; 
 
-                    // LOCAL MODE HANDLING: If no conversationId, don't hit the server
                     if (!this.conversationId) {
                         this.messages.push({
                             id: 'local-msg-' + Date.now(),
@@ -1152,7 +1200,6 @@
                             created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                         });
 
-                        // Dynamic Lookup: Match message content with menu labels
                         const matchedMenu = this.chat_main_menu.find(m => 
                             content.toLowerCase().includes(m.label.toLowerCase()) || 
                             m.label.toLowerCase().includes(content.toLowerCase())
@@ -1161,7 +1208,6 @@
                         if (matchedMenu) {
                             this.handleMenuClick(matchedMenu.id);
                         } else {
-                            // Default response if no match
                             setTimeout(() => {
                                 this.messages.push({
                                     id: 'local-bot-err-' + Date.now(),
@@ -1178,18 +1224,14 @@
                         return;
                     }
 
-                    this.lastActivity = Date.now();
-                    this.reminderSentCount = 0;
                     this.isSending = true;
-
                     const tempId = Date.now();
-                    const now = new Date();
                     this.messages.push({
                         temp_id: tempId,
                         sender_type: 'user',
                         message_type: 'text',
                         content: content,
-                        created_at: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     });
                     this.scrollToBottom();
 
@@ -1217,10 +1259,8 @@
                                 this.messages[msgIndex].content = data.message.content;
                             }
 
-                            // Tambahkan balasan bot jika ada di response JSON
                             if (data.bot_replies && data.bot_replies.length > 0) {
                                 data.bot_replies.forEach(botMsg => {
-                                    // Cek agar tidak duplikat dengan broadcast
                                     if (!this.messages.some(m => m.id === botMsg.id)) {
                                         this.messages.push(botMsg);
                                     }
@@ -1236,7 +1276,7 @@
                             
                         } else {
                             this.messages = this.messages.filter(m => m.temp_id !== tempId);
-                            alert('Gagal mengirim: ' + (data.error || data.message || 'Server Error ' + response.status));
+                            alert('Gagal mengirim: ' + (data.error || data.message || 'Server Error'));
                         }
 
                     } catch (error) {
@@ -1244,9 +1284,6 @@
                     } finally {
                         this.isSending = false;
                         this.sendTypingEvent(false);
-                        this.$nextTick(() => {
-                            if (this.$refs && this.$refs.messageInput) this.$refs.messageInput.focus();
-                        });
                     }
                 },
 
@@ -1256,7 +1293,6 @@
 
                     this.isSending = true;
                     const tempId = Date.now();
-                    const now = new Date();
                     
                     let previewUrl = '';
                     let tempType = 'file';
@@ -1270,7 +1306,7 @@
                         sender_type: 'user',
                         message_type: tempType,
                         content: previewUrl || file.name,
-                        created_at: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     });
                     this.scrollToBottom();
 
@@ -1289,17 +1325,17 @@
                         });
 
                         const data = await response.json();
-                        if (!response.ok) throw new Error(data.error || data.message || 'Server Error ' + response.status);
-
-                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
-                        if (msgIndex !== -1 && data.success) {
-                            this.messages[msgIndex].id = data.message.id;
-                            this.messages[msgIndex].message_type = data.message.message_type;
-                            this.messages[msgIndex].content = data.message.content;
+                        if (data.success) {
+                            const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                            if (msgIndex !== -1) {
+                                this.messages[msgIndex].id = data.message.id;
+                                this.messages[msgIndex].message_type = data.message.message_type;
+                                this.messages[msgIndex].content = data.message.content;
+                            }
                         }
                     } catch (error) {
                         this.messages = this.messages.filter(m => m.temp_id !== tempId);
-                        alert(error.message);
+                        alert('Gagal unggah file');
                     } finally {
                         this.isSending = false;
                         e.target.value = '';
@@ -1310,11 +1346,10 @@
                     if (this.isSending || this.botPhase !== 'awaiting_category') return;
                     this.newMessage = category;
                     await this.sendMessage();
-                    this.botPhase = 'awaiting_explanation';
                 },
 
                 sendTypingEvent(isTyping = true) {
-                    if (this.status !== 'active') return;
+                    if (!this.conversationId || this.status !== 'active') return;
 
                     fetch('{{ route('chat.typing') }}', {
                         method: 'POST',
@@ -1337,6 +1372,10 @@
                     }, 50);
                 }
             }));
+        });
+    </script>
+</body>
+</html>}));
         });
     </script>
 </body>
