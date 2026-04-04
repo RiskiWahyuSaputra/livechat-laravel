@@ -99,7 +99,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ]);
 
                 // --- Menu 8: Role CRUD ---
-                Route::resource('/roles-list', \App\Http\Controllers\RoleController::class)->names([
+Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
                     'index' => 'roles.index',
                     'create' => 'roles.create',
                     'store' => 'roles.store',
