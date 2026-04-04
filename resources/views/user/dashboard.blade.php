@@ -71,16 +71,16 @@
 							</span>
 						</a>
 						<a href="{{ route('user.home') }}" class="navbar-brand logo">
-							<img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
+							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
 						</a>
 						<a href="{{ route('user.home') }}" class="navbar-brand logo-small">
-							<img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid" alt="Logo" style="max-height: 35px;">
+							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 35px;">
 						</a>
 					</div>
 					<div class="main-menu-wrapper">
 						<div class="menu-header">
 							<a href="{{ route('user.home') }}" class="menu-logo">
-								<img src="{{ asset('images/logo-brilian-min2.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
+								<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
 							</a>
 							<a id="menu_close" class="menu-close" href="javascript:void(0);"> <i class="fas fa-times"></i></a>
 						</div>
@@ -332,7 +332,7 @@
 							<!-- Footer Widget -->
 							<div class="footer-widget">
 								<div class="footer-logo">
-									<a href="{{ route('user.home') }}"><img src="{{ asset('images/logo-brilian-min2.png') }}" alt="logo" style="max-height: 50px;"></a>
+									<a href="{{ route('user.home') }}"><img src="{{ asset('images/logo-brilian-min.png') }}" alt="logo" style="max-height: 50px;"></a>
 								</div>
 								<div class="footer-content">
 									<p>BRILLIAN BIZ adalah perusahaan yang memasarkan produk-produk berkualitas dengan konsep direct selling atau penjualan langsung. </p>
@@ -541,34 +541,57 @@
                                     <div class="mt-2 flex flex-wrap gap-1.5 w-full">
                                         <!-- Phase: awaiting_category -->
                                         <template x-if="botPhase === 'awaiting_category'">
-                                            <template x-for="cat in botCategories" :key="cat">
-                                                <button @click="selectCategory(cat)" 
-                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 min-w-[100px] text-center">
-                                                    <span x-text="cat"></span>
-                                                </button>
-                                            </template>
+                                            <div class="flex flex-wrap gap-2 w-full mt-2"
+                                                 x-transition:enter="transition ease-out duration-300"
+                                                 x-transition:enter-start="opacity-0 transform translate-y-2"
+                                                 x-transition:enter-end="opacity-100 transform translate-y-0">
+                                                <template x-for="cat in botCategories" :key="cat">     
+                                                    <button @click="selectCategory(cat)" 
+                                                            class="px-4 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[12px] font-bold tracking-tight transition-all shadow-sm flex items-center gap-2 hover:-translate-y-0.5 active:scale-95 group">
+                                                        <div class="w-6 h-6 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                                                            <i class="fas fa-tag text-blue-400 text-[10px]"></i>
+                                                        </div>
+                                                        <span x-text="cat"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
                                         </template>
 
                                         <!-- Phase: awaiting_cs_type -->
                                         <template x-if="botPhase === 'awaiting_cs_type'">
-                                            <div class="flex flex-wrap gap-1.5 w-full">
+                                            <div class="flex flex-wrap gap-2 w-full mt-2"
+                                                 x-transition:enter="transition ease-out duration-300"
+                                                 x-transition:enter-start="opacity-0 transform translate-y-2"
+                                                 x-transition:enter-end="opacity-100 transform translate-y-0">
                                                 <button @click="newMessage = 'Customer service'; sendMessage()" 
-                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center">
-                                                    Customer service
+                                                        class="px-4 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[12px] font-bold tracking-tight transition-all shadow-sm flex items-center gap-2 hover:-translate-y-0.5 active:scale-95 group">
+                                                    <div class="w-6 h-6 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                                                        <i class="fas fa-headset text-blue-600 text-[11px]"></i>
+                                                    </div>
+                                                    <span>Customer service</span>
                                                 </button>
                                                 <button @click="newMessage = 'CS Voucher'; sendMessage()" 
-                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center">
-                                                    CS Voucher
+                                                        class="px-4 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[12px] font-bold tracking-tight transition-all shadow-sm flex items-center gap-2 hover:-translate-y-0.5 active:scale-95 group">
+                                                    <div class="w-6 h-6 rounded-full bg-orange-50 group-hover:bg-orange-100 flex items-center justify-center transition-colors">
+                                                        <i class="fas fa-ticket-alt text-orange-500 text-[11px]"></i>
+                                                    </div>
+                                                    <span>CS Voucher</span>
                                                 </button>
                                             </div>
                                         </template>
 
                                         <!-- Phase: awaiting_submenu (Dynamic) -->
                                         <template x-if="botPhase === 'awaiting_submenu'">
-                                            <div class="flex flex-wrap gap-1.5 w-full">
+                                            <div class="flex flex-wrap gap-2 w-full mt-2"
+                                                 x-transition:enter="transition ease-out duration-300"
+                                                 x-transition:enter-start="opacity-0 transform translate-y-2"
+                                                 x-transition:enter-end="opacity-100 transform translate-y-0">
                                                 <template x-for="child in botSubmenus" :key="child.id">
                                                     <button @click="handleSubmenuClick(child)" 
-                                                            class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 min-w-[100px] text-center">
+                                                            class="px-4 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[12px] font-bold tracking-tight transition-all shadow-sm flex items-center gap-2 hover:-translate-y-0.5 active:scale-95 group">
+                                                        <div class="w-6 h-6 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                                                            <i class="fas fa-chevron-circle-right text-blue-300 text-[11px]"></i>
+                                                        </div>
                                                         <span x-text="child.label"></span>
                                                     </button>
                                                 </template>
@@ -577,10 +600,27 @@
 
                                         <!-- Phase: awaiting_main_menu -->
                                         <template x-if="botPhase === 'awaiting_main_menu'">
-                                            <div class="flex flex-wrap gap-1.5 w-full">
+                                            <div class="flex flex-wrap gap-2 w-full mt-2"
+                                                 x-transition:enter="transition ease-out duration-300"
+                                                 x-transition:enter-start="opacity-0 transform translate-y-2"
+                                                 x-transition:enter-end="opacity-100 transform translate-y-0">
                                                 <template x-for="item in chat_main_menu" :key="item.id">
                                                     <button @click="handleMenuClick(item.id)" 
-                                                            class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 min-w-[100px] text-center">
+                                                            class="px-4 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[12px] font-bold tracking-tight transition-all shadow-sm flex items-center gap-2 hover:-translate-y-0.5 active:scale-95 group">
+                                                        <div class="w-6 h-6 rounded-full bg-slate-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                                                            <template x-if="item.label.toLowerCase().includes('youtube')">
+                                                                <i class="fab fa-youtube text-red-500 text-[11px]"></i>
+                                                            </template>
+                                                            <template x-if="item.label.toLowerCase().includes('cs') || item.label.toLowerCase().includes('hubungi')">
+                                                                <i class="fas fa-headset text-blue-500 text-[11px]"></i>
+                                                            </template>
+                                                            <template x-if="item.label.toLowerCase().includes('seminar') || item.label.toLowerCase().includes('jadwal')">
+                                                                <i class="fas fa-calendar-alt text-green-600 text-[11px]"></i>
+                                                            </template>
+                                                            <template x-if="!item.label.toLowerCase().includes('youtube') && !item.label.toLowerCase().includes('cs') && !item.label.toLowerCase().includes('hubungi') && !item.label.toLowerCase().includes('seminar') && !item.label.toLowerCase().includes('jadwal')">
+                                                                <i class="fas fa-chevron-right text-slate-300 text-[11px]"></i>
+                                                            </template>
+                                                        </div>
                                                         <span x-text="item.label"></span>
                                                     </button>
                                                 </template>
@@ -589,13 +629,14 @@
 
                                         <!-- Phase: offer_agent_transfer -->
                                         <template x-if="botPhase === 'offer_agent_transfer'">
-                                            <div class="flex flex-col sm:flex-row gap-1.5 w-full">
+                                            <div class="flex flex-wrap gap-2 w-full mt-2">
                                                 <button @click="newMessage = 'LANJUT'; sendMessage()" 
-                                                        class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">
-                                                    <i class="fas fa-comment-dots"></i> Tanya Lagi
+                                                        class="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-full text-[11px] font-bold tracking-tight transition-all shadow-sm flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-95">
+                                                    <i class="fas fa-comment-dots text-blue-400 text-xs"></i> Tanya Lagi
                                                 </button>
                                                 <button @click="newMessage = 'AGENT'; sendMessage()" 
-                                                        class="px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 rounded-full text-[9px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-1.5">                                                    <i class="fas fa-headset"></i> Hubungi Agent
+                                                        class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 rounded-full text-[11px] font-bold tracking-tight transition-all shadow-sm flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-95">
+                                                    <i class="fas fa-headset text-xs"></i> Hubungi Agent
                                                 </button>
                                             </div>
                                         </template>
@@ -629,23 +670,34 @@
                         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                     </div>
 
-                    <!-- Debug info -->
-                    <div class="text-xs text-slate-500 mb-2">
-                        Debug: isInitialized: <span x-text="isInitialized"></span>, 
-                        menu length: <span x-text="chat_main_menu.length"></span>,
-                        showRegForm: <span x-text="showRegForm"></span>
-                    </div>
 
-                    <div class="grid grid-cols-1 gap-1.5">
+
+                    <div class="grid grid-cols-1 gap-3">
                         <template x-for="item in chat_main_menu" :key="item.id">
                             <button @click="handleMenuClick(item.id)" 
-                                    class="w-full text-left px-3.5 py-2.5 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-2xl text-[12px] font-bold transition-all shadow-sm flex items-center justify-between group">
-                                <span x-text="item.label"></span>
-                                <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                    class="w-full text-left px-4 py-3 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-2xl text-xs font-bold transition-all shadow-sm hover:shadow-md flex items-center justify-between group transform hover:-translate-y-0.5 active:scale-[0.98]">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center bg-slate-50 group-hover:bg-blue-100 transition-colors shrink-0">
+                                        <template x-if="item.label.toLowerCase().includes('youtube')">
+                                            <i class="fab fa-youtube text-red-500 text-sm"></i>
+                                        </template>
+                                        <template x-if="item.label.toLowerCase().includes('cs') || item.label.toLowerCase().includes('hubungi')">
+                                            <i class="fas fa-headset text-blue-500 text-sm"></i>
+                                        </template>
+                                        <template x-if="item.label.toLowerCase().includes('seminar') || item.label.toLowerCase().includes('jadwal')">
+                                            <i class="fas fa-calendar-alt text-green-600 text-sm"></i>
+                                        </template>
+                                        <template x-if="!item.label.toLowerCase().includes('youtube') && !item.label.toLowerCase().includes('cs') && !item.label.toLowerCase().includes('hubungi') && !item.label.toLowerCase().includes('seminar') && !item.label.toLowerCase().includes('jadwal')">
+                                            <i class="fas fa-circle-chevron-right text-slate-300 text-sm"></i>
+                                        </template>
+                                    </div>
+                                    <span x-text="item.label"></span>
+                                </div>
+                                <svg class="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                             </button>
                         </template>
-                        <div x-show="chat_main_menu.length === 0" class="text-xs text-blue-500">
-                            Menu belum dimuat atau kosong
+                        <div x-show="chat_main_menu.length === 0" class="text-center py-4 text-xs text-slate-400 italic">
+                            Menu belum tersedia...
                         </div>
                     </div>
                 </div>
@@ -681,7 +733,7 @@
                             <input type="text" x-model="regForm.origin" required class="form-control" placeholder="Nama perusahaan atau asal Anda" style="border-radius: 12px;">
                         </div>
 
-                        <button type="submit" :disabled="isLoading" class="btn btn-primary w-100 py-2 mt-2" style="border-radius: 12px; font-weight: bold;">
+                        <button type="submit" :disabled="isLoading" class="btn btn-primary w-100 py-1.5 mt-2" style="border-radius: 12px; font-weight: bold;">
                             <span x-show="!isLoading">Mulai Chat</span>
                             <div x-show="isLoading" class="spinner-border spinner-border-sm" role="status"></div>
                         </button>
@@ -914,9 +966,9 @@
                                 if (menu.action_value) {
                                     const isYoutube = menu.action_value.toLowerCase().includes('youtube.com') || menu.action_value.toLowerCase().includes('youtu.be');
                                     if (isYoutube) {
-                                        content += `<div class="mt-2"><a href="${menu.action_value}" target="_blank" class="btn btn-danger btn-sm rounded-pill px-3"><i class="fab fa-youtube me-1"></i> Buka YouTube</a></div>`;
+                                        content += `<div class="mt-1.5"><a href="${menu.action_value}" target="_blank" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-full font-bold no-underline transition-all hover:bg-red-700 active:scale-95 shadow-sm" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube" style="font-size: 12px;"></i> Buka YouTube</a></div>`;
                                     } else {
-                                        content += `<div class="mt-2"><a href="${menu.action_value}" target="_blank" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-external-link-alt me-1"></i> Lihat Detail</a></div>`;
+                                        content += `<div class="mt-1.5"><a href="${menu.action_value}" target="_blank" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-full font-bold no-underline transition-all hover:bg-blue-700 active:scale-95 shadow-sm" style="font-size: 11px; text-decoration: none; color: white;"><i class="fas fa-external-link-alt" style="font-size: 10px;"></i> Lihat Detail</a></div>`;
                                     }
                                 }
 
@@ -932,7 +984,7 @@
                                     id: 'local-bot-menu-' + Date.now(),
                                     sender_id: 0,
                                     sender_type: 'admin',
-                                    content: "Ada lagi yang bisa kami bantu?",
+                                    content: "Ada lagi yang bisa kami bantu? Pilih menu di bawah ini:",
                                     created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                                 });
                                 this.botPhase = 'awaiting_main_menu';
