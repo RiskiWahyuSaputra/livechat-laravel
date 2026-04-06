@@ -16,6 +16,12 @@ const adminRolesData = {
         'Modul Sistem & Keamanan': ['manage_roles']
     },
     init() {
+        @if($errors->any())
+            this.showModal = true;
+            this.isEdit = {{ old('id') ? 'true' : 'false' }};
+            // Restore form data from old input if needed, but for now just opening it is a start
+        @endif
+
         this.$watch('form.role', (value) => {
             if (value === 'super_admin') {
                 this.form.is_superadmin = true;
@@ -180,7 +186,7 @@ function confirmDelete(e, isSuperadmin) {
     <div class="modal fade" :class="showModal ? 'show d-block' : ''" tabindex="-1" x-show="showModal" x-cloak>
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form :action="isEdit ? '/admin/admins/' + form.id : '/admin/admins'" method="POST" @submit="confirmSubmit">
+                <form :action="isEdit ? '{{ url('admin/admins') }}/' + form.id : '{{ url('admin/admins') }}'" method="POST" @submit="confirmSubmit">
                     @csrf
                     <template x-if="isEdit">
                         <input type="hidden" name="_method" value="PUT">
@@ -190,6 +196,15 @@ function confirmDelete(e, isSuperadmin) {
                         <button type="button" class="btn-close" @click="showModal = false"></button>
                     </div>
                     <div class="modal-body">
+                        @if ($errors->any())
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
