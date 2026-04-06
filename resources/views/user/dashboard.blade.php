@@ -127,16 +127,12 @@
 						<div class="col-lg-5">
 							<div class="banner-imgs">
 								<div class="banner-1 shape-1">
-									<img class="img-fluid" alt="banner" src="{{ asset('images/logo-biz.png') }}">
 								</div>
 								<div class="banner-2 shape-3">
-									<img class="img-fluid" alt="banner" src="{{ asset('images/seminar.png') }}">
 								</div>
 								<div class="banner-3 shape-3">
-									<img class="img-fluid" alt="banner" src="{{ asset('images/produk-best.png') }}">
 								</div>
 								<div class="banner-4 shape-2">
-									<img class="img-responsive" alt="banner" src="{{ asset('images/gedung.png') }}">
 								</div>
 							</div>
 						</div>
