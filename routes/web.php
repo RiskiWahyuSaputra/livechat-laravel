@@ -16,6 +16,8 @@ Route::get('/', function () {
 
 // Home page dapat diakses publik
 Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home');
+Route::get('/about', [UserDashboardController::class, 'about'])->name('user.about');
+Route::get('/contact', [UserDashboardController::class, 'contact'])->name('user.contact');
 
 // Route registrasi chat
 Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');

@@ -24,4 +24,26 @@ class UserDashboardController extends Controller
 
         return view('user.dashboard', compact('isAuthenticated'));
     }
+
+    public function about(Request $request)
+    {
+        $isAuthenticated = false;
+        $token = $request->cookie('guest_chat_token');
+        if ($token && User::where('email', $token)->exists()) {
+            $isAuthenticated = true;
+        }
+
+        return view('user.about', compact('isAuthenticated'));
+    }
+
+    public function contact(Request $request)
+    {
+        $isAuthenticated = false;
+        $token = $request->cookie('guest_chat_token');
+        if ($token && User::where('email', $token)->exists()) {
+            $isAuthenticated = true;
+        }
+
+        return view('user.contact', compact('isAuthenticated'));
+    }
 }
