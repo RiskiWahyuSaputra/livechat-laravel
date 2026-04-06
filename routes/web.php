@@ -118,6 +118,14 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
             Route::get('/analytics/realtime', [App\Http\Controllers\Admin\AnalyticsController::class, 'realtime'])->name('analytics.realtime');
             Route::get('/analytics/export', [App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
 
+            // --- Menu: Reports / Laporan ---
+            Route::prefix('reports')->name('reports.')->group(function () {
+                Route::get('/', [App\Http\Controllers\Admin\ReportController::class, 'index'])->name('index');
+                Route::get('/export/excel', [App\Http\Controllers\Admin\ReportController::class, 'exportExcel'])->name('export.excel');
+                Route::get('/export/pdf', [App\Http\Controllers\Admin\ReportController::class, 'exportPdf'])->name('export.pdf');
+                Route::get('/api-data', [App\Http\Controllers\Admin\ReportController::class, 'apiData'])->name('api-data');
+            });
+
             // --- Menu 9: Settings ---
             Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
             Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
