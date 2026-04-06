@@ -51,6 +51,59 @@
             left: 30px !important;
             right: auto !important;
         }
+
+        /* Custom styles for feature-box hover */
+        .feature-box {
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-icon {
+            height: 114px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feature-icon span {
+            transition: all 0.4s ease-in-out;
+        }
+        .feature-box:hover .feature-icon span {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .feature-icon span img {
+            transition: all 0.4s ease-in-out;
+        }
+        .feature-box:hover .feature-icon span img {
+            width: 20px;
+            height: auto;
+        }
+
+        /* Remove dark overlay on hover */
+        .feature-box:hover .feature-overlay:before {
+            display: none !important;
+        }
+
+        /* Badge-like style for text on hover */
+        .feature-box h5 {
+            transition: all 0.4s ease-in-out;
+            position: relative;
+            z-index: 2;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .feature-box:hover h5 {
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff !important;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 
