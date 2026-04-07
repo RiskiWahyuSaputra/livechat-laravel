@@ -23,11 +23,11 @@
         #brillian-chat-fab {
             width: 64px;
             height: 64px;
-            border-radius: 50%;
+            border-radius: 50% !important;
             background-color: #2563eb;
             color: white;
             border: none;
-            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.4);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -55,8 +55,8 @@
             max-height: calc(100vh - 120px);
             max-width: calc(100vw - 48px);
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             border: 1px solid #e2e8f0;
             overflow: hidden;
             display: none;
