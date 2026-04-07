@@ -31,6 +31,28 @@ class ChatController extends Controller
     }
 
     /**
+     * Tampilkan widget chat untuk di-embed di website lain.
+     */
+    public function showWidget(Request $request)
+    {
+        $token = $request->cookie('guest_chat_token');
+        $isAuthenticated = false;
+        
+        if ($token) {
+            $user = User::where('email', $token)->first();
+            if ($user) {
+                $isAuthenticated = true;
+                Auth::guard('web')->login($user, true);
+            }
+        }
+
+        return response()
+            ->view('chat.widget', ['isAuthenticated' => $isAuthenticated])
+            ->header('X-Frame-Options', 'ALLOWALL') // or remove it
+            ->header('Content-Security-Policy', "frame-ancestors *");
+    }
+
+    /**
      * Tampilkan halaman chat user.
      */
     public function showChat(Request $request)
