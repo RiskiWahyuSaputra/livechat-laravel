@@ -590,6 +590,7 @@
                 <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                     <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Peringkat</th>
                     <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Agen</th>
+                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Level</th>
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Obrolan ditutup</th>
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Rata-rata respon</th>
@@ -611,6 +612,11 @@
                             </div>
                             <div style="font-weight: 600; color: #1e293b; font-size: 14px;">{{ $agent['username'] }}</div>
                         </div>
+                    </td>
+                    <td style="padding: 16px; vertical-align: middle; text-align: center;">
+                        <span class="badge {{ $agent['level'] == 1 ? 'bg-danger' : 'bg-primary' }}">
+                            {{ $agent['level'] }}
+                        </span>
                     </td>
                     <td style="padding: 16px; vertical-align: middle; text-align: center;">
                         <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; @if($agent['status'] == 'online') background: #d1fae5; color: #047857; @elseif($agent['status'] == 'busy') background: #fef3c7; color: #b45309; @else background: #f1f5f9; color: #64748b; @endif">

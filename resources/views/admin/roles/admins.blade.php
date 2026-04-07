@@ -8,10 +8,11 @@
 const adminRolesData = {
     showModal: false,
     isEdit: false,
-    form: { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [] },
+    form: { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [], level: 1 },
     availablePermissions: {{ Js::from($permissions) }},
+    rolesList: {{ Js::from($rolesList) }},
     permissionGroups: {
-        'Modul Percakapan & Pelayanan': ['view_chat', 'view_history', 'manage_quick_replies'],
+        'Modul Percakapan & Pelayanan': ['view_chat', 'manage_quick_replies'],
         'Modul Pelanggan': ['manage_customers'],
         'Modul Sistem & Keamanan': ['manage_roles']
     },
@@ -26,8 +27,18 @@ const adminRolesData = {
             if (value === 'super_admin') {
                 this.form.is_superadmin = true;
                 this.form.permissions = Object.keys(this.availablePermissions);
+                this.form.level = 1;
             } else {
                 this.form.is_superadmin = false;
+                
+                // Cari level dari rolesList
+                const selectedRole = this.rolesList.find(r => r.slug === value);
+                if (selectedRole) {
+                    this.form.level = selectedRole.level;
+                } else if (!this.isEdit) {
+                    this.form.level = 2; // Default fallback
+                }
+
                 if (!this.isEdit) {
                     this.form.permissions = [];
                 }
@@ -36,7 +47,7 @@ const adminRolesData = {
     },
     openCreate() {
         this.isEdit = false;
-        this.form = { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [] };
+        this.form = { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [], level: 2 };
         this.showModal = true;
     },
     openEdit(admin) {
@@ -48,7 +59,8 @@ const adminRolesData = {
             password: '', 
             role: admin.role,
             is_superadmin: Boolean(admin.is_superadmin), 
-            permissions: Array.isArray(admin.permissions) ? admin.permissions : (admin.permissions ? Object.values(admin.permissions) : []) 
+            permissions: Array.isArray(admin.permissions) ? admin.permissions : (admin.permissions ? Object.values(admin.permissions) : []),
+            level: admin.level || 1
         };
         this.showModal = true;
     },
@@ -122,7 +134,8 @@ function confirmDelete(e, isSuperadmin) {
                             <thead class="thead-light">
                                 <tr>
                                     <th>Administrator</th>
-                                    <th>Level Akses</th>
+                                    <th>Level Agent</th>
+                                    <th>Akses Modul</th>
                                     <th class="text-end">Aksi</th>
                                 </tr>
                             </thead>
@@ -143,8 +156,13 @@ function confirmDelete(e, isSuperadmin) {
                                         </div>
                                     </td>
                                     <td>
+                                        <span class="badge {{ $adm->level == 1 ? 'bg-danger' : 'bg-primary' }}">
+                                            Level {{ $adm->level }}
+                                        </span>
+                                    </td>
+                                    <td>
                                         @if($adm->is_superadmin)
-                                            <span class="badge bg-danger">Superadmin Global</span>
+                                            <span class="badge bg-danger">Full System Access</span>
                                         @else
                                             <span class="badge bg-primary mb-1">{{ $adm->roleModel->name ?? $adm->role }}</span>
                                             <div class="d-flex flex-wrap gap-1">
@@ -171,7 +189,7 @@ function confirmDelete(e, isSuperadmin) {
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="3" class="text-center p-5 text-muted">Belum ada administrator.</td>
+                                    <td colspan="4" class="text-center p-5 text-muted">Belum ada administrator.</td>
                                 </tr>
                                 @endforelse
                             </tbody>
@@ -225,16 +243,21 @@ function confirmDelete(e, isSuperadmin) {
                                     <label class="form-label font-weight-bold">Role Administrator</label>
                                     <select name="role" x-model="form.role" class="form-select" required>
                                         <option value="super_admin">Superadmin</option>
-                                        <template x-for="roleItem in {{ Js::from($rolesList) }}" :key="roleItem.slug">
+                                        <template x-for="roleItem in rolesList" :key="roleItem.slug">
                                             <template x-if="roleItem.slug !== 'super_admin'">
                                                 <option :value="roleItem.slug" x-text="roleItem.name"></option>
                                             </template>
                                         </template>
-                                        <!-- Keep original agent for fallback if no roles in DB -->
-                                        <template x-if="{{ $rolesList->count() }} === 0">
+                                        <!-- Fallback for agent if not in DB -->
+                                        <template x-if="rolesList.length === 0">
                                             <option value="agent">Agent</option>
                                         </template>
                                     </select>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="form-label font-weight-bold">Level Agent (1 = Tertinggi)</label>
+                                    <input type="number" name="level" x-model="form.level" class="form-control" min="1" required :disabled="form.role === 'super_admin'">
+                                    <small class="text-muted" x-show="form.role === 'super_admin'">Superadmin otomatis Level 1.</small>
                                 </div>
                                 <div>
                                     <label class="form-label d-block text-primary mb-3"><i class="fe fe-shield"></i> Penetapan Hak Akses</label>

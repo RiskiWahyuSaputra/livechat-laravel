@@ -587,6 +587,9 @@
                                 <a href="{{ route('admin.customers.index') }}"><i class="fe fe-users"></i> <span>Data
                                         Pelanggan</span></a>
                             </li>
+                            <li class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.reports.index') }}"><i class="fe fe-file-text"></i> <span>Laporan</span></a>
+                            </li>
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('manage_roles'))
