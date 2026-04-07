@@ -27,6 +27,7 @@ Route::match(['get', 'post'], '/chat/logout', [ChatController::class , 'logout']
 
 // Routes Chat
 Route::get('/chat', [ChatController::class, 'showChat'])->name('chat.index');
+Route::get('/chat-widget', [ChatController::class, 'showWidget'])->name('chat.widget');
 Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init');
 Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.send');
 Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
