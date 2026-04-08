@@ -190,10 +190,80 @@
         .header-navbar-rht .logged-item .nav-link:hover .user-name {
             color: #0a1d37 !important; /* Matches original title color */
         }
+
+        /* Decorative Background Blobs */
+        .bg-blob-1 {
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 123, 255, 0.05) 0%, transparent 70%);
+            z-index: -1;
+            animation: move 20s infinite alternate;
+        }
+        .bg-blob-2 {
+            position: absolute;
+            top: 500px;
+            left: -100px;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.03) 0%, transparent 70%);
+            z-index: -1;
+            animation: move 25s infinite alternate-reverse;
+        }
+        @keyframes move {
+            from { transform: translate(0, 0); }
+            to { transform: translate(50px, 100px); }
+        }
+
+        /* Glow effect for Feature Boxes */
+        .feature-box {
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .feature-box:hover {
+            box-shadow: 0 15px 30px rgba(0, 123, 255, 0.1) !important;
+            border-color: rgba(0, 123, 255, 0.2);
+            transform: translateY(-8px);
+        }
+
+        /* Animation for user greeting in navbar */
+        .user-greeting-pill {
+            animation: slideInRight 0.5s ease-out;
+            background: #f0f7ff;
+            padding: 5px 15px;
+            border-radius: 50px;
+            border: 1px solid rgba(0, 123, 255, 0.1);
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Smooth Navbar Entrance on Scroll */
+        .header {
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transform: translateY(0);
+        }
+        .header.fixed {
+            animation: slideDown 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05) !important;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 
 <body x-data="chatWidget()" x-init="initWidget()" class="antialiased">
+
+    <!-- Animated Background Blobs -->
+    <div class="bg-blob-1"></div>
+    <div class="bg-blob-2"></div>
 
 	<div class="main-wrapper">
 	
@@ -246,8 +316,10 @@
                                          x-text="user.initial">
                                     </div>
                                 </span>
-                                <span class="user-content ms-2 d-none d-md-inline-block">
-                                    <span class="user-name fw-bold" style="font-size: 14px; display: block; line-height: 1.2;" x-text="user.name"></span>
+                                <span class="user-content ms-2 d-none d-md-inline-block user-greeting-pill">
+                                    <span class="user-name fw-bold" style="font-size: 14px; display: block; line-height: 1.2;">
+                                        👋 <span x-text="user.name"></span>
+                                    </span>
                                     <span class="user-details text-muted small" style="font-size: 11px; display: block;" x-text="user.origin"></span>
                                 </span>
                             </a>
