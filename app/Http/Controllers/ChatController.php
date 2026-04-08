@@ -282,11 +282,11 @@ class ChatController extends Controller
         $userId = $request->input('user_id');
         
         $user = null;
-        if ($token) {
+        if (Auth::guard('web')->check()) {
+            $user = Auth::guard('web')->user();
+        } elseif ($token) {
             $user = User::where('email', $token)->first();
-        }
-        
-        if (!$user && $userId) {
+        } elseif ($userId) {
             $user = User::find($userId);
         }
 

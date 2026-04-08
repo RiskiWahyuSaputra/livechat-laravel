@@ -1,5 +1,5 @@
 <!-- Chat Widget Container -->
-<div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end chat-widget-container" x-data="chatWidget()" x-init="initWidget()">
+<div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end chat-widget-container">
     
     <!-- Chat Popup Window -->
     <div x-show="isOpen" x-cloak
@@ -389,8 +389,9 @@
             isAuthenticated: {{ $isAuthenticated ? 'true' : 'false' }},
             csrfToken: '{{ csrf_token() }}',
             user: {
-                name: @json(Auth::check() ? Auth::user()->name : ($isAuthenticated ? 'Guest' : '')),
-                initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : ($isAuthenticated ? 'G' : '') }}'
+                name: '{{ Auth::check() ? Auth::user()->name : '' }}',
+                origin: '{{ Auth::check() ? Auth::user()->origin : 'Pelanggan' }}',
+                initial: '{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : 'G' }}'
             },
 
             // Form Data
@@ -632,6 +633,12 @@
                     if (data.success) {
                         this.showRegForm = false;
                         this.isAuthenticated = true;
+                        // Update UI data instantly
+                        this.user.name = data.user.name;
+                        this.user.origin = data.user.origin || 'Pelanggan';
+                        this.user.initial = data.user.name.charAt(0).toUpperCase();
+                        
+                        // Fetch the rest of chat data (conversation, etc)
                         await this.fetchChatData();
                     } else {
                         this.regError = data.message || 'Terjadi kesalahan.';
