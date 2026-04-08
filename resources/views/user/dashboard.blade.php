@@ -181,10 +181,19 @@
             .hero-title { font-size: 2.5rem; }
             .hero-section { padding: 60px 0; }
         }
+
+        /* Remove blue background on navbar user profile hover */
+        .header-navbar-rht .logged-item .nav-link:hover {
+            background: transparent !important;
+            color: inherit !important;
+        }
+        .header-navbar-rht .logged-item .nav-link:hover .user-name {
+            color: #0a1d37 !important; /* Matches original title color */
+        }
     </style>
 </head>
 
-<body x-data="chatWidget()" x-init="initWidget()">
+<body x-data="chatWidget()" x-init="initWidget()" class="antialiased">
 
 	<div class="main-wrapper">
 	
@@ -226,6 +235,39 @@
 							</li>
 						</ul>
 					</div>
+                    
+                    <!-- Navbar Profile (Dynamic with Alpine.js) -->
+                    <ul class="nav header-navbar-rht" x-show="isAuthenticated" x-cloak>
+                        <li class="nav-item dropdown has-arrow logged-item">
+                            <a href="#" class="dropdown-toggle nav-link" data-bs-toggle="dropdown">
+                                <span class="user-img">
+                                    <div class="w-10 h-10 rounded-circle bg-primary d-flex align-items-center justify-content-center text-white font-bold" 
+                                         style="width: 40px; height: 40px; border-radius: 50% !important; background: #007bff !important; color: white !important; font-weight: bold !important;"
+                                         x-text="user.initial">
+                                    </div>
+                                </span>
+                                <span class="user-content ms-2 d-none d-md-inline-block">
+                                    <span class="user-name fw-bold" style="font-size: 14px; display: block; line-height: 1.2;" x-text="user.name"></span>
+                                    <span class="user-details text-muted small" style="font-size: 11px; display: block;" x-text="user.origin"></span>
+                                </span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <div class="user-header">
+                                    <div class="avatar avatar-sm">
+                                        <div class="w-8 h-8 rounded-circle bg-primary d-flex align-items-center justify-content-center text-white font-bold" 
+                                             style="width: 32px; height: 32px; border-radius: 50% !important; background: #007bff !important; color: white !important; font-weight: bold !important; font-size: 12px;"
+                                             x-text="user.initial">
+                                        </div>
+                                    </div>
+                                    <div class="user-text">
+                                        <h6 x-text="user.name"></h6>
+                                        <p class="text-muted mb-0" x-text="user.origin"></p>
+                                    </div>
+                                </div>
+                                <a class="dropdown-item" href="{{ route('chat.logout') }}">Logout</a>
+                            </div>
+                        </li>
+                    </ul>
 				</nav>
 			</div>
 		</header>
