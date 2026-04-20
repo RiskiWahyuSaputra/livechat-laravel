@@ -248,9 +248,13 @@ class ChatController extends Controller
             ->first();
 
         if ($activeConversation) {
-             $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $activeConversation->id)->count();
+             // Hitung posisi antrian berdasarkan waktu (FIFO), bukan ID
+             $queueCount = Conversation::whereIn('status', ['pending', 'queued'])
+                 ->whereNull('admin_id')
+                 ->where('created_at', '<=', $activeConversation->created_at)
+                 ->count();
              $activeConversation->update([
-                 'bot_phase' => 'off', 
+                 'bot_phase' => 'off',
                  'queue_position' => $queueCount
              ]);
              
@@ -773,7 +777,11 @@ class ChatController extends Controller
                 ]);
             } else {
                 $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan {$conversation->problem_category}: ");
-                $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
+                // Hitung posisi antrian berdasarkan waktu (FIFO), bukan ID
+                $queueCount = Conversation::whereIn('status', ['pending', 'queued'])
+                    ->whereNull('admin_id')
+                    ->where('created_at', '<=', $conversation->created_at)
+                    ->count();
                 $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
 
                 $rawReplies = [
@@ -841,6 +849,7 @@ class ChatController extends Controller
 
         if ($anyOnline && !$availableAdmin) {
             $status = 'queued';
+            // Hitung posisi antrian: semua yang queued + 1
             $queuePosition = Conversation::where('status', 'queued')->count() + 1;
         }
 
@@ -916,7 +925,11 @@ class ChatController extends Controller
                      $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                      $botReplies[] = "Hai! Saya BEST AI, asisten virtual kamu. Ceritakan aja kendala atau pertanyaan kamu, nanti saya bantu sebisa saya. Kalau mau langsung ngobrol sama Agent, klik tombol **Hubungi Agent** di bawah ya.";
                 } else {
-                     $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
+                     // Hitung posisi antrian berdasarkan waktu (FIFO), bukan ID
+                     $queueCount = Conversation::whereIn('status', ['pending', 'queued'])
+                         ->whereNull('admin_id')
+                         ->where('created_at', '<=', $conversation->created_at)
+                         ->count();
                      $botReplies[] = "Sebelum terhubung dengan Customer service kami apakah ada yang ingin ditanyakan ke BEST AI ketik \"YA\" jika tidak abaikan saja.\n\nAntrean Anda saat ini: ke-{$queueCount}.";
                 }
             }
