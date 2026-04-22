@@ -3,51 +3,45 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use App\Models\QuickReply;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GeminiService
 {
     protected $apiKey;
+    protected string $provider;
+    protected string $preferredModel;
 
-    public function __construct()
+    public function __construct(protected OpenClawService $openClawService)
     {
         $this->apiKey = trim(Setting::get('gemini_api_key', env('GEMINI_API_KEY') ?? ''));
+        $this->provider = strtolower(trim((string) Setting::get('ai_provider', env('AI_PROVIDER', 'openclaw'))));
+        $this->preferredModel = trim((string) Setting::get('gemini_model', env('GEMINI_MODEL', 'gemini-1.5-flash')));
     }
 
     public function askGemini($prompt, $additionalInstruction = "")
     {
-        if (empty($this->apiKey)) return "Sistem AI belum siap.";
+        $fullInstruction = $this->buildAssistantInstruction($additionalInstruction);
 
-        // Coba model-model ini secara berurutan
-        $models = [
-            'gemini-1.5-flash', 
-            'gemini-1.5-pro',
-            'gemini-2.0-flash',
-            'gemini-pro'
-        ];
-        
-        $baseInstruction = "Kamu adalah asisten AI resmi dari PT BEST CORPORATION SYARIAH bernama BEST AI.
-        TUGAS KAMU:
-        1. Hanya jawab pertanyaan yang berkaitan dengan profil, produk, layanan, pendaftaran, dan informasi seputar PT BEST CORPORATION SYARIAH.
-        2. Jika pertanyaan di luar topik tersebut (seperti politik, agama umum, tips masak, teknologi lain, dll), tolak dengan sopan dan arahkan pelanggan untuk bertanya seputar PT BEST CORP.
-        3. Jika memberikan jawaban dalam bentuk daftar atau list, wajib gunakan format angka (1, 2, 3, dst).
-        4. Jawab dengan singkat, padat, dan ramah dalam bahasa Indonesia. Gunakan kata 'kamu' bukan 'Anda', tone santai tapi tetap profesional.
-        5. jangan gunakan ** untuk membuat teks menjadi bold.
-        6. JANGAN PERNAH menggunakan tanda kurung [] atau placeholder seperti '[Sebutkan produk...]'.
-        7. Jika pelanggan ingin bantuan manusia atau bertanya tentang Agent, beritahu mereka untuk mengklik tombol Hubungi Agent yang tersedia di bawah jawaban kamu.
-        8. Jika informasi tidak ditemukan di KNOWLEDGE BASE di bawah, gunakan hasil pencarian Google yang tersedia untuk menjawab.
-        9. Jika tetap tidak ditemukan di keduanya, beritahu pelanggan bahwa kamu belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.
-        10. PENTING: JANGAN PERNAH memberikan kalimat salam pembuka (seperti 'Halo!', 'Selamat pagi', 'Terima kasih telah menghubungi kami', dll) di awal jawabanmu, karena sistem sudah menyapanya di layar chatbot. Langsung jawab intinya saja.";
-        
-        // Tambahkan Knowledge Base dari QuickReply
-        $quickReplies = \App\Models\QuickReply::all();
-        $knowledgeBase = "\n\nKNOWLEDGE BASE (Gunakan informasi ini untuk menjawab):\n";
-        foreach ($quickReplies as $qr) {
-            $knowledgeBase .= "- {$qr->title}: {$qr->content}\n";
+        if ($this->shouldUseOpenClaw()) {
+            $openClawResponse = $this->openClawService->ask($prompt, $fullInstruction);
+            if ($openClawResponse) {
+                return $openClawResponse;
+            }
+
+            return "Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.";
         }
 
-        $fullInstruction = $baseInstruction . $knowledgeBase . " " . $additionalInstruction;
+        if (empty($this->apiKey)) return "Sistem AI belum siap.";
+
+        $models = array_values(array_unique(array_filter([
+            $this->preferredModel,
+            'gemini-1.5-flash',
+            'gemini-1.5-pro',
+            'gemini-2.0-flash',
+            'gemini-pro',
+        ])));
 
         foreach ($models as $model) {
             $aiText = $this->tryModel($model, $fullInstruction, $prompt);
@@ -76,8 +70,6 @@ class GeminiService
 
     public function summarizeConversation($history)
     {
-        if (empty($this->apiKey)) return null;
-
         $prompt = "Berikut adalah riwayat percakapan antara Pelanggan dan Admin Support PT BEST CORP. 
         TUGAS ANDA: 
         1. Analisis apakah ada informasi Penting/Pertanyaan Baru yang berhasil dijawab oleh Admin dengan BAIK.
@@ -95,15 +87,24 @@ class GeminiService
         RIWAYAT CHAT:
         $history";
 
+        if ($this->shouldUseOpenClaw()) {
+            $response = $this->openClawService->ask($prompt, "Kamu adalah AI Knowledge Extractor.");
+            return $this->decodeKnowledgePayload($response);
+        }
+
+        if (empty($this->apiKey)) return null;
+
         // Gunakan model yang mumpuni untuk ekstraksi
-        $models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+        $models = array_values(array_unique(array_filter([
+            $this->preferredModel,
+            'gemini-2.0-flash',
+            'gemini-1.5-flash',
+        ])));
         
         foreach ($models as $model) {
-            $response = $this            ->tryModel($model, "Kamu adalah AI Knowledge Extractor.", $prompt);
+            $response = $this->tryModel($model, "Kamu adalah AI Knowledge Extractor.", $prompt);
             if ($response) {
-                // Bersihkan respon dari markdown jika AI membandel
-                $cleaned = preg_replace('/```json|```/', '', $response);
-                $data = json_decode(trim($cleaned), true);
+                $data = $this->decodeKnowledgePayload($response);
                 if (is_array($data)) return $data;
             }
         }
@@ -198,5 +199,48 @@ class GeminiService
     {
         $models = $this->getAvailableModels();
         Log::info("Daftar Model Tersedia:", ['count' => count($models), 'models' => $models]);
+    }
+
+    private function shouldUseOpenClaw(): bool
+    {
+        return $this->provider === 'openclaw';
+    }
+
+    private function buildAssistantInstruction(string $additionalInstruction = ''): string
+    {
+        $baseInstruction = "Kamu adalah BEST AI, asisten virtual resmi milik PT BEST CORPORATION SYARIAH.
+        IDENTITAS DAN BATASAN:
+        1. Kamu hanya boleh menjawab hal-hal yang berkaitan dengan PT BEST CORPORATION SYARIAH, termasuk profil perusahaan, produk, layanan, pendaftaran, benefit, promo, prosedur, dan informasi resmi lain yang berhubungan langsung dengan PT BEST CORPORATION SYARIAH.
+        2. Jika pengguna bertanya di luar konteks PT BEST CORPORATION SYARIAH, kamu wajib menolak dengan sopan. Jangan menjawab isi pertanyaan tersebut.
+        3. Saat menolak, arahkan pengguna untuk kembali bertanya seputar PT BEST CORPORATION SYARIAH. Contoh gaya jawaban: 'Maaf, saya hanya bisa membantu pertanyaan seputar PT BEST CORPORATION SYARIAH. Kalau kamu mau, silakan tanyakan produk, layanan, atau informasi BEST ya.'
+        4. Jangan pernah mengarang jawaban. Jika informasi tidak ada di knowledge base atau data yang tersedia, katakan dengan jujur bahwa kamu belum memiliki detail datanya dan sarankan menunggu admin atau agent.
+        GAYA JAWABAN:
+        5. Jawab singkat, padat, jelas, dan ramah dalam bahasa Indonesia.
+        6. Gunakan kata 'kamu', bukan 'Anda'.
+        7. Jika membuat daftar, gunakan format angka: 1, 2, 3, dan seterusnya.
+        8. Jangan gunakan tanda ** untuk bold.
+        9. Jangan gunakan tanda kurung siku [] atau placeholder palsu.
+        10. Jangan beri salam pembuka di awal jawaban. Langsung jawab inti.
+        11. Jika pengguna meminta bantuan manusia, admin, atau agent, arahkan untuk klik tombol Hubungi Agent yang tersedia.
+        12. Prioritaskan knowledge base di bawah sebagai sumber utama jawaban.";
+
+        $knowledgeBase = "\n\nKNOWLEDGE BASE (Gunakan informasi ini untuk menjawab):\n";
+        foreach (QuickReply::all() as $quickReply) {
+            $knowledgeBase .= "- {$quickReply->title}: {$quickReply->content}\n";
+        }
+
+        return trim($baseInstruction . $knowledgeBase . ' ' . $additionalInstruction);
+    }
+
+    private function decodeKnowledgePayload(?string $response): ?array
+    {
+        if (!$response) {
+            return null;
+        }
+
+        $cleaned = preg_replace('/```json|```/', '', $response);
+        $data = json_decode(trim($cleaned), true);
+
+        return is_array($data) ? $data : null;
     }
 }

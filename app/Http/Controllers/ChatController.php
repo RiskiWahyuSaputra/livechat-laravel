@@ -15,18 +15,14 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
 use App\Models\User;
-use App\Services\WhatsappService;
 use App\Services\GeminiService;
-use App\Jobs\ProcessUserMessage;
 
 class ChatController extends Controller
 {
-    protected $whatsappService;
     protected $geminiService;
 
-    public function __construct(WhatsappService $whatsappService, GeminiService $geminiService)
+    public function __construct(GeminiService $geminiService)
     {
-        $this->whatsappService = $whatsappService;
         $this->geminiService = $geminiService;
     }
 
@@ -473,12 +469,8 @@ class ChatController extends Controller
 
         try {
             broadcast(new MessageSent($message));
-            
-            // Dispatch background processing (WhatsApp & Gemini)
-            ProcessUserMessage::dispatch($message);
-
         } catch (\Exception $e) { 
-            \Log::error('Broadcast/Job dispatch failed', ['error' => $e->getMessage()]); 
+            \Log::error('Broadcast failed', ['error' => $e->getMessage()]); 
         }
 
         // Tangani Bot Response dan kumpulkan untuk dikirim di JSON
@@ -639,14 +631,7 @@ class ChatController extends Controller
 
             $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan ke BEST AI: ");
             $conversation->update(['bot_phase' => 'offer_agent_transfer']);
-            
-            $newBotMessages[] = Message::create([
-                'conversation_id' => $conversation->id,
-                'sender_id'       => 0,
-                'sender_type'     => 'admin',
-                'message_type'    => 'text',
-                'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
-            ]);
+            $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
             
             if (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
                 $newBotMessages[] = Message::create([
@@ -688,13 +673,7 @@ class ChatController extends Controller
                 $conversation->update(['bot_phase' => 'chatting_with_ai']);
                 $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan lanjutan ke BEST AI: ");
 
-                $newBotMessages[] = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => 0,
-                    'sender_type'     => 'admin',
-                    'message_type'    => 'text',
-                    'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
-                ]);
+                $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
 
                 if ($recentBotAsks >= 2 && !str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
                     // Setelah 2x berturut-turut user abaikan opsi, tawarkan AGENT secara eksplisit tanpa loop
@@ -776,36 +755,105 @@ class ChatController extends Controller
                 $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
                 $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
 
-                $rawReplies = [
-                    ['content' => $aiResponse, 'type' => 'ai'],
-                    ['content' => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.", 'type' => 'system']
-                ];
-
-                $newBotMessages = []; // Clear previous if any, though in this branch it should be empty
-                foreach ($rawReplies as $bm) {
-                    $newBotMessages[] = Message::create([
-                        'conversation_id' => $conversation->id,
-                        'sender_id'       => 0,
-                        'sender_type'     => 'admin',
-                        'message_type'    => 'text',
-                        'content'         => ($bm['type'] === 'ai' ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' : '') . $bm['content'],
-                    ]);
-                }
+                $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
+                $newBotMessages[] = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.",
+                ]);
             }
         } elseif ($conversation->bot_phase === 'off' && is_null($conversation->admin_id)) {
             // Jika bot sudah OFF tapi admin belum klaim, bot tetap menjawab sebagai asisten pintar
             $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan lanjutan dari pelanggan (Admin belum bergabung): ");
-            
-            $newBotMessages[] = Message::create([
+
+            $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
+        }
+
+        return $this->formatBotReplies($newBotMessages, $conversation);
+    }
+
+    private function createAiReplyMessages(Conversation $conversation, string $userMessage, string $aiResponse): array
+    {
+        $messages = [];
+
+        $messages[] = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => 0,
+            'sender_type'     => 'admin',
+            'message_type'    => 'text',
+            'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
+        ]);
+
+        $productImage = $this->detectProductImageForMessage($userMessage);
+        if ($productImage) {
+            $messages[] = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'text',
-                'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
+                'content'         => 'Berikut gambaran produk ' . $productImage['label'] . ':',
+            ]);
+
+            $messages[] = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'image',
+                'content'         => asset('images/' . $productImage['file']),
             ]);
         }
 
-        return $this->formatBotReplies($newBotMessages, $conversation);
+        return $messages;
+    }
+
+    private function detectProductImageForMessage(string $message): ?array
+    {
+        $normalized = strtolower($message);
+
+        $productMap = [
+            [
+                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
+                'file' => 'produk-kecantikan.png',
+                'label' => 'kecantikan',
+            ],
+            [
+                'keywords' => ['kesehatan', 'health', 'herbal', 'vitamin', 'suplemen'],
+                'file' => 'produk-kesehatan.png',
+                'label' => 'kesehatan',
+            ],
+            [
+                'keywords' => ['otomotif', 'motor', 'mobil', 'bengkel', 'oli'],
+                'file' => 'produk-otomotif.png',
+                'label' => 'otomotif',
+            ],
+            [
+                'keywords' => ['pertanian', 'pupuk', 'tani', 'agrikultur', 'agro'],
+                'file' => 'produk-pertanian.png',
+                'label' => 'pertanian',
+            ],
+        ];
+
+        foreach ($productMap as $product) {
+            foreach ($product['keywords'] as $keyword) {
+                if (str_contains($normalized, $keyword)) {
+                    return [
+                        'file' => $product['file'],
+                        'label' => $product['label'],
+                    ];
+                }
+            }
+        }
+
+        if (str_contains($normalized, 'produk') || str_contains($normalized, 'best')) {
+            return [
+                'file' => 'produk-best.png',
+                'label' => 'BEST',
+            ];
+        }
+
+        return null;
     }
 
     private function formatBotReplies($messages, $conversation)

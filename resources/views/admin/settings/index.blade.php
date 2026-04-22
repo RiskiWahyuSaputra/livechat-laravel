@@ -16,54 +16,61 @@
             @csrf
             @method('PUT')
             
-            <!-- Whapi Settings Card -->
+            <!-- AI Settings Card -->
             <div class="card shadow-sm border-0 rounded-4 mb-4">
                 <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                    <h5 class="fw-bold mb-0 text-success"><i class="fe fe-message-circle me-2"></i> Integrasi Whapi.cloud</h5>
+                    <h5 class="fw-bold mb-0 text-primary"><i class="fe fe-command me-2"></i> Kecerdasan Buatan Pra-Claim</h5>
                 </div>
                 <div class="card-body pt-3 pb-4">
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">Whapi API Token</label>
-                        <input type="password" name="whapi_token" class="form-control form-control-lg bg-light" value="{{ $settings['whapi_token'] ?? env('WHAPI_TOKEN') }}">
-                        <small class="text-muted mt-1 d-block">Kunci rahasia *(API Key)* yang didapatkan dari dashboard Whapi.cloud.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">Whapi Admin Number</label>
-                        <input type="text" name="whapi_admin_number" class="form-control form-control-lg bg-light" value="{{ $settings['whapi_admin_number'] ?? env('WHAPI_ADMIN_NUMBER') }}" placeholder="Misal: 628123456789">
-                        <small class="text-muted mt-1 d-block">Nomor WhatsApp utama penerima pesan tanpa menggunakan simbol `+`.</small>
-                    </div>
-                    <div class="form-group mb-1">
-                        <label class="form-label fw-bold text-info"><i class="fe fe-link"></i> Webhook URL <span class="badge bg-secondary ms-1 fw-normal">Wajib Disalin</span></label>
-                        <div class="input-group input-group-lg">
-                            <input type="text" id="webhookUrl" class="form-control bg-white border-info text-dark" value="{{ url('/api/webhook/whatsapp') }}" readonly>
-                            <button class="btn btn-info text-white fw-bold px-4" type="button" onclick="navigator.clipboard.writeText(document.getElementById('webhookUrl').value); alert('Tautan Webhook Tersalin ke Papan Klip!');"><i class="fe fe-copy me-1"></i> Copy</button>
-                        </div>
-                        <small class="text-muted mt-2 d-block">Tempelkan URL ini secara utuh pada pengaturan Webhook *Instance* di aplikasi Whapi Anda.</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gemini AI Settings Card -->
-            <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                    <h5 class="fw-bold mb-0 text-primary"><i class="fe fe-command me-2"></i> Kecerdasan Buatan (Gemini AI)</h5>
-                </div>
-                <div class="card-body pt-3 pb-4">
+                    <input type="hidden" name="ai_provider" value="openclaw">
+                    <input type="hidden" name="messaging_provider" value="openclaw">
                     <div class="form-group mb-3">
                         <label class="form-label fw-bold opacity-75">Gemini API Key</label>
                         <input type="password" name="gemini_api_key" class="form-control form-control-lg bg-light" value="{{ $settings['gemini_api_key'] ?? env('GEMINI_API_KEY') }}">
-                        <small class="text-muted mt-1 d-block">Dapatkan ini dari dasbor *Google AI Studio* untuk mengaktifkan asisten BEST AI.</small>
+                        <small class="text-muted mt-1 d-block">Tetap boleh diisi sebagai fallback jika sewaktu-waktu ingin kembali ke Gemini.</small>
                     </div>
-                    <div class="form-group mb-1">
-                        <label class="form-label fw-bold opacity-75">Mesin Otak yang Digunakan</label>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">Model Gemini</label>
                         <div class="position-relative">
                             <select name="gemini_model" class="form-select form-select-lg bg-light border-0 py-3 cursor-pointer">
                                 <option value="gemini-pro" {{ ($settings['gemini_model'] ?? '') == 'gemini-pro' ? 'selected' : '' }}>Gemini Pro (Versi Lama & Paling Stabil)</option>
                                 <option value="gemini-1.5-flash" {{ ($settings['gemini_model'] ?? '') == 'gemini-1.5-flash' ? 'selected' : '' }}>Gemini 1.5 Flash (Sangat Cepat & Responsif)</option>
                                 <option value="gemini-1.5-pro" {{ ($settings['gemini_model'] ?? '') == 'gemini-1.5-pro' ? 'selected' : '' }}>Gemini 1.5 Pro (Akurasi Kalimat Maksimal)</option>
+                                <option value="gemini-2.0-flash" {{ ($settings['gemini_model'] ?? '') == 'gemini-2.0-flash' ? 'selected' : '' }}>Gemini 2.0 Flash</option>
                             </select>
                         </div>
-                        <small class="text-muted mt-2 d-block">Pilih model algoritma yang ingin dipakai untuk memberikan penalaran *(reasoning)* otomatis kepada klien.</small>
+                        <small class="text-muted mt-2 d-block">Dipakai saat provider AI masih Gemini.</small>
+                    </div>
+                    <hr class="my-4">
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Base URL</label>
+                        <input type="text" name="openclaw_base_url" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_base_url'] ?? env('OPENCLAW_BASE_URL', 'http://127.0.0.1:18789') }}" placeholder="http://127.0.0.1:18789">
+                        <small class="text-muted mt-1 d-block">Alamat gateway OpenClaw Anda.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Hook Path</label>
+                        <input type="text" name="openclaw_hook_path" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_hook_path'] ?? env('OPENCLAW_HOOK_PATH', '/hooks/agent') }}" placeholder="/hooks/agent">
+                        <small class="text-muted mt-1 d-block">Mengacu ke endpoint hook agent OpenClaw. Default dokumentasi adalah `/hooks/agent`.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Hook Token</label>
+                        <input type="password" name="openclaw_hook_token" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_hook_token'] ?? env('OPENCLAW_HOOK_TOKEN') }}">
+                        <small class="text-muted mt-1 d-block">Token Bearer untuk memanggil hook OpenClaw.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Agent Name</label>
+                        <input type="text" name="openclaw_agent_name" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_agent_name'] ?? env('OPENCLAW_AGENT_NAME', 'Website AI') }}" placeholder="Website AI">
+                        <small class="text-muted mt-1 d-block">Nama agent yang menerima request dari website ini.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Model</label>
+                        <input type="text" name="openclaw_model" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_model'] ?? env('OPENCLAW_MODEL', 'codex') }}" placeholder="codex">
+                        <small class="text-muted mt-1 d-block">Model default Anda saat ini adalah `codex`.</small>
+                    </div>
+                    <div class="form-group mb-1">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Timeout (detik)</label>
+                        <input type="number" min="5" name="openclaw_timeout_seconds" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_timeout_seconds'] ?? env('OPENCLAW_TIMEOUT_SECONDS', 30) }}">
+                        <small class="text-muted mt-1 d-block">Batas tunggu website saat menunggu jawaban OpenClaw.</small>
                     </div>
                 </div>
             </div>
