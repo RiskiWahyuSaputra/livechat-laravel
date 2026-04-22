@@ -27,21 +27,14 @@ class RoleController extends Controller
 
         $admins = Admin::with('roleModel')->orderBy('is_superadmin', 'desc')->latest()->get();
         $permissions = $this->availablePermissions;
-        $rolesList = Role::all();
+        $rolesList = Role::orderBy('level')->orderBy('name')->get();
         return view('admin.roles.admins', compact('admins', 'permissions', 'rolesList'));
     }
 
     private function syncLegacyRoles()
     {
-        $defaultDescriptions = [
-            'super_admin' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
-            'agent' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
-            'agent1' => 'Atasan/Supervisor Agent - Memiliki wewenang untuk menangani eskalasi dari Agent 2.',
-            'agent2' => 'Staff Agent - Menangani percakapan awal dan dapat melakukan eskalasi ke Agent 1.',
-        ];
-
         // Pastikan role default ada dengan deskripsi dan level
-        foreach ($defaultRoles as $slug => $data) {
+        foreach ($this->defaultRoles() as $slug => $data) {
             Role::updateOrCreate(
                 ['slug' => $slug],
                 [
@@ -59,6 +52,27 @@ class RoleController extends Controller
                 $admin->update(['role_id' => $role->id]);
             }
         }
+    }
+
+    private function defaultRoles(): array
+    {
+        return [
+            'super_admin' => [
+                'name' => 'Superadmin',
+                'description' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
+                'level' => 1,
+            ],
+            'agent1' => [
+                'name' => 'Agent 1 (Supervisor)',
+                'description' => 'Atasan/Supervisor Agent - Memiliki wewenang untuk menangani eskalasi dari Agent 2.',
+                'level' => 2,
+            ],
+            'agent2' => [
+                'name' => 'Agent 2 (Staff)',
+                'description' => 'Staff Agent - Menangani percakapan awal dan dapat melakukan eskalasi ke Agent 1.',
+                'level' => 3,
+            ],
+        ];
     }
 
     public function store(Request $request)
