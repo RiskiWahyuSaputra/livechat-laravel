@@ -7,13 +7,11 @@ use App\Events\MessageSent;
 use App\Events\TypingIndicator;
 use App\Events\UserShouldBeLoggedOut;
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessAdminMessage;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
-use App\Services\WhatsappService;
 use App\Services\MessageSearchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,12 +20,10 @@ use Carbon\Carbon;
 class DashboardController extends Controller
 {
     protected $analyticsService;
-    protected $whatsappService;
 
-    public function __construct(AnalyticsService $analyticsService, WhatsappService $whatsappService)
+    public function __construct(AnalyticsService $analyticsService)
     {
         $this->analyticsService = $analyticsService;
-        $this->whatsappService = $whatsappService;
     }
 
     /**
@@ -369,14 +365,8 @@ class DashboardController extends Controller
         try {
             broadcast(new MessageSent($message));
             \Log::info('Admin Broadcast MessageSent success');
-
-            // --- WHAPI NOTIFICATION (MOVED TO BACKGROUND JOB) ---
-            if ($messageType !== 'whisper') {
-                ProcessAdminMessage::dispatch($message);
-            }
-
         } catch (\Exception $e) {
-            \Log::error('Admin Broadcast/Job dispatch MessageSent failed', ['error' => $e->getMessage()]);
+            \Log::error('Admin Broadcast MessageSent failed', ['error' => $e->getMessage()]);
         }
 
         return response()->json([
