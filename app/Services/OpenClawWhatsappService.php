@@ -20,6 +20,7 @@ class OpenClawWhatsappService
     protected string $channel;
     protected string $account;
     protected string $bridgeToken;
+    protected string $publicBaseUrl;
     protected bool $enabled;
 
     public function __construct()
@@ -35,6 +36,7 @@ class OpenClawWhatsappService
         $this->channel = trim((string) Setting::get('openclaw_whatsapp_channel', env('OPENCLAW_WHATSAPP_CHANNEL', 'whatsapp')));
         $this->account = trim((string) Setting::get('openclaw_whatsapp_account', env('OPENCLAW_WHATSAPP_ACCOUNT', '')));
         $this->bridgeToken = trim((string) Setting::get('openclaw_bridge_token', env('OPENCLAW_BRIDGE_TOKEN', '')));
+        $this->publicBaseUrl = rtrim((string) Setting::get('openclaw_public_base_url', env('OPENCLAW_PUBLIC_BASE_URL', env('ASSET_URL', env('APP_URL', '')))), '/');
         $this->enabled = filter_var(Setting::get('openclaw_whatsapp_enabled', env('OPENCLAW_WHATSAPP_ENABLED', true)), FILTER_VALIDATE_BOOL);
 
         if ($this->gatewayOrigin === '') {
@@ -117,7 +119,22 @@ class OpenClawWhatsappService
             return false;
         }
 
-        $command = $this->buildGatewaySendCommand($target, $text, $mediaUrl, $buttons);
+        $resolvedMedia = $this->resolveMediaReference($mediaUrl);
+        if (trim((string) $mediaUrl) !== '' && !$resolvedMedia['url'] && !$resolvedMedia['file']) {
+            Log::warning('Media WhatsApp dilewati karena tidak ada URL publik yang bisa dipakai gateway.', [
+                'user_id' => $user->id,
+                'original_media_url' => $mediaUrl,
+                'suggested_env' => 'OPENCLAW_PUBLIC_BASE_URL',
+            ]);
+        }
+
+        $command = $this->buildGatewaySendCommand(
+            $target,
+            $text,
+            $resolvedMedia['url'],
+            $buttons,
+            $resolvedMedia['file'],
+        );
 
         try {
             $process = new Process($command, base_path(), $this->buildProcessEnv(), null, 30);
@@ -182,7 +199,7 @@ class OpenClawWhatsappService
         ]);
     }
 
-    private function buildGatewaySendCommand(string $target, string $text = '', ?string $mediaUrl = null, array $buttons = []): array
+    private function buildGatewaySendCommand(string $target, string $text = '', ?string $mediaUrl = null, array $buttons = [], ?string $mediaFile = null): array
     {
         $command = [
             $this->nodePath !== '' ? $this->nodePath : 'node',
@@ -206,6 +223,11 @@ class OpenClawWhatsappService
         if ($mediaUrl) {
             $command[] = '--media';
             $command[] = $mediaUrl;
+        }
+
+        if ($mediaFile) {
+            $command[] = '--media-file';
+            $command[] = $mediaFile;
         }
 
         if (!empty($buttons)) {
@@ -295,6 +317,117 @@ class OpenClawWhatsappService
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         return trim($text);
+    }
+
+    private function resolveMediaReference(?string $mediaUrl): array
+    {
+        $mediaUrl = trim((string) $mediaUrl);
+        if ($mediaUrl === '') {
+            return ['url' => null, 'file' => null];
+        }
+
+        if (str_starts_with($mediaUrl, 'data:')) {
+            Log::warning('Media WhatsApp berbentuk data URI tidak didukung gateway OpenClaw. Gunakan URL publik.', [
+                'suggested_env' => 'OPENCLAW_PUBLIC_BASE_URL',
+            ]);
+
+            return ['url' => null, 'file' => null];
+        }
+
+        $parts = parse_url($mediaUrl);
+        if ($parts === false) {
+            return ['url' => null, 'file' => null];
+        }
+
+        if (!isset($parts['scheme']) || !isset($parts['host'])) {
+            $rebuilt = $this->buildUrlFromBase($this->publicBaseUrl, $mediaUrl);
+            if ($rebuilt !== null) {
+                return ['url' => $rebuilt, 'file' => null];
+            }
+
+            return ['url' => null, 'file' => null];
+        }
+
+        if (!$this->isBlockedMediaHost($parts['host'])) {
+            return ['url' => $mediaUrl, 'file' => null];
+        }
+
+        $rebuilt = $this->buildUrlFromBase($this->publicBaseUrl, $this->buildRelativePath($parts));
+        if ($rebuilt !== null) {
+            return ['url' => $rebuilt, 'file' => null];
+        }
+
+        Log::warning('Media WhatsApp masih memakai host lokal/private dan belum ada base URL publik.', [
+            'original_media_url' => $mediaUrl,
+            'suggested_env' => 'OPENCLAW_PUBLIC_BASE_URL',
+        ]);
+
+        return ['url' => null, 'file' => null];
+    }
+
+    private function buildRelativePath(array $parts): string
+    {
+        $path = $parts['path'] ?? '/';
+        $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+
+        return $path . $query;
+    }
+
+    private function resolveLocalMediaPath(?string $path): ?string
+    {
+        $path = trim((string) $path);
+        if ($path === '') {
+            return null;
+        }
+
+        $cleanPath = '/' . ltrim($path, '/');
+
+        if (str_starts_with($cleanPath, '/storage/')) {
+            $relative = ltrim(substr($cleanPath, strlen('/storage/')), '/');
+            return storage_path('app/public/' . $relative);
+        }
+
+        return public_path(ltrim($cleanPath, '/'));
+    }
+
+    private function buildUrlFromBase(string $baseUrl, string $path): ?string
+    {
+        $baseUrl = trim($baseUrl);
+        if ($baseUrl === '') {
+            return null;
+        }
+
+        $baseParts = parse_url($baseUrl);
+        if ($baseParts === false || !isset($baseParts['scheme'], $baseParts['host'])) {
+            return null;
+        }
+
+        if ($this->isBlockedMediaHost($baseParts['host'])) {
+            return null;
+        }
+
+        $normalizedPath = '/' . ltrim($path, '/');
+        $port = isset($baseParts['port']) ? ':' . $baseParts['port'] : '';
+
+        return "{$baseParts['scheme']}://{$baseParts['host']}{$port}{$normalizedPath}";
+    }
+
+    private function isBlockedMediaHost(string $host): bool
+    {
+        $host = strtolower(trim($host));
+        if ($host === '' || in_array($host, ['localhost', '127.0.0.1', '0.0.0.0', '::1'], true)) {
+            return true;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+
+        return !filter_var(
+            $host,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
     }
 
     private function readGatewayTokenFromConfig(): string

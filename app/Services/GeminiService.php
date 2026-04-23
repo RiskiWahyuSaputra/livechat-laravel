@@ -29,43 +29,16 @@ class GeminiService
             if ($openClawResponse) {
                 return $openClawResponse;
             }
-
-            return "Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.";
+            Log::warning('OpenClaw tidak mengembalikan jawaban. Fallback ke Gemini API.');
         }
 
-        if (empty($this->apiKey)) return "Sistem AI belum siap.";
+        $geminiResponse = $this->askGeminiApi($prompt, $fullInstruction);
 
-        $models = array_values(array_unique(array_filter([
-            $this->preferredModel,
-            'gemini-1.5-flash',
-            'gemini-1.5-pro',
-            'gemini-2.0-flash',
-            'gemini-pro',
-        ])));
-
-        foreach ($models as $model) {
-            $aiText = $this->tryModel($model, $fullInstruction, $prompt);
-            if ($aiText) return $aiText;
+        if ($geminiResponse) {
+            return $geminiResponse;
         }
 
-        // Jika semua model hardcoded gagal, coba ambil satu model dari API secara dinamis
-        $availableModels = $this->getAvailableModels();
-        if (!empty($availableModels)) {
-            Log::info("Mencoba model alternatif dari API...");
-            foreach ($availableModels as $modelData) {
-                $modelName = $modelData['name']; // ini biasanya "models/..."
-                // Hapus prefix "models/" jika ada karena URL sudah punya "models/"
-                $modelId = str_replace('models/', '', $modelName);
-                
-                // Lewati jika sudah dicoba di loop sebelumnya
-                if (in_array($modelId, $models)) continue;
-
-                $aiText = $this->tryModel($modelId, $fullInstruction, $prompt);
-                if ($aiText) return $aiText;
-            }
-        }
-
-        return "Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.";
+        return $this->fallbackMessage();
     }
 
     public function summarizeConversation($history)
@@ -89,23 +62,72 @@ class GeminiService
 
         if ($this->shouldUseOpenClaw()) {
             $response = $this->openClawService->ask($prompt, "Kamu adalah AI Knowledge Extractor.");
-            return $this->decodeKnowledgePayload($response);
+            $data = $this->decodeKnowledgePayload($response);
+            if (is_array($data)) {
+                return $data;
+            }
+
+            Log::warning('OpenClaw tidak mengembalikan ringkasan knowledge. Fallback ke Gemini API.');
         }
 
-        if (empty($this->apiKey)) return null;
-
-        // Gunakan model yang mumpuni untuk ekstraksi
-        $models = array_values(array_unique(array_filter([
+        $response = $this->askGeminiApi($prompt, "Kamu adalah AI Knowledge Extractor.", [
             $this->preferredModel,
             'gemini-2.0-flash',
             'gemini-1.5-flash',
+        ]);
+
+        if ($response) {
+            $data = $this->decodeKnowledgePayload($response);
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+
+        return null;
+    }
+
+    private function askGeminiApi(string $prompt, string $fullInstruction, ?array $preferredModels = null): ?string
+    {
+        if (empty($this->apiKey)) {
+            return null;
+        }
+
+        $models = array_values(array_unique(array_filter($preferredModels ?? [
+            $this->preferredModel,
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-001',
+            'gemini-2.0-flash-lite',
+            'gemini-2.0-flash-lite-001',
+            'gemini-1.5-flash',
+            'gemini-1.5-pro',
+            'gemini-pro',
         ])));
-        
+
         foreach ($models as $model) {
-            $response = $this->tryModel($model, "Kamu adalah AI Knowledge Extractor.", $prompt);
-            if ($response) {
-                $data = $this->decodeKnowledgePayload($response);
-                if (is_array($data)) return $data;
+            $aiText = $this->tryModel($model, $fullInstruction, $prompt);
+            if ($aiText) {
+                return $aiText;
+            }
+        }
+
+        // Jika semua model hardcoded gagal, coba ambil satu model dari API secara dinamis
+        $availableModels = $this->getAvailableModels();
+        if (!empty($availableModels)) {
+            Log::info("Mencoba model alternatif dari API...");
+            foreach ($availableModels as $modelData) {
+                $modelName = $modelData['name']; // ini biasanya "models/..."
+                // Hapus prefix "models/" jika ada karena URL sudah punya "models/"
+                $modelId = str_replace('models/', '', $modelName);
+
+                // Lewati jika sudah dicoba di loop sebelumnya
+                if (in_array($modelId, $models, true)) {
+                    continue;
+                }
+
+                $aiText = $this->tryModel($modelId, $fullInstruction, $prompt);
+                if ($aiText) {
+                    return $aiText;
+                }
             }
         }
 
@@ -199,6 +221,11 @@ class GeminiService
     {
         $models = $this->getAvailableModels();
         Log::info("Daftar Model Tersedia:", ['count' => count($models), 'models' => $models]);
+    }
+
+    private function fallbackMessage(): string
+    {
+        return "Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.";
     }
 
     private function shouldUseOpenClaw(): bool

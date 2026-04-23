@@ -13,34 +13,26 @@ const method = (args.method || "send").trim();
 const target = (args.target || "").trim();
 const message = (args.message || "").trim();
 const mediaUrl = (args.media || "").trim();
+const mediaFile = (args["media-file"] || "").trim();
 const buttons = (args.buttons || "").trim();
 const messageId = (args["message-id"] || "").trim();
 const accountId = (args.account || "").trim();
 const threadId = (args["thread-id"] || "").trim();
-
-if (!target) {
-  fail("Missing required --target value.");
-}
-
-if (method === "send" && !message && !mediaUrl) {
-  fail("Either --message or --media is required.");
-}
-
-const openClawRoot = resolveOpenClawRoot();
-const requireFromOpenClaw = createRequire(path.join(openClawRoot, "package.json"));
-const WebSocket = requireFromOpenClaw("ws");
-
-const ws = new WebSocket(gatewayUrl, { origin });
 const pending = new Map();
 let finished = false;
+let timeoutHandle = null;
+let ws = null;
 
-const cleanup = (code = 0) => {
+function cleanup(code = 0) {
   if (finished) {
     return;
   }
 
   finished = true;
-  clearTimeout(timeoutHandle);
+
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+  }
 
   for (const entry of pending.values()) {
     entry.reject(new Error("Gateway sender stopped before request completed."));
@@ -48,16 +40,32 @@ const cleanup = (code = 0) => {
 
   pending.clear();
 
-  try {
-    ws.close();
-  } catch {
-    // Ignore close errors on shutdown.
+  if (ws) {
+    try {
+      ws.close();
+    } catch {
+      // Ignore close errors on shutdown.
+    }
   }
 
   process.exit(code);
-};
+}
 
-const timeoutHandle = setTimeout(() => {
+if (!target) {
+  fail("Missing required --target value.");
+}
+
+if ((method === "send" || method === "message.send") && !message && !mediaUrl && !mediaFile) {
+  fail("Either --message, --media, or --media-file is required.");
+}
+
+const openClawRoot = resolveOpenClawRoot();
+const requireFromOpenClaw = createRequire(path.join(openClawRoot, "package.json"));
+const WebSocket = requireFromOpenClaw("ws");
+
+ws = new WebSocket(gatewayUrl, { origin });
+
+timeoutHandle = setTimeout(() => {
   fail(`Gateway sender timed out after ${timeoutMs}ms.`);
 }, timeoutMs);
 
@@ -158,7 +166,11 @@ async function handleConnectChallenge(frame) {
       if (finalMessage) params.message = finalMessage;
     }
 
-    if (mediaUrl) params.mediaUrl = mediaUrl;
+    if (mediaFile) {
+      fail("Local media file is not supported by this gateway flow. Provide a public URL with --media.");
+    } else if (mediaUrl) {
+      params.mediaUrl = mediaUrl;
+    }
     if (accountId) params.accountId = accountId;
     if (threadId) params.threadId = threadId;
   } else if (method === "message.read" || method === "whatsapp.read") {

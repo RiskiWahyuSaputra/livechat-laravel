@@ -20,6 +20,7 @@ Isi pengaturan berikut di halaman admin:
 - `openclaw_whatsapp_channel`
 - `openclaw_whatsapp_account` (opsional)
 - `openclaw_bridge_token`
+- `openclaw_public_base_url` (opsional, penting untuk kirim gambar/file dari server lokal)
 
 ## Hook OpenClaw
 
@@ -61,6 +62,13 @@ Outbound WhatsApp dari Laravel memakai command OpenClaw CLI:
 Untuk media:
 
 - `openclaw message send --channel whatsapp --target <nomor> --media <url>`
+
+Jika Laravel Anda berjalan di `127.0.0.1`, `localhost`, atau IP private lain, media WhatsApp tidak akan bisa di-fetch oleh gateway. Isi `openclaw_public_base_url` atau env `OPENCLAW_PUBLIC_BASE_URL` dengan URL publik aplikasi Anda, misalnya URL tunnel Cloudflare atau domain server.
+
+Catatan penting:
+
+- Fallback `local file` / `data:` URI tidak dipakai lagi untuk WhatsApp karena gateway akan menolaknya.
+- Jika URL media masih lokal/private dan tidak ada base URL publik, Laravel akan tetap mengirim teksnya, tetapi medianya dilewati dan dicatat ke log.
 
 Jika instance Anda butuh account tertentu, isi `openclaw_whatsapp_account`.
 

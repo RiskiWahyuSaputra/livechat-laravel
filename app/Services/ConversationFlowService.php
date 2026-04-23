@@ -261,7 +261,8 @@ class ConversationFlowService
                 ]);
             }
         } elseif ($conversation->bot_phase === 'awaiting_submenu') {
-            $child = $this->findMenuByLabel($userMessage);
+            $parentMenu = $this->resolveAwaitingSubmenuParentMenu($conversation);
+            $child = $this->findSubmenuSelection($userMessage, $parentMenu?->id);
             
             // Web fallback: if label matching fails but it's a known submenu option
             if (!$child) {
@@ -462,7 +463,7 @@ class ConversationFlowService
                  'content'         => "Silakan isi data diri Anda melalui link berikut agar dapat terhubung dengan Agent:\n\n" . $regUrl,
              ]);
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
-            $menu = $this->findRootMenuByLabel($userMessage);
+            $menu = $this->findRootMenuSelection($userMessage);
             if ($menu) {
                 $content = $menu->message_response ?? '';
                 if ($menu->action_value && (str_contains(strtolower($menu->action_value), 'youtube.com') || str_contains(strtolower($menu->action_value), 'youtu.be'))) {
@@ -622,6 +623,8 @@ class ConversationFlowService
             'tidak memiliki gambar',
             'tidak punya gambar',
             'maaf, saya tidak bisa langsung',
+            'sistem akan menampilkan gambar',
+            'secara otomatis di sini',
         ];
 
         foreach ($conflictingPhrases as $phrase) {
@@ -738,7 +741,7 @@ class ConversationFlowService
                 ->first();
 
             if ($lastUserMessage) {
-                $parentMenu = $this->findRootMenuByLabel($lastUserMessage->content);
+                $parentMenu = $this->findRootMenuSelection($lastUserMessage->content);
                 if ($parentMenu) {
                     $submenus = BotMenu::where('parent_id', $parentMenu->id)
                         ->orderBy('order_index')
@@ -793,7 +796,7 @@ class ConversationFlowService
         }
 
         foreach ($menus as $index => $menu) {
-            $lines[] = ($index + 1) . '. ' . $menu->label;
+            $lines[] = '[' . ($index + 1) . '] ' . $menu->label;
         }
         $lines[] = '';
         $lines[] = 'Balas dengan nama menu yang kamu pilih.';
@@ -838,7 +841,7 @@ class ConversationFlowService
 
         $lines = ['Pilih salah satu submenu berikut:'];
         foreach ($children as $index => $child) {
-            $lines[] = ($index + 1) . '. ' . $child->label;
+            $lines[] = '[' . ($index + 1) . '] ' . $child->label;
         }
         $lines[] = '';
         $lines[] = 'Balas dengan nama submenu yang kamu pilih.';
@@ -902,9 +905,74 @@ class ConversationFlowService
             ->first();
     }
 
+    private function findRootMenuSelection(string $input): ?BotMenu
+    {
+        $menu = $this->findRootMenuByLabel($input);
+        if ($menu) {
+            return $menu;
+        }
+
+        $index = $this->extractNumericSelection($input);
+        if ($index === null) {
+            return null;
+        }
+
+        return $this->rootMenus()->values()->get($index - 1);
+    }
+
     private function findMenuByLabel(string $label): ?BotMenu
     {
         return BotMenu::whereRaw('LOWER(label) = ?', [mb_strtolower(trim($label))])
             ->first();
+    }
+
+    private function findSubmenuSelection(string $input, ?int $parentId = null): ?BotMenu
+    {
+        if ($parentId) {
+            $child = BotMenu::where('parent_id', $parentId)
+                ->whereRaw('LOWER(label) = ?', [mb_strtolower(trim($input))])
+                ->first();
+
+            if ($child) {
+                return $child;
+            }
+
+            $index = $this->extractNumericSelection($input);
+            if ($index !== null) {
+                return BotMenu::where('parent_id', $parentId)
+                    ->orderBy('order_index')
+                    ->get()
+                    ->values()
+                    ->get($index - 1);
+            }
+        }
+
+        return $this->findMenuByLabel($input);
+    }
+
+    private function extractNumericSelection(string $input): ?int
+    {
+        if (preg_match('/^\s*\[?(\d+)\]?\s*$/', trim($input), $matches) !== 1) {
+            return null;
+        }
+
+        $value = (int) ($matches[1] ?? 0);
+
+        return $value > 0 ? $value : null;
+    }
+
+    private function resolveAwaitingSubmenuParentMenu(Conversation $conversation): ?BotMenu
+    {
+        $lastUserMessage = Message::where('conversation_id', $conversation->id)
+            ->where('sender_type', 'user')
+            ->orderBy('created_at', 'desc')
+            ->skip(1)
+            ->first();
+
+        if (!$lastUserMessage) {
+            return null;
+        }
+
+        return $this->findRootMenuSelection($lastUserMessage->content);
     }
 }
