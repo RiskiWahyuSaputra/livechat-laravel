@@ -768,31 +768,21 @@ class ChatController extends Controller
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = \App\Models\BotMenu::where('label', $userMessage)->whereNull('parent_id')->first();
             if ($menu) {
-                $content = $menu->message_response ?? '';
-                if ($menu->action_value && (str_contains(strtolower($menu->action_value), 'youtube.com') || str_contains(strtolower($menu->action_value), 'youtu.be'))) {
-                    // Extract Video ID
-                    $embedUrl = false;
-                    if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $menu->action_value, $match)) {
-                        $embedUrl = "https://www.youtube.com/embed/" . $match[1];
-                    } 
-                    
-                    if ($embedUrl) {
-                         $content .= '<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]"><div class="relative w-full" style="padding-bottom: 56.25%;"><iframe class="absolute top-0 left-0 w-full h-full" src="' . $embedUrl . '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><div class="p-2 bg-white"><a href="' . $menu->action_value . '" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;"><i class="fab fa-youtube"></i> Buka di YouTube</a></div></div>';
-                    } else {
-                         // Improved fallback for channel or non-video links
-                         $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Kunjungi Channel YouTube</a></div>';
-                    }
-                } elseif ($menu->action_type === 'link' && $menu->action_value) {
-                    $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fas fa-external-link-alt"></i> Buka Link</a></div>';
+                if ($menu->action_type === 'link' && $menu->action_value) {
+                    $content = $this->buildLinkMenuResponse($menu);
+                } else {
+                    $content = $menu->message_response ?? '';
                 }
 
-                if ($content) $newBotMessages[] = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => 0,
-                    'sender_type'     => 'admin',
-                    'message_type'    => 'text',
-                    'content'         => $content . ($menu->action_type === 'link' ? "\n\nPilih layanan kami lainnya:" : ""),
-                ]);
+                if ($content) {
+                    $newBotMessages[] = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => $content,
+                    ]);
+                }
 
                 if ($menu->action_type === 'submenu') {
                     $conversation->update(['bot_phase' => 'awaiting_submenu']);
@@ -1003,6 +993,75 @@ class ChatController extends Controller
         return $formatted;
     }
 
+    private function buildLinkMenuResponse(\App\Models\BotMenu $menu): string
+    {
+        $menuLabel = trim((string) $menu->label);
+        $menuLabelLower = mb_strtolower($menuLabel, 'UTF-8');
+        $menuList = $this->buildMainMenuListOnly();
+
+        if ($this->isYoutubeLink($menu->action_value)) {
+            return implode("\n", [
+                'Anda dapat menonton channel youtube BRILLIAN.BIZ di sini:',
+                '',
+                $menu->action_value,
+                '',
+                'Kunjungi Channel YouTube',
+                '',
+                'Pilih layanan kami lainnya:',
+                '',
+                $menuList,
+            ]);
+        }
+
+        if (str_contains($menuLabelLower, 'jadwal seminar')) {
+            return implode("\n", [
+                'Berikut jadwal seminar BRILLIAN.BIZ: Buka Link',
+                '',
+                $menu->action_value,
+                '',
+                'Pilih layanan kami lainnya:',
+                '',
+                $menuList,
+            ]);
+        }
+
+        $lines = [];
+        if (!empty($menu->message_response)) {
+            $lines[] = trim((string) $menu->message_response);
+            $lines[] = '';
+        }
+        $lines[] = $menu->action_value;
+        $lines[] = '';
+        $lines[] = 'Pilih layanan kami lainnya:';
+        $lines[] = '';
+        $lines[] = $menuList;
+
+        return implode("\n", $lines);
+    }
+
+    private function buildMainMenuListOnly(): string
+    {
+        $menus = \App\Models\BotMenu::whereNull('parent_id')
+            ->orderBy('order_index')
+            ->get(['label']);
+
+        if ($menus->isEmpty()) {
+            return 'Menu utama belum tersedia saat ini.';
+        }
+
+        return $menus
+            ->values()
+            ->map(fn ($menu, $index) => '[' . ($index + 1) . '] ' . $menu->label)
+            ->implode("\n");
+    }
+
+    private function isYoutubeLink(?string $url): bool
+    {
+        $normalized = mb_strtolower((string) $url, 'UTF-8');
+
+        return str_contains($normalized, 'youtube.com') || str_contains($normalized, 'youtu.be');
+    }
+
     private function createConversation($user, $selectedMenuId = null): Conversation
     {
         $availableAdmin = Admin::where('status', '!=', 'offline')->get()->first(fn($admin) => $admin->canTakeNewChat());
@@ -1055,34 +1114,16 @@ class ChatController extends Controller
         // Bot Response
         $botReplies = [];
         if ($menu) {
-            $content = $menu->message_response ?? '';
-            
             if ($menu->action_type === 'link' && $menu->action_value) {
-                $isYoutube = str_contains(strtolower($menu->action_value), 'youtube.com') || str_contains(strtolower($menu->action_value), 'youtu.be');
-                if ($isYoutube) {
-                    $embedUrl = false;
-                    if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $menu->action_value, $match)) {
-                        $embedUrl = "https://www.youtube.com/embed/" . $match[1];
-                    }
-                    
-                    if ($embedUrl) {
-                        $content .= '<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]"><div class="relative w-full" style="padding-bottom: 56.25%;"><iframe class="absolute top-0 left-0 w-full h-full" src="' . $embedUrl . '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><div class="p-2 bg-white"><a href="' . $menu->action_value . '" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;"><i class="fab fa-youtube"></i> Buka di YouTube</a></div></div>';
-                    } else {
-                        $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Kunjungi Channel</a></div>';
-                    }
-                } else {
-                    $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fas fa-external-link-alt"></i> Buka Link</a></div>';
-                }
+                $content = $this->buildLinkMenuResponse($menu);
+            } else {
+                $content = $menu->message_response ?? '';
             }
-            
+
             if ($content) $botReplies[] = $content;
-            
-            if ($menu->action_type === 'submenu') {
-                // No need to send text list, Alpine.js will render buttons
-            } elseif ($menu->action_type === 'link') {
-                // Also show main menu again for links
+
+            if ($menu->action_type === 'link') {
                 $conversation->update(['bot_phase' => 'awaiting_main_menu']);
-                $botReplies[] = "Pilih layanan kami lainnya:";
             } elseif ($menu->action_type === 'connect_cs') {
                 if ($isAnonymousCS) {
                      $conversation->update(['bot_phase' => 'offer_agent_transfer']);
