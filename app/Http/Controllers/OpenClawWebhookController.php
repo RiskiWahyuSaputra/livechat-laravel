@@ -74,9 +74,7 @@ class OpenClawWebhookController extends Controller
             $isNewConversation = true;
 
             if (!$this->shouldProcessInitialInbound($conversation, $message['content'])) {
-                foreach ($result['bot_messages'] as $botMessage) {
-                    $this->sendBotMessageToWhatsapp($user, $botMessage);
-                }
+                $this->sendBotMessagesToWhatsapp($user, $result['bot_messages']);
 
                 return response()->json([
                     'status' => 'ok',
@@ -94,15 +92,61 @@ class OpenClawWebhookController extends Controller
             broadcast: true
         );
 
-        foreach ($result['bot_messages'] as $botMessage) {
-            $this->sendBotMessageToWhatsapp($user, $botMessage);
-        }
+        $this->sendBotMessagesToWhatsapp($user, $result['bot_messages']);
 
         return response()->json([
             'status' => 'ok',
             'conversation_id' => $conversation->id,
             'user_id' => $user->id,
         ]);
+    }
+
+    private function sendBotMessagesToWhatsapp(User $user, array $messages): void
+    {
+        $total = count($messages);
+
+        for ($index = 0; $index < $total; $index++) {
+            $current = $messages[$index];
+            $next = $messages[$index + 1] ?? null;
+            $afterNext = $messages[$index + 2] ?? null;
+
+            if (
+                $current->message_type === 'text' &&
+                $next &&
+                in_array($next->message_type, ['image', 'file'], true) &&
+                $afterNext &&
+                $afterNext->message_type === 'text' &&
+                !empty($afterNext->whatsapp_buttons ?? []) &&
+                empty($current->whatsapp_buttons ?? []) &&
+                trim((string) $current->content) !== ''
+            ) {
+                $captionParts = [trim((string) $current->content), trim((string) $afterNext->content)];
+                $caption = trim(implode("\n\n", array_filter($captionParts)));
+                $this->openClawWhatsappService->sendMedia(
+                    $user,
+                    $next->content,
+                    $caption,
+                    $afterNext->whatsapp_buttons ?? []
+                );
+                $index += 2;
+                continue;
+            }
+
+            if (
+                $current->message_type === 'text' &&
+                $next &&
+                in_array($next->message_type, ['image', 'file'], true) &&
+                empty($current->whatsapp_buttons ?? []) &&
+                trim((string) $current->content) !== ''
+            ) {
+                $buttons = isset($next->whatsapp_buttons) ? $next->whatsapp_buttons : [];
+                $this->openClawWhatsappService->sendMedia($user, $next->content, $current->content, $buttons);
+                $index++;
+                continue;
+            }
+
+            $this->sendBotMessageToWhatsapp($user, $current);
+        }
     }
 
     private function sendBotMessageToWhatsapp(User $user, $message): void

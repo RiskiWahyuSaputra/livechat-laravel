@@ -571,7 +571,7 @@ class ChatController extends Controller
         return response()->json(['success' => true]);
     }
 
-}
+    private function handleBotResponse(Conversation $conversation, string $userMessage): array
     {
         $newBotMessages = [];
         $botCategories = config('chat.complaint_categories');
@@ -899,6 +899,8 @@ class ChatController extends Controller
             'tidak memiliki gambar',
             'tidak punya gambar',
             'maaf, saya tidak bisa langsung',
+            'sistem akan menampilkan gambar',
+            'secara otomatis di sini',
         ];
 
         foreach ($conflictingPhrases as $phrase) {
