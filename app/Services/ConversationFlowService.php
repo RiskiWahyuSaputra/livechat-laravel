@@ -69,24 +69,10 @@ class ConversationFlowService
 
         $botReplies = [];
         if ($menu) {
-            $content = $menu->message_response ?? '';
-
             if ($menu->action_type === 'link' && $menu->action_value) {
-                $isYoutube = str_contains(strtolower($menu->action_value), 'youtube.com') || str_contains(strtolower($menu->action_value), 'youtu.be');
-                if ($isYoutube) {
-                    $embedUrl = false;
-                    if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $menu->action_value, $match)) {
-                        $embedUrl = "https://www.youtube.com/embed/" . $match[1];
-                    }
-
-                    if ($embedUrl) {
-                        $content .= '<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]"><div class="relative w-full" style="padding-bottom: 56.25%;"><iframe class="absolute top-0 left-0 w-full h-full" src="' . $embedUrl . '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><div class="p-2 bg-white"><a href="' . $menu->action_value . '" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;"><i class="fab fa-youtube"></i> Buka di YouTube</a></div></div>';
-                    } else {
-                        $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Kunjungi Channel</a></div>';
-                    }
-                } else {
-                    $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fas fa-external-link-alt"></i> Buka Link</a></div>';
-                }
+                $content = $this->buildLinkMenuResponse($menu);
+            } else {
+                $content = $menu->message_response ?? '';
             }
 
             if ($content) {
@@ -95,7 +81,6 @@ class ConversationFlowService
 
             if ($menu->action_type === 'link') {
                 $conversation->update(['bot_phase' => 'awaiting_main_menu']);
-                $botReplies[] = 'Pilih layanan kami lainnya:';
             } elseif ($menu->action_type === 'connect_cs') {
                 $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                 $botReplies[] = 'Hai! Saya BEST AI, asisten virtual kamu. Ceritakan aja kendala atau pertanyaan kamu, nanti saya bantu sebisa saya. Kalau mau langsung ngobrol sama Agent, klik tombol **Hubungi Agent** di bawah ya.';
@@ -465,20 +450,10 @@ class ConversationFlowService
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = $this->findRootMenuSelection($userMessage);
             if ($menu) {
-                $content = $menu->message_response ?? '';
-                if ($menu->action_value && (str_contains(strtolower($menu->action_value), 'youtube.com') || str_contains(strtolower($menu->action_value), 'youtu.be'))) {
-                    $embedUrl = false;
-                    if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $menu->action_value, $match)) {
-                        $embedUrl = 'https://www.youtube.com/embed/' . $match[1];
-                    }
-
-                    if ($embedUrl) {
-                        $content .= '<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]"><div class="relative w-full" style="padding-bottom: 56.25%;"><iframe class="absolute top-0 left-0 w-full h-full" src="' . $embedUrl . '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><div class="p-2 bg-white"><a href="' . $menu->action_value . '" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;"><i class="fab fa-youtube"></i> Buka di YouTube</a></div></div>';
-                    } else {
-                        $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Kunjungi Channel YouTube</a></div>';
-                    }
-                } elseif ($menu->action_type === 'link' && $menu->action_value) {
-                    $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fas fa-external-link-alt"></i> Buka Link</a></div>';
+                if ($menu->action_type === 'link' && $menu->action_value) {
+                    $content = $this->buildLinkMenuResponse($menu);
+                } else {
+                    $content = $menu->message_response ?? '';
                 }
 
                 if ($content) {
@@ -487,12 +462,8 @@ class ConversationFlowService
                         'sender_id' => 0,
                         'sender_type' => 'admin',
                         'message_type' => 'text',
-                        'content' => $content . ($menu->action_type === 'link' ? "\n\nPilih layanan kami lainnya:" : ''),
+                        'content' => $content,
                     ]);
-
-                    if ($menu->action_type === 'link') {
-                        $msg->whatsapp_buttons = $this->buildMainMenuButtons();
-                    }
 
                     $newBotMessages[] = $msg;
                 }
@@ -802,6 +773,72 @@ class ConversationFlowService
         $lines[] = 'Balas dengan nama menu yang kamu pilih.';
 
         return implode("\n", $lines);
+    }
+
+    private function buildLinkMenuResponse(BotMenu $menu): string
+    {
+        $menuLabel = trim((string) $menu->label);
+        $menuLabelLower = mb_strtolower($menuLabel, 'UTF-8');
+        $menuList = $this->buildMainMenuListOnly();
+
+        if ($this->isYoutubeLink($menu)) {
+            return implode("\n", [
+                'Anda dapat menonton channel youtube BRILLIAN.BIZ di sini:',
+                '',
+                $menu->action_value,
+                '',
+                'Kunjungi Channel YouTube',
+                '',
+                'Pilih layanan kami lainnya:',
+                '',
+                $menuList,
+            ]);
+        }
+
+        if (str_contains($menuLabelLower, 'jadwal seminar')) {
+            return implode("\n", [
+                'Berikut jadwal seminar BRILLIAN.BIZ: Buka Link',
+                '',
+                $menu->action_value,
+                '',
+                'Pilih layanan kami lainnya:',
+                '',
+                $menuList,
+            ]);
+        }
+
+        $lines = [];
+        if (!empty($menu->message_response)) {
+            $lines[] = trim((string) $menu->message_response);
+            $lines[] = '';
+        }
+        $lines[] = $menu->action_value;
+        $lines[] = '';
+        $lines[] = 'Pilih layanan kami lainnya:';
+        $lines[] = '';
+        $lines[] = $menuList;
+
+        return implode("\n", $lines);
+    }
+
+    private function buildMainMenuListOnly(): string
+    {
+        $menus = $this->rootMenus();
+        if ($menus->isEmpty()) {
+            return 'Menu utama belum tersedia saat ini.';
+        }
+
+        return $menus
+            ->values()
+            ->map(fn ($menu, $index) => '[' . ($index + 1) . '] ' . $menu->label)
+            ->implode("\n");
+    }
+
+    private function isYoutubeLink(BotMenu $menu): bool
+    {
+        $url = mb_strtolower((string) $menu->action_value, 'UTF-8');
+
+        return str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be');
     }
 
     private function buildCategoryPrompt(bool $includeIntro = true): string

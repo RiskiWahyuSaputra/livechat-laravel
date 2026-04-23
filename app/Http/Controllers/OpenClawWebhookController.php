@@ -151,7 +151,7 @@ class OpenClawWebhookController extends Controller
 
     private function sendBotMessageToWhatsapp(User $user, $message): void
     {
-        $buttons = isset($message->whatsapp_buttons) ? $message->whatsapp_buttons : [];
+        $buttons = $this->filterWhatsappButtonsForMessage($message);
 
         if ($message->message_type === 'image' || $message->message_type === 'file') {
             $this->openClawWhatsappService->sendMedia($user, $message->content, '', $buttons);
@@ -159,6 +159,28 @@ class OpenClawWebhookController extends Controller
         }
 
         $this->openClawWhatsappService->sendText($user, $message->content, $buttons);
+    }
+
+    private function filterWhatsappButtonsForMessage($message): array
+    {
+        $buttons = isset($message->whatsapp_buttons) ? $message->whatsapp_buttons : [];
+        $content = trim((string) ($message->content ?? ''));
+
+        if ($content === '' || empty($buttons)) {
+            return $buttons;
+        }
+
+        $normalized = strtolower(strip_tags($content));
+
+        if (
+            str_contains($normalized, 'balas dengan nama menu yang kamu pilih') ||
+            str_contains($normalized, 'balas dengan nama submenu yang kamu pilih') ||
+            str_contains($normalized, 'silakan pilih salah satu menu utama berikut')
+        ) {
+            return [];
+        }
+
+        return $buttons;
     }
 
     private function findOrCreateWhatsappUser(array $message): User
