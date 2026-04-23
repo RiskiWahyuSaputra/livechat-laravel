@@ -15,15 +15,18 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
 use App\Models\User;
+use App\Services\ConversationFlowService;
 use App\Services\GeminiService;
 
 class ChatController extends Controller
 {
     protected $geminiService;
+    protected $conversationFlowService;
 
-    public function __construct(GeminiService $geminiService)
+    public function __construct(GeminiService $geminiService, ConversationFlowService $conversationFlowService)
     {
         $this->geminiService = $geminiService;
+        $this->conversationFlowService = $conversationFlowService;
     }
 
     /**
@@ -68,7 +71,8 @@ class ChatController extends Controller
             ->first();
 
         if (!$activeConversation) {
-            $activeConversation = $this->createConversation($user);
+            $result = $this->conversationFlowService->createConversation($user);
+            $activeConversation = $result['conversation'];
         }
 
         // Ambil pesan awal agar tidak kosong saat render
@@ -93,6 +97,68 @@ class ChatController extends Controller
             'messages' => $messages,
             'botCategories' => config('chat.complaint_categories'),
         ]);
+    }
+
+    /**
+     * Tampilkan form registrasi khusus WhatsApp
+     */
+    public function showWhatsappRegister($token)
+    {
+        $user = User::where('registration_token', $token)->firstOrFail();
+        return view('chat.whatsapp_register', ['token' => $token, 'user' => $user]);
+    }
+
+    /**
+     * Simpan data registrasi WhatsApp dan hubungkan ke Agent
+     */
+    public function submitWhatsappRegister(Request $request)
+    {
+        $request->validate([
+            'token'  => 'required|string',
+            'name'   => 'required|string|max:255',
+            'origin' => 'required|string|max:255',
+        ]);
+
+        $user = User::where('registration_token', $request->token)->firstOrFail();
+        
+        $user->update([
+            'name'   => $request->name,
+            'origin' => $request->origin,
+            'registration_token' => null, // Clear token after use
+        ]);
+
+        // Cari percakapan aktif
+        $activeConversation = $user->conversations()
+            ->whereIn('status', ['pending', 'active', 'queued'])
+            ->first();
+
+        if ($activeConversation) {
+            $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $activeConversation->id)->count();
+            
+            $activeConversation->update([
+                'bot_phase' => 'off',
+                'queue_position' => $queueCount
+            ]);
+
+            $msg = Message::create([
+                'conversation_id' => $activeConversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "Terima kasih, data Anda sudah kami terima. Anda sekarang ada di antrean ke-{$queueCount} untuk terhubung dengan Agent.",
+            ]);
+
+            // Kirim notifikasi konfirmasi ke WhatsApp juga
+            $whatsappService = app(\App\Services\OpenClawWhatsappService::class);
+            $whatsappService->sendText($user, "Terima kasih {$user->name}, data Anda sudah dikonfirmasi. Tunggu sebentar ya, saya sedang menyambungkan Anda ke Agent.");
+
+            try {
+                broadcast(new MessageSent($msg));
+                broadcast(new ConversationStatusChanged($activeConversation, 'system'));
+            } catch (\Exception $e) {}
+        }
+
+        return view('chat.whatsapp_register_success');
     }
 
     /**
@@ -137,7 +203,8 @@ class ChatController extends Controller
             ->first();
 
         if (!$activeConversation) {
-            $activeConversation = $this->createConversation($user, $request->selected_option);
+            $result = $this->conversationFlowService->createConversation($user, $request->selected_option);
+            $activeConversation = $result['conversation'];
         }
 
         if ($request->expectsJson()) {
@@ -182,7 +249,8 @@ class ChatController extends Controller
         Auth::guard('web')->login($user, true);
 
         // Pastikan conversation otomatis dibuat
-        $activeConversation = $this->createConversation($user, $request->selected_option);
+        $result = $this->conversationFlowService->createConversation($user, $request->selected_option);
+        $activeConversation = $result['conversation'];
         
         // Atur agar langsung ke fase bot 'awaiting_submenu' atau sesuai menu yang dipencet
         if ($request->selected_option) {
@@ -377,7 +445,8 @@ class ChatController extends Controller
                 ->first();
 
             if (!$activeConversation) {
-                $activeConversation = $this->createConversation($user);
+                $result = $this->conversationFlowService->createConversation($user);
+                $activeConversation = $result['conversation'];
             }
 
             $allConversations = $user->conversations()->withTrashed()->pluck('id');
@@ -408,7 +477,7 @@ class ChatController extends Controller
                 'bot_phase'    => $activeConversation->bot_phase,
                 'botCategories' => config('chat.complaint_categories'),
                 'bot_submenus' => ($activeConversation->bot_phase === 'awaiting_submenu') 
-                    ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label])
+                    ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id])
                     : []
             ]));
         } catch (\Exception $e) {
@@ -439,7 +508,8 @@ class ChatController extends Controller
         if ($conversation->user_id != $user->id) return response()->json(['error' => 'Akses ditolak.'], 403);
 
         if (!$conversation->isOpen() || $conversation->trashed()) {
-            $conversation = $this->createConversation($user);
+            $result = $this->conversationFlowService->createConversation($user);
+            $conversation = $result['conversation'];
         }
 
         $messageType = 'text';
@@ -454,30 +524,17 @@ class ChatController extends Controller
             $content = asset('storage/' . $path);
         }
 
-        $message = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id'       => $user->id,
-            'sender_type'     => 'user',
-            'message_type'    => $messageType,
-            'content'         => $content ?? '',
-        ]);
+        $result = $this->conversationFlowService->processInboundMessage(
+            user: $user,
+            conversation: $conversation,
+            content: $content ?? '',
+            messageType: $messageType,
+            broadcast: true
+        );
 
-        $conversation->update([
-            'last_message_at' => now(),
-            'reminder_count' => 0,
-        ]);
-
-        try {
-            broadcast(new MessageSent($message));
-        } catch (\Exception $e) { 
-            \Log::error('Broadcast failed', ['error' => $e->getMessage()]); 
-        }
-
-        // Tangani Bot Response dan kumpulkan untuk dikirim di JSON
-        $botReplies = [];
-        if ($conversation->bot_phase !== 'off' || is_null($conversation->admin_id)) {
-            $botReplies = $this->handleBotResponse($conversation, $message->content);
-        }
+        $message = $result['message'];
+        $botReplies = $result['bot_replies'];
+        $botSubmenus = $result['submenus'] ?? [];
 
         return response()->json([
             'success' => true,
@@ -488,7 +545,8 @@ class ChatController extends Controller
                 'created_at'   => $message->created_at->format('H:i'),
             ],
             'bot_replies' => $botReplies,
-            'bot_phase'   => $conversation->fresh()->bot_phase
+            'bot_phase'   => $result['bot_phase'],
+            'bot_submenus' => $botSubmenus,
         ]);
     }
 
@@ -513,7 +571,7 @@ class ChatController extends Controller
         return response()->json(['success' => true]);
     }
 
-    private function handleBotResponse($conversation, $userMessage)
+}
     {
         $newBotMessages = [];
         $botCategories = config('chat.complaint_categories');
@@ -777,6 +835,11 @@ class ChatController extends Controller
     private function createAiReplyMessages(Conversation $conversation, string $userMessage, string $aiResponse): array
     {
         $messages = [];
+        $productImage = $this->detectProductImageForMessage($userMessage);
+
+        if ($productImage) {
+            $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
+        }
 
         $messages[] = Message::create([
             'conversation_id' => $conversation->id,
@@ -786,8 +849,7 @@ class ChatController extends Controller
             'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
         ]);
 
-        $productImage = $this->detectProductImageForMessage($userMessage);
-        if ($productImage) {
+        if ($productImage && $this->shouldAttachProductImage($aiResponse)) {
             $messages[] = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
@@ -801,16 +863,67 @@ class ChatController extends Controller
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'image',
-                'content'         => asset('images/' . $productImage['file']),
+                'content'         => asset('images/produk/' . $productImage['file']),
             ]);
         }
 
         return $messages;
     }
 
+    private function normalizeAiResponseForProductImage(string $aiResponse, string $label): string
+    {
+        if (!$this->responseConflictsWithProductImage($aiResponse)) {
+            return $aiResponse;
+        }
+
+        return "Berikut gambaran produk {$label} dari PT BEST CORPORATION SYARIAH. Kalau kamu mau, saya juga bisa bantu jelaskan detail manfaat, kategori, atau informasi lanjutannya.";
+    }
+
+    private function shouldAttachProductImage(string $aiResponse): bool
+    {
+        return !$this->responseConflictsWithProductImage($aiResponse);
+    }
+
+    private function responseConflictsWithProductImage(string $aiResponse): bool
+    {
+        $normalized = strtolower(strip_tags($aiResponse));
+
+        $conflictingPhrases = [
+            'tidak bisa langsung memberikan foto',
+            'tidak bisa memberikan foto',
+            'tidak bisa kirim foto',
+            'tidak bisa mengirim foto',
+            'tidak dapat menampilkan gambar',
+            'tidak bisa menampilkan gambar',
+            'belum memiliki detail data untuk menampilkan gambar',
+            'tidak memiliki gambar',
+            'tidak punya gambar',
+            'maaf, saya tidak bisa langsung',
+        ];
+
+        foreach ($conflictingPhrases as $phrase) {
+            if (str_contains($normalized, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function detectProductImageForMessage(string $message): ?array
     {
         $normalized = strtolower($message);
+        $genericProductIntentKeywords = [
+            'produk',
+            'product',
+            'kategori produk',
+            'jenis produk',
+            'katalog',
+            'catalog',
+            'gambar produk',
+            'foto produk',
+            'barang',
+        ];
 
         $productMap = [
             [
@@ -846,7 +959,16 @@ class ChatController extends Controller
             }
         }
 
-        if (str_contains($normalized, 'produk') || str_contains($normalized, 'best')) {
+        foreach ($genericProductIntentKeywords as $keyword) {
+            if (str_contains($normalized, $keyword)) {
+                return [
+                    'file' => 'produk-best.png',
+                    'label' => 'BEST',
+                ];
+            }
+        }
+
+        if (str_contains($normalized, 'best') && str_contains($normalized, 'produk')) {
             return [
                 'file' => 'produk-best.png',
                 'label' => 'BEST',

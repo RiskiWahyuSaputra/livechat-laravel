@@ -23,7 +23,7 @@
     </style>
 </head>
     <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
-      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() ?: 'null' }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}', {{ Js::from($botCategories) }})">
+      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() ?: 'null' }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}', {{ Js::from($botCategories) }}, {{ Js::from($activeConversation->bot_phase === 'awaiting_submenu' ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id]) : []) }})">
 
     <!-- Header Navbar Minimalist -->
     <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
@@ -157,14 +157,44 @@
                             <!-- Bot Transfer Options (Muncul di pesan bot terakhir saat fase offer_agent_transfer) -->
                             <template x-if="msg.sender_id == 0 && botPhase === 'offer_agent_transfer' && isLastBotMessage(index, messages)">
                                 <div class="mt-3 flex flex-col sm:flex-row gap-2 w-full">
-                                    <button @click="selectOption('LANJUT')" 
+                                    <button @click="selectOption('Tanya BEST AI')" 
                                             class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-2">
-                                        <i class="fas fa-comment-dots"></i> Tanya Lagi
+                                        <i class="fas fa-comment-dots"></i> Tanya BEST AI
                                     </button>
-                                    <button @click="selectOption('AGENT')" 
+                                    <button @click="selectOption('Hubungi Agent')" 
                                             class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[11px] font-bold transition-all shadow-md flex-1 text-center flex items-center justify-center gap-2">
                                         <i class="fas fa-headset"></i> Hubungi Agent
                                     </button>
+                                </div>
+                            </template>
+
+                            <!-- Bot Initial Chat Options (Muncul di pesan bot terakhir saat fase chatting_with_ai) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'chatting_with_ai' && isLastBotMessage(index, messages)">
+                                <div class="mt-3 flex flex-col sm:flex-row gap-2 w-full">
+                                    <button @click="selectOption('Tanya BEST AI')" 
+                                            class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-2">
+                                        <i class="fas fa-comment-dots"></i> Tanya BEST AI
+                                    </button>
+                                    <button @click="selectOption('Hubungi Agent')" 
+                                            class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[11px] font-bold transition-all shadow-md flex-1 text-center flex items-center justify-center gap-2">
+                                        <i class="fas fa-headset"></i> Hubungi Agent
+                                    </button>
+                                </div>
+                            </template>
+
+                            <!-- Bot Submenu Options (Muncul di pesan bot terakhir saat fase awaiting_submenu) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_submenu' && isLastBotMessage(index, messages)">
+                                <div class="mt-3 flex flex-wrap gap-2 w-full">
+                                    <template x-for="sub in botSubmenus.filter(s => {
+                                        // Filter only submenus that belong to the menu just picked by user
+                                        let lastUserMsg = [...messages].reverse().find(m => m.sender_type === 'user');
+                                        return lastUserMsg && String(lastUserMsg.content).toLowerCase().trim() === 'hubungi cs' ? s.parent_id == 13 : true;
+                                    })" :key="sub.id">
+                                        <button @click="selectOption(sub.label)" 
+                                                class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 min-w-[140px] text-center">
+                                            <span x-text="sub.label"></span>
+                                        </button>
+                                    </template>
                                 </div>
                             </template>
                         </div>
@@ -224,12 +254,13 @@
     <!-- Logic Alpine JS Tetap Sama, Tidak Diubah -->
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase, botCategories) => ({
+            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase, botCategories, initialSubmenus) => ({
                 conversationId: conversationId,
                 userId: userId,
                 status: initialStatus,
                 messages: initialMessages,
                 botPhase: initialBotPhase || 'off',
+                botSubmenus: initialSubmenus || [],
                 newMessage: '',
                 isSending: false,
                 isTyping: false,
@@ -254,6 +285,7 @@
                                 console.log('🔄 Polling sync: status berubah dari', this.status, '→', data.conversation.status);
                                 this.status = data.conversation.status;
                                 if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                                if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                             }
                         } catch (e) { /* silent */ }
                     }, 20000);
@@ -300,6 +332,7 @@
                                 if (data.conversation) {
                                     this.status = data.conversation.status;
                                     if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                                    if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                                 }
                                 if (data.messages) {
                                     this.messages = data.messages;
@@ -410,6 +443,9 @@
                             // Sync botPhase dari response backend (SINGLE SOURCE OF TRUTH)
                             if (data.bot_phase) {
                                 this.botPhase = data.bot_phase;
+                            }
+                            if (data.bot_submenus) {
+                                this.botSubmenus = data.bot_submenus;
                             }
                         }
 

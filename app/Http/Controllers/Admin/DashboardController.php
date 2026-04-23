@@ -13,6 +13,7 @@ use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Services\MessageSearchService;
+use App\Services\OpenClawWhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -20,10 +21,12 @@ use Carbon\Carbon;
 class DashboardController extends Controller
 {
     protected $analyticsService;
+    protected $openClawWhatsappService;
 
-    public function __construct(AnalyticsService $analyticsService)
+    public function __construct(AnalyticsService $analyticsService, OpenClawWhatsappService $openClawWhatsappService)
     {
         $this->analyticsService = $analyticsService;
+        $this->openClawWhatsappService = $openClawWhatsappService;
     }
 
     /**
@@ -365,6 +368,14 @@ class DashboardController extends Controller
         try {
             broadcast(new MessageSent($message));
             \Log::info('Admin Broadcast MessageSent success');
+
+            if ($messageType !== 'whisper' && $conversation->customer && $conversation->customer->origin === 'WhatsApp') {
+                if ($messageType === 'text') {
+                    $this->openClawWhatsappService->sendText($conversation->customer, $content ?? '');
+                } elseif (in_array($messageType, ['image', 'file'], true)) {
+                    $this->openClawWhatsappService->sendMedia($conversation->customer, $content ?? '');
+                }
+            }
         } catch (\Exception $e) {
             \Log::error('Admin Broadcast MessageSent failed', ['error' => $e->getMessage()]);
         }

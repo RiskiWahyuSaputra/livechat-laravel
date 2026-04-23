@@ -27,7 +27,7 @@ class OpenClawService
 
     public function isConfigured(): bool
     {
-        return $this->baseUrl !== '' && $this->hookToken !== '';
+        return $this->baseUrl !== '';
     }
 
     public function ask(string $prompt, string $systemInstruction = ''): ?string
@@ -49,11 +49,15 @@ class OpenClawService
                 $payload['model'] = $this->model;
             }
 
-            $response = Http::withoutVerifying()
+            $request = Http::withoutVerifying()
                 ->acceptJson()
-                ->withToken($this->hookToken)
-                ->timeout($this->timeoutSeconds + 5)
-                ->post($this->baseUrl . $this->hookPath, $payload);
+                ->timeout($this->timeoutSeconds + 5);
+
+            if ($this->hookToken !== '') {
+                $request = $request->withToken($this->hookToken);
+            }
+
+            $response = $request->post($this->baseUrl . $this->hookPath, $payload);
 
             if (!$response->successful()) {
                 Log::warning('OpenClaw hook request gagal.', [

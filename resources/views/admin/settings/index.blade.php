@@ -72,6 +72,43 @@
                         <input type="number" min="5" name="openclaw_timeout_seconds" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_timeout_seconds'] ?? env('OPENCLAW_TIMEOUT_SECONDS', 30) }}">
                         <small class="text-muted mt-1 d-block">Batas tunggu website saat menunggu jawaban OpenClaw.</small>
                     </div>
+                    <hr class="my-4">
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw WhatsApp Enabled</label>
+                        <select name="openclaw_whatsapp_enabled" class="form-select form-select-lg bg-light border-0 py-3 cursor-pointer">
+                            <option value="1" {{ (string) ($settings['openclaw_whatsapp_enabled'] ?? env('OPENCLAW_WHATSAPP_ENABLED', '1')) === '1' ? 'selected' : '' }}>Aktif</option>
+                            <option value="0" {{ (string) ($settings['openclaw_whatsapp_enabled'] ?? env('OPENCLAW_WHATSAPP_ENABLED')) === '0' ? 'selected' : '' }}>Nonaktif</option>
+                        </select>
+                        <small class="text-muted mt-1 d-block">Aktifkan jika OpenClaw juga akan menangani jalur WhatsApp.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw CLI Path</label>
+                        <input type="text" name="openclaw_cli_path" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_cli_path'] ?? env('OPENCLAW_CLI_PATH', 'openclaw') }}" placeholder="openclaw">
+                        <small class="text-muted mt-1 d-block">Path binary OpenClaw pada server Laravel untuk kirim pesan outbound WhatsApp.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw WhatsApp Channel</label>
+                        <input type="text" name="openclaw_whatsapp_channel" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_whatsapp_channel'] ?? env('OPENCLAW_WHATSAPP_CHANNEL', 'whatsapp') }}" placeholder="whatsapp">
+                        <small class="text-muted mt-1 d-block">Nama channel yang dipakai command `openclaw message send`.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw WhatsApp Account</label>
+                        <input type="text" name="openclaw_whatsapp_account" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_whatsapp_account'] ?? env('OPENCLAW_WHATSAPP_ACCOUNT') }}" placeholder="Opsional">
+                        <small class="text-muted mt-1 d-block">Isi jika instance WhatsApp OpenClaw Anda memakai account atau session tertentu.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Bridge Token</label>
+                        <input type="password" name="openclaw_bridge_token" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_bridge_token'] ?? env('OPENCLAW_BRIDGE_TOKEN') }}">
+                        <small class="text-muted mt-1 d-block">Token untuk mengamankan webhook masuk dari OpenClaw ke Laravel.</small>
+                    </div>
+                    <div class="form-group mb-1">
+                        <label class="form-label fw-bold text-info"><i class="fe fe-link"></i> OpenClaw WhatsApp Webhook URL</label>
+                        <div class="input-group input-group-lg">
+                            <input type="text" id="openclawWebhookUrl" class="form-control bg-white border-info text-dark" value="{{ url('/api/webhook/openclaw/whatsapp') }}" readonly>
+                            <button class="btn btn-info text-white fw-bold px-4" type="button" onclick="navigator.clipboard.writeText(document.getElementById('openclawWebhookUrl').value); alert('Tautan Webhook OpenClaw tersalin!');"><i class="fe fe-copy me-1"></i> Copy</button>
+                        </div>
+                        <small class="text-muted mt-2 d-block">Pakai URL ini pada hook OpenClaw agar pesan WhatsApp masuk mengikuti flow chat website yang sama.</small>
+                    </div>
                 </div>
             </div>
 

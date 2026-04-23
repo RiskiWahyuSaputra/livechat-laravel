@@ -617,7 +617,8 @@
                 this.isLoading = true;
                 this.regError = '';
                 try {
-                    const response = await fetch('{{ route('chat.register') }}', {
+                    const url = this.isAuthenticated ? '{{ route('chat.updateProfile') }}' : '{{ route('chat.register') }}';
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': this.csrfToken,
@@ -634,9 +635,10 @@
                         this.showRegForm = false;
                         this.isAuthenticated = true;
                         // Update UI data instantly
-                        this.user.name = data.user.name;
-                        this.user.origin = data.user.origin || 'Pelanggan';
-                        this.user.initial = data.user.name.charAt(0).toUpperCase();
+                        if (data.user) {
+                            this.user.name = data.user.name;
+                            this.user.initial = data.user.name.charAt(0).toUpperCase();
+                        }
                         
                         // Fetch the rest of chat data (conversation, etc)
                         await this.fetchChatData();
