@@ -17,10 +17,22 @@ class Setting extends Model
      */
     public static function get($key, $default = null)
     {
-        return Cache::rememberForever('setting_' . $key, function () use ($key, $default) {
-            $setting = self::where('key', $key)->first();
-            return $setting ? $setting->value : ($default ?? config($key));
-        });
+        $cacheKey = 'setting_' . $key;
+        $missing = '__setting_cache_missing__';
+        $cached = Cache::get($cacheKey, $missing);
+
+        if ($cached !== $missing) {
+            return $cached;
+        }
+
+        $setting = self::where('key', $key)->first();
+
+        if ($setting) {
+            Cache::forever($cacheKey, $setting->value);
+            return $setting->value;
+        }
+
+        return $default ?? config($key);
     }
 
     /**

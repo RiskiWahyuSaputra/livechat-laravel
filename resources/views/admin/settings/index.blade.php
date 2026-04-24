@@ -97,6 +97,11 @@
                         <small class="text-muted mt-1 d-block">Isi jika instance WhatsApp OpenClaw Anda memakai account atau session tertentu.</small>
                     </div>
                     <div class="form-group mb-3">
+                        <label class="form-label fw-bold opacity-75">OpenClaw Public Base URL</label>
+                        <input type="text" name="openclaw_public_base_url" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_public_base_url'] ?? env('OPENCLAW_PUBLIC_BASE_URL') }}" placeholder="https://xxxx.ngrok-free.app">
+                        <small class="text-muted mt-1 d-block">Harus mengarah ke URL publik aplikasi Laravel Anda agar file di `public/images/...` bisa diambil gateway WhatsApp. Jangan isi dengan URL gateway OpenClaw bila port tunnel-nya berbeda.</small>
+                    </div>
+                    <div class="form-group mb-3">
                         <label class="form-label fw-bold opacity-75">OpenClaw Bridge Token</label>
                         <input type="password" name="openclaw_bridge_token" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_bridge_token'] ?? env('OPENCLAW_BRIDGE_TOKEN') }}">
                         <small class="text-muted mt-1 d-block">Token untuk mengamankan webhook masuk dari OpenClaw ke Laravel.</small>
