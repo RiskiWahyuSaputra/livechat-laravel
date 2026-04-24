@@ -316,8 +316,7 @@ class ConversationFlowService
                 ]);
             }
         } elseif ($conversation->bot_phase === 'chatting_with_ai') {
-            $normalizedMsg = strtoupper(trim($userMessage));
-            if ($normalizedMsg === 'AGENT' || str_contains($normalizedMsg, 'HUBUNGI AGENT')) {
+            if ($this->wantsAgentTransfer($userMessage)) {
                 if ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
                     $newBotMessages[] = Message::create([
@@ -360,8 +359,7 @@ class ConversationFlowService
                 $newBotMessages[] = $msg;
             }
         } elseif ($conversation->bot_phase === 'offer_agent_transfer') {
-            $normalizedMsg = strtoupper(trim($userMessage));
-            if ($normalizedMsg === 'AGENT' || str_contains($normalizedMsg, 'HUBUNGI AGENT')) {
+            if ($this->wantsAgentTransfer($userMessage)) {
                 if ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
                     $newBotMessages[] = Message::create([
@@ -382,7 +380,7 @@ class ConversationFlowService
                         'content' => "Oke, saya sambungkan ke Agent ya. Kamu sekarang ada di antrean ke-{$queueCount}. Tunggu sebentar ya.",
                     ]);
                 }
-            } elseif ($normalizedMsg === 'LANJUT' || str_contains($normalizedMsg, 'LANJUT TANYA') || str_contains($normalizedMsg, 'TANYA BEST AI')) {
+            } elseif ($this->wantsContinueWithAi($userMessage)) {
                 $newBotMessages[] = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id' => 0,
@@ -570,6 +568,54 @@ class ConversationFlowService
     private function isAiFallbackResponse(string $aiResponse): bool
     {
         return $this->geminiService->isFallbackResponse($aiResponse);
+    }
+
+    private function wantsAgentTransfer(string $userMessage): bool
+    {
+        $normalized = $this->normalizeBotInput($userMessage);
+
+        if (in_array($normalized, [
+            '2',
+            'agent',
+            'hubungi agent',
+            'hubungin agent',
+            'hubungi cs',
+            'hubungin cs',
+            'cs',
+            'customer service',
+        ], true)) {
+            return true;
+        }
+
+        return str_contains($normalized, 'agent')
+            || str_contains($normalized, 'customer service');
+    }
+
+    private function wantsContinueWithAi(string $userMessage): bool
+    {
+        $normalized = $this->normalizeBotInput($userMessage);
+
+        if (in_array($normalized, [
+            '1',
+            'lanjut',
+            'lanjut tanya',
+            'tanya best ai',
+            'best ai',
+            'tanya ai',
+        ], true)) {
+            return true;
+        }
+
+        return str_contains($normalized, 'lanjut')
+            || str_contains($normalized, 'tanya best ai');
+    }
+
+    private function normalizeBotInput(string $userMessage): string
+    {
+        $normalized = mb_strtolower(trim(strip_tags($userMessage)));
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+
+        return trim((string) $normalized);
     }
 
     private function normalizeAiResponseForProductImage(string $aiResponse, string $label): string

@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\BotMenu;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\User;
 use App\Services\ConversationFlowService;
 use App\Services\OpenClawWhatsappService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class OpenClawWebhookController extends Controller
 {
@@ -211,8 +214,6 @@ class OpenClawWebhookController extends Controller
 
     private function normalizePayload(array $payload): ?array
     {
-        $context = $payload['context'] ?? $payload['message'] ?? $payload;
-
         $channel = strtolower((string) ($this->extractValue($payload, ['context.channelId', 'channel', 'context.channel', 'source.channel']) ?? 'whatsapp'));
         if ($channel !== 'whatsapp') {
             return null;
@@ -248,14 +249,95 @@ class OpenClawWebhookController extends Controller
 
         $mediaUrl = (string) ($this->extractValue($payload, [
             'context.mediaUrl',
+            'context.fileUrl',
             'mediaUrl',
+            'fileUrl',
             'context.attachment.url',
+            'context.attachment.mediaUrl',
+            'context.attachment.fileUrl',
+            'context.attachment.downloadUrl',
             'attachment.url',
+            'attachment.mediaUrl',
+            'attachment.fileUrl',
+            'attachment.downloadUrl',
+            'context.media.url',
+            'context.media.mediaUrl',
+            'context.media.fileUrl',
+            'media.url',
+            'media.mediaUrl',
+            'media.fileUrl',
+            'message.mediaUrl',
+            'message.fileUrl',
+            'message.attachment.url',
+            'message.attachment.mediaUrl',
+            'message.attachment.fileUrl',
+            'message.attachment.downloadUrl',
+            'context.attachments.0.url',
+            'context.attachments.0.mediaUrl',
+            'context.attachments.0.fileUrl',
+            'context.attachments.0.downloadUrl',
+            'context.message.attachments.0.url',
+            'context.message.attachments.0.mediaUrl',
+            'context.message.attachments.0.fileUrl',
+            'context.message.attachments.0.downloadUrl',
+            'context.metadata.attachment.url',
+            'context.metadata.attachment.mediaUrl',
+            'context.metadata.attachment.fileUrl',
+            'context.metadata.attachment.downloadUrl',
+            'context.metadata.attachments.0.url',
+            'context.metadata.attachments.0.mediaUrl',
+            'context.metadata.attachments.0.fileUrl',
+            'context.metadata.attachments.0.downloadUrl',
+            'context.metadata.mediaUrl',
+            'context.metadata.fileUrl',
         ]) ?? '');
 
-        if ($content === '' && $mediaUrl !== '') {
+        $mediaPath = (string) ($this->extractValue($payload, [
+            'context.mediaPath',
+            'context.filePath',
+            'mediaPath',
+            'filePath',
+            'context.attachment.path',
+            'context.attachment.filePath',
+            'context.attachment.localPath',
+            'context.attachment.savedPath',
+            'attachment.path',
+            'attachment.filePath',
+            'attachment.localPath',
+            'attachment.savedPath',
+            'context.media.path',
+            'context.media.filePath',
+            'media.path',
+            'media.filePath',
+            'message.attachment.path',
+            'message.attachment.filePath',
+            'context.attachments.0.path',
+            'context.attachments.0.filePath',
+            'context.message.attachments.0.path',
+            'context.message.attachments.0.filePath',
+            'context.metadata.attachment.path',
+            'context.metadata.attachment.filePath',
+            'context.metadata.attachments.0.path',
+            'context.metadata.attachments.0.filePath',
+        ]) ?? '');
+
+        $mediaMarkerType = $this->extractMediaMarkerType($content);
+
+        if ($mediaUrl !== '') {
             $content = $mediaUrl;
-            $messageType = str_contains($messageType, 'image') ? 'image' : 'file';
+            $messageType = $this->normalizeInboundMessageType($messageType, $mediaMarkerType, true, $mediaUrl);
+        } elseif ($mediaPath !== '') {
+            $importedMediaUrl = $this->importInboundMediaFromLocalPath($mediaPath);
+            if ($importedMediaUrl !== null) {
+                $content = $importedMediaUrl;
+                $messageType = $this->normalizeInboundMessageType($messageType, $mediaMarkerType, true, $importedMediaUrl);
+            } elseif ($mediaMarkerType !== null) {
+                $content = $this->buildMissingMediaPlaceholder($mediaMarkerType);
+                $messageType = $this->normalizeInboundMessageType($messageType, $mediaMarkerType, false);
+            }
+        } elseif ($mediaMarkerType !== null) {
+            $content = $this->buildMissingMediaPlaceholder($mediaMarkerType);
+            $messageType = $this->normalizeInboundMessageType($messageType, $mediaMarkerType, false);
         }
 
         if ($content === '' || $from === '') {
@@ -298,6 +380,113 @@ class OpenClawWebhookController extends Controller
         }
 
         return null;
+    }
+
+    private function extractMediaMarkerType(string $content): ?string
+    {
+        $normalized = trim(mb_strtolower($content));
+
+        if (preg_match('/^<media:([a-z0-9_-]+)>$/', $normalized, $matches) !== 1) {
+            return null;
+        }
+
+        return $matches[1] ?? null;
+    }
+
+    private function normalizeInboundMessageType(string $messageType, ?string $mediaMarkerType, bool $hasMediaUrl, ?string $mediaUrl = null): string
+    {
+        $normalizedType = trim(mb_strtolower($messageType));
+        $markerType = trim(mb_strtolower((string) $mediaMarkerType));
+
+        if (
+            str_contains($normalizedType, 'image')
+            || $markerType === 'image'
+            || $markerType === 'photo'
+            || $this->isImageMediaUrl($mediaUrl)
+        ) {
+            return 'image';
+        }
+
+        if ($hasMediaUrl || $markerType !== '') {
+            return 'file';
+        }
+
+        return 'text';
+    }
+
+    private function isImageMediaUrl(?string $mediaUrl): bool
+    {
+        $url = trim(mb_strtolower((string) $mediaUrl));
+        if ($url === '') {
+            return false;
+        }
+
+        return preg_match('/\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/', $url) === 1;
+    }
+
+    private function importInboundMediaFromLocalPath(string $mediaPath): ?string
+    {
+        $realPath = realpath($mediaPath);
+        if ($realPath === false || !is_file($realPath)) {
+            return null;
+        }
+
+        $allowedRoots = array_values(array_filter(array_map(
+            fn ($path) => $path ? realpath($path) : false,
+            [
+                env('OPENCLAW_STATE_DIR'),
+                storage_path('app'),
+            ]
+        )));
+
+        $normalizedPath = str_replace('\\', '/', $realPath);
+        $isAllowed = collect($allowedRoots)->contains(function ($root) use ($normalizedPath) {
+            $normalizedRoot = str_replace('\\', '/', (string) $root);
+
+            return $normalizedRoot !== '' && str_starts_with($normalizedPath, rtrim($normalizedRoot, '/') . '/');
+        });
+
+        if (!$isAllowed) {
+            Log::warning('OpenClaw inbound media path diabaikan karena berada di luar root yang diizinkan.', [
+                'path' => $realPath,
+            ]);
+
+            return null;
+        }
+
+        $extension = strtolower((string) pathinfo($realPath, PATHINFO_EXTENSION));
+        if ($extension === '') {
+            $mime = @mime_content_type($realPath) ?: '';
+            $extension = match ($mime) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/gif' => 'gif',
+                'image/webp' => 'webp',
+                default => 'bin',
+            };
+        }
+
+        $relativePath = 'whatsapp-inbound/' . now()->format('Y/m') . '/' . Str::uuid() . '.' . $extension;
+
+        try {
+            Storage::disk('public')->put($relativePath, file_get_contents($realPath));
+
+            return Storage::disk('public')->url($relativePath);
+        } catch (\Throwable $e) {
+            Log::warning('Gagal mengimpor media inbound WhatsApp dari path lokal.', [
+                'path' => $realPath,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function buildMissingMediaPlaceholder(string $mediaMarkerType): string
+    {
+        $type = trim(mb_strtolower($mediaMarkerType));
+
+        return 'whatsapp-media-placeholder:' . ($type !== '' ? $type : 'file');
     }
 
     private function normalizeContact(string $from): string
