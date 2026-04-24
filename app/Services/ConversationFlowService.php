@@ -10,6 +10,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class ConversationFlowService
 {
@@ -344,7 +345,7 @@ class ConversationFlowService
             $conversation->update(['bot_phase' => 'offer_agent_transfer']);
             $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
 
-            if (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+            if (!$this->isAiFallbackResponse($aiResponse)) {
                 $msg = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id' => 0,
@@ -401,7 +402,7 @@ class ConversationFlowService
                 $aiResponse = $this->geminiService->askGemini($userMessage, 'Pertanyaan pelanggan lanjutan ke BEST AI: ');
                 $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
 
-                if ($recentBotAsks >= 2 && !str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                if ($recentBotAsks >= 2 && !$this->isAiFallbackResponse($aiResponse)) {
                     $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                     $msg = Message::create([
                         'conversation_id' => $conversation->id,
@@ -414,7 +415,7 @@ class ConversationFlowService
                         ['type' => 'reply', 'reply' => ['id' => 'agent', 'title' => 'Hubungi Agent']]
                     ];
                     $newBotMessages[] = $msg;
-                } elseif (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                } elseif (!$this->isAiFallbackResponse($aiResponse)) {
                     $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                     $msg = Message::create([
                         'conversation_id' => $conversation->id,
@@ -530,8 +531,9 @@ class ConversationFlowService
     {
         $messages = [];
         $productImage = $this->detectProductImageForMessage($userMessage);
+        $isFallbackResponse = $this->isAiFallbackResponse($aiResponse);
 
-        if ($productImage) {
+        if ($productImage && !$isFallbackResponse) {
             $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
         }
 
@@ -544,7 +546,7 @@ class ConversationFlowService
         ]);
         $messages[] = $msg;
 
-        if ($productImage && $this->shouldAttachProductImage($aiResponse)) {
+        if ($productImage && !$isFallbackResponse && $this->shouldAttachProductImage($aiResponse)) {
             $messages[] = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id' => 0,
@@ -563,6 +565,11 @@ class ConversationFlowService
         }
 
         return $messages;
+    }
+
+    private function isAiFallbackResponse(string $aiResponse): bool
+    {
+        return $this->geminiService->isFallbackResponse($aiResponse);
     }
 
     private function normalizeAiResponseForProductImage(string $aiResponse, string $label): string
