@@ -291,6 +291,26 @@ class DashboardController extends Controller
             'content'         => "Chat Anda sedang diproses oleh {$admin->username}. Silakan mulai berbicara.",
         ]);
 
+        $customer = $conversation->customer;
+        if (
+            $customer
+            && !empty($customer->contact)
+            && mb_strtolower((string) $customer->origin) === 'whatsapp'
+        ) {
+            $sent = $this->openClawWhatsappService->sendText(
+                $customer,
+                "Chat kamu sekarang sedang ditangani oleh {$admin->username}. Silakan lanjutkan pesanmu ya."
+            );
+
+            if (!$sent) {
+                \Log::warning('Notifikasi claim conversation ke WhatsApp gagal dikirim.', [
+                    'conversation_id' => $conversation->id,
+                    'user_id' => $customer->id,
+                    'admin_id' => $admin->id,
+                ]);
+            }
+        }
+
         try {
             broadcast(new MessageSent($sysMessage));
             // Penting: Broadcast agar sidebar admin lain dan dashboard user terupdate
@@ -431,6 +451,27 @@ class DashboardController extends Controller
             'content'         => "Chat diteruskan dari {$fromAdmin->username} ke {$toAdmin->username}.",
         ]);
 
+        $customer = $conversation->customer;
+        if (
+            $customer
+            && !empty($customer->contact)
+            && mb_strtolower((string) $customer->origin) === 'whatsapp'
+        ) {
+            $sent = $this->openClawWhatsappService->sendText(
+                $customer,
+                "Chat kamu sekarang diteruskan dari {$fromAdmin->username} ke {$toAdmin->username}. Silakan lanjutkan pesanmu ya."
+            );
+
+            if (!$sent) {
+                \Log::warning('Notifikasi handover conversation ke WhatsApp gagal dikirim.', [
+                    'conversation_id' => $conversation->id,
+                    'user_id' => $customer->id,
+                    'from_admin_id' => $fromAdmin->id,
+                    'to_admin_id' => $toAdmin->id,
+                ]);
+            }
+        }
+
         broadcast(new MessageSent($sysMessage));
         broadcast(new ConversationStatusChanged($conversation, $fromAdmin->username));
 
@@ -476,6 +517,27 @@ class DashboardController extends Controller
             'content'         => "Chat dieskalasi dari {$fromAdmin->username} ke {$toAdmin->username}.",
         ]);
 
+        $customer = $conversation->customer;
+        if (
+            $customer
+            && !empty($customer->contact)
+            && mb_strtolower((string) $customer->origin) === 'whatsapp'
+        ) {
+            $sent = $this->openClawWhatsappService->sendText(
+                $customer,
+                "Chat kamu sekarang dieskalasi dari {$fromAdmin->username} ke {$toAdmin->username}. Silakan tunggu sebentar ya."
+            );
+
+            if (!$sent) {
+                \Log::warning('Notifikasi escalation conversation ke WhatsApp gagal dikirim.', [
+                    'conversation_id' => $conversation->id,
+                    'user_id' => $customer->id,
+                    'from_admin_id' => $fromAdmin->id,
+                    'to_admin_id' => $toAdmin->id,
+                ]);
+            }
+        }
+
         broadcast(new MessageSent($sysMessage));
         broadcast(new ConversationStatusChanged($conversation, $fromAdmin->username));
 
@@ -519,6 +581,26 @@ class DashboardController extends Controller
             broadcast(new MessageSent($sysMessage));
             broadcast(new ConversationStatusChanged($conversation, $admin->username));
         } catch (\Exception $e) {}
+
+        $customer = $conversation->customer;
+        if (
+            $customer
+            && !empty($customer->contact)
+            && mb_strtolower((string) $customer->origin) === 'whatsapp'
+        ) {
+            $sent = $this->openClawWhatsappService->sendText(
+                $customer,
+                "Chat kamu sudah diselesaikan oleh {$admin->username}. Terima kasih sudah menghubungi kami."
+            );
+
+            if (!$sent) {
+                \Log::warning('Notifikasi close conversation ke WhatsApp gagal dikirim.', [
+                    'conversation_id' => $conversation->id,
+                    'user_id' => $customer->id,
+                    'admin_id' => $admin->id,
+                ]);
+            }
+        }
 
         if ($conversation->customer) {
             event(new UserShouldBeLoggedOut($conversation->customer));

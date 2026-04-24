@@ -150,13 +150,26 @@
                     <!-- Image -->
                     <template x-if="msg.message_type === 'image'">
                         <div class="bubble" :class="msg.sender_id == adminId ? 'bubble-me' : 'bubble-other'" style="padding:6px;">
-                            <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:pointer;" class="hover:opacity-90 transition-opacity" @click="window.open(msg.content, '_blank')">
+                            <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:pointer;" class="hover:opacity-90 transition-opacity" @click="window.open(msg.content, '_blank')">
+                            </template>
+                            <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                <div style="padding:10px 12px; border-radius:12px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.5; border:1px solid #fcd34d;">
+                                    Media gambar dari WhatsApp diterima, tetapi gateway belum mengirim URL file gambar ke panel web.
+                                </div>
+                            </template>
                         </div>
                     </template>
 
                     <!-- File -->
                     <template x-if="msg.message_type === 'file'">
                         <div class="bubble" :class="msg.sender_id == adminId ? 'bubble-me' : 'bubble-other'">
+                            <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                <div style="padding:10px 12px; border-radius:12px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.5; border:1px solid #fcd34d;">
+                                    Media file dari WhatsApp diterima, tetapi gateway belum mengirim URL file ke panel web.
+                                </div>
+                            </template>
+                            <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
                             <div class="file-attachment">
                                 <div class="file-icon">
                                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -170,6 +183,7 @@
                                     </a>
                                 </div>
                             </div>
+                            </template>
                         </div>
                     </template>
 

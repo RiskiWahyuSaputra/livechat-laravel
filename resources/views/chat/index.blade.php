@@ -113,16 +113,29 @@
                                 <!-- Pesan Gambar -->
                                 <template x-if="msg.message_type === 'image'">
                                     <div class="space-y-2">
-                                        <img :src="msg.content" 
-                                             class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
-                                             @click="window.open(msg.content, '_blank')"
-                                             x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                        <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                            <img :src="msg.content" 
+                                                 class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
+                                                 @click="window.open(msg.content, '_blank')"
+                                                 x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                        </template>
+                                        <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                            <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-xs md:text-sm">
+                                                Media gambar dari WhatsApp diterima, tetapi gateway belum mengirim URL file gambar ke web.
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
 
                                 <!-- Pesan File -->
                                 <template x-if="msg.message_type === 'file'">
                                     <div class="w-full">
+                                        <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                            <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-xs md:text-sm">
+                                                Media file dari WhatsApp diterima, tetapi gateway belum mengirim URL file ke web.
+                                            </div>
+                                        </template>
+                                        <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
                                         <div class="flex items-center gap-3 min-w-0">
                                             <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
                                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -135,6 +148,7 @@
                                                 </a>
                                             </div>
                                         </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
