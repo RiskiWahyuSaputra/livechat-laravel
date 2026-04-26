@@ -1,8 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\OpenClawWebhookController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\WhatsappWebhookController;
 
-
-Route::post('/webhook/whatsapp', [WhatsappWebhookController::class, 'handle']);
+Route::post('/webhook/openclaw/whatsapp', [OpenClawWebhookController::class, 'handleWhatsapp'])
+    ->name('api.openclaw.whatsapp.webhook');

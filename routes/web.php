@@ -21,6 +21,8 @@ Route::get('/contact', [UserDashboardController::class, 'contact'])->name('user.
 
 // Route registrasi chat
 Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');
+Route::get('/chat/register/whatsapp/{token}', [ChatController::class, 'showWhatsappRegister'])->name('chat.register.whatsapp');
+Route::post('/chat/register/whatsapp', [ChatController::class, 'submitWhatsappRegister'])->name('chat.register.whatsapp.submit');
 Route::post('/chat/register-anonymous', [ChatController::class , 'registerAnonymous'])->name('chat.registerAnonymous');
 Route::post('/chat/update-profile', [ChatController::class , 'updateProfile'])->name('chat.updateProfile');
 Route::match(['get', 'post'], '/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');

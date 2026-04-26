@@ -15,19 +15,18 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
 use App\Models\User;
-use App\Services\WhatsappService;
+use App\Services\ConversationFlowService;
 use App\Services\GeminiService;
-use App\Jobs\ProcessUserMessage;
 
 class ChatController extends Controller
 {
-    protected $whatsappService;
     protected $geminiService;
+    protected $conversationFlowService;
 
-    public function __construct(WhatsappService $whatsappService, GeminiService $geminiService)
+    public function __construct(GeminiService $geminiService, ConversationFlowService $conversationFlowService)
     {
-        $this->whatsappService = $whatsappService;
         $this->geminiService = $geminiService;
+        $this->conversationFlowService = $conversationFlowService;
     }
 
     /**
@@ -72,7 +71,8 @@ class ChatController extends Controller
             ->first();
 
         if (!$activeConversation) {
-            $activeConversation = $this->createConversation($user);
+            $result = $this->conversationFlowService->createConversation($user);
+            $activeConversation = $result['conversation'];
         }
 
         // Ambil pesan awal agar tidak kosong saat render
@@ -97,6 +97,68 @@ class ChatController extends Controller
             'messages' => $messages,
             'botCategories' => config('chat.complaint_categories'),
         ]);
+    }
+
+    /**
+     * Tampilkan form registrasi khusus WhatsApp
+     */
+    public function showWhatsappRegister($token)
+    {
+        $user = User::where('registration_token', $token)->firstOrFail();
+        return view('chat.whatsapp_register', ['token' => $token, 'user' => $user]);
+    }
+
+    /**
+     * Simpan data registrasi WhatsApp dan hubungkan ke Agent
+     */
+    public function submitWhatsappRegister(Request $request)
+    {
+        $request->validate([
+            'token'  => 'required|string',
+            'name'   => 'required|string|max:255',
+            'origin' => 'required|string|max:255',
+        ]);
+
+        $user = User::where('registration_token', $request->token)->firstOrFail();
+        
+        $user->update([
+            'name'   => $request->name,
+            'origin' => $request->origin,
+            'registration_token' => null, // Clear token after use
+        ]);
+
+        // Cari percakapan aktif
+        $activeConversation = $user->conversations()
+            ->whereIn('status', ['pending', 'active', 'queued'])
+            ->first();
+
+        if ($activeConversation) {
+            $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $activeConversation->id)->count();
+            
+            $activeConversation->update([
+                'bot_phase' => 'off',
+                'queue_position' => $queueCount
+            ]);
+
+            $msg = Message::create([
+                'conversation_id' => $activeConversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'text',
+                'content'         => "Terima kasih, data Anda sudah kami terima. Anda sekarang ada di antrean ke-{$queueCount} untuk terhubung dengan Agent.",
+            ]);
+
+            // Kirim notifikasi konfirmasi ke WhatsApp juga
+            $whatsappService = app(\App\Services\OpenClawWhatsappService::class);
+            $whatsappService->sendText($user, "Terima kasih {$user->name}, data Anda sudah dikonfirmasi. Tunggu sebentar ya, saya sedang menyambungkan Anda ke Agent.");
+
+            try {
+                broadcast(new MessageSent($msg));
+                broadcast(new ConversationStatusChanged($activeConversation, 'system'));
+            } catch (\Exception $e) {}
+        }
+
+        return view('chat.whatsapp_register_success');
     }
 
     /**
@@ -141,7 +203,8 @@ class ChatController extends Controller
             ->first();
 
         if (!$activeConversation) {
-            $activeConversation = $this->createConversation($user, $request->selected_option);
+            $result = $this->conversationFlowService->createConversation($user, $request->selected_option);
+            $activeConversation = $result['conversation'];
         }
 
         if ($request->expectsJson()) {
@@ -186,7 +249,8 @@ class ChatController extends Controller
         Auth::guard('web')->login($user, true);
 
         // Pastikan conversation otomatis dibuat
-        $activeConversation = $this->createConversation($user, $request->selected_option);
+        $result = $this->conversationFlowService->createConversation($user, $request->selected_option);
+        $activeConversation = $result['conversation'];
         
         // Atur agar langsung ke fase bot 'awaiting_submenu' atau sesuai menu yang dipencet
         if ($request->selected_option) {
@@ -286,11 +350,11 @@ class ChatController extends Controller
         $userId = $request->input('user_id');
         
         $user = null;
-        if ($token) {
+        if (Auth::guard('web')->check()) {
+            $user = Auth::guard('web')->user();
+        } elseif ($token) {
             $user = User::where('email', $token)->first();
-        }
-        
-        if (!$user && $userId) {
+        } elseif ($userId) {
             $user = User::find($userId);
         }
 
@@ -385,7 +449,8 @@ class ChatController extends Controller
                 ->first();
 
             if (!$activeConversation) {
-                $activeConversation = $this->createConversation($user);
+                $result = $this->conversationFlowService->createConversation($user);
+                $activeConversation = $result['conversation'];
             }
 
             $allConversations = $user->conversations()->withTrashed()->pluck('id');
@@ -416,7 +481,7 @@ class ChatController extends Controller
                 'bot_phase'    => $activeConversation->bot_phase,
                 'botCategories' => config('chat.complaint_categories'),
                 'bot_submenus' => ($activeConversation->bot_phase === 'awaiting_submenu') 
-                    ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label])
+                    ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id])
                     : []
             ]));
         } catch (\Exception $e) {
@@ -447,7 +512,8 @@ class ChatController extends Controller
         if ($conversation->user_id != $user->id) return response()->json(['error' => 'Akses ditolak.'], 403);
 
         if (!$conversation->isOpen() || $conversation->trashed()) {
-            $conversation = $this->createConversation($user);
+            $result = $this->conversationFlowService->createConversation($user);
+            $conversation = $result['conversation'];
         }
 
         $messageType = 'text';
@@ -462,34 +528,17 @@ class ChatController extends Controller
             $content = asset('storage/' . $path);
         }
 
-        $message = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id'       => $user->id,
-            'sender_type'     => 'user',
-            'message_type'    => $messageType,
-            'content'         => $content ?? '',
-        ]);
+        $result = $this->conversationFlowService->processInboundMessage(
+            user: $user,
+            conversation: $conversation,
+            content: $content ?? '',
+            messageType: $messageType,
+            broadcast: true
+        );
 
-        $conversation->update([
-            'last_message_at' => now(),
-            'reminder_count' => 0,
-        ]);
-
-        try {
-            broadcast(new MessageSent($message));
-            
-            // Dispatch background processing (WhatsApp & Gemini)
-            ProcessUserMessage::dispatch($message);
-
-        } catch (\Exception $e) { 
-            \Log::error('Broadcast/Job dispatch failed', ['error' => $e->getMessage()]); 
-        }
-
-        // Tangani Bot Response dan kumpulkan untuk dikirim di JSON
-        $botReplies = [];
-        if ($conversation->bot_phase !== 'off' || is_null($conversation->admin_id)) {
-            $botReplies = $this->handleBotResponse($conversation, $message->content);
-        }
+        $message = $result['message'];
+        $botReplies = $result['bot_replies'];
+        $botSubmenus = $result['submenus'] ?? [];
 
         return response()->json([
             'success' => true,
@@ -500,7 +549,8 @@ class ChatController extends Controller
                 'created_at'   => $message->created_at->format('H:i'),
             ],
             'bot_replies' => $botReplies,
-            'bot_phase'   => $conversation->fresh()->bot_phase
+            'bot_phase'   => $result['bot_phase'],
+            'bot_submenus' => $botSubmenus,
         ]);
     }
 
@@ -525,7 +575,7 @@ class ChatController extends Controller
         return response()->json(['success' => true]);
     }
 
-    private function handleBotResponse($conversation, $userMessage)
+    private function handleBotResponse(Conversation $conversation, string $userMessage): array
     {
         $newBotMessages = [];
         $botCategories = config('chat.complaint_categories');
@@ -643,14 +693,7 @@ class ChatController extends Controller
 
             $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan ke BEST AI: ");
             $conversation->update(['bot_phase' => 'offer_agent_transfer']);
-            
-            $newBotMessages[] = Message::create([
-                'conversation_id' => $conversation->id,
-                'sender_id'       => 0,
-                'sender_type'     => 'admin',
-                'message_type'    => 'text',
-                'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
-            ]);
+            $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
             
             if (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
                 $newBotMessages[] = Message::create([
@@ -692,13 +735,7 @@ class ChatController extends Controller
                 $conversation->update(['bot_phase' => 'chatting_with_ai']);
                 $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan pelanggan lanjutan ke BEST AI: ");
 
-                $newBotMessages[] = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => 0,
-                    'sender_type'     => 'admin',
-                    'message_type'    => 'text',
-                    'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
-                ]);
+                $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
 
                 if ($recentBotAsks >= 2 && !str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
                     // Setelah 2x berturut-turut user abaikan opsi, tawarkan AGENT secara eksplisit tanpa loop
@@ -735,31 +772,21 @@ class ChatController extends Controller
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = \App\Models\BotMenu::where('label', $userMessage)->whereNull('parent_id')->first();
             if ($menu) {
-                $content = $menu->message_response ?? '';
-                if ($menu->action_value && (str_contains(strtolower($menu->action_value), 'youtube.com') || str_contains(strtolower($menu->action_value), 'youtu.be'))) {
-                    // Extract Video ID
-                    $embedUrl = false;
-                    if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $menu->action_value, $match)) {
-                        $embedUrl = "https://www.youtube.com/embed/" . $match[1];
-                    } 
-                    
-                    if ($embedUrl) {
-                         $content .= '<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]"><div class="relative w-full" style="padding-bottom: 56.25%;"><iframe class="absolute top-0 left-0 w-full h-full" src="' . $embedUrl . '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><div class="p-2 bg-white"><a href="' . $menu->action_value . '" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;"><i class="fab fa-youtube"></i> Buka di YouTube</a></div></div>';
-                    } else {
-                         // Improved fallback for channel or non-video links
-                         $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Kunjungi Channel YouTube</a></div>';
-                    }
-                } elseif ($menu->action_type === 'link' && $menu->action_value) {
-                    $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fas fa-external-link-alt"></i> Buka Link</a></div>';
+                if ($menu->action_type === 'link' && $menu->action_value) {
+                    $content = $this->buildLinkMenuResponse($menu);
+                } else {
+                    $content = $menu->message_response ?? '';
                 }
 
-                if ($content) $newBotMessages[] = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => 0,
-                    'sender_type'     => 'admin',
-                    'message_type'    => 'text',
-                    'content'         => $content . ($menu->action_type === 'link' ? "\n\nPilih layanan kami lainnya:" : ""),
-                ]);
+                if ($content) {
+                    $newBotMessages[] = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => $content,
+                    ]);
+                }
 
                 if ($menu->action_type === 'submenu') {
                     $conversation->update(['bot_phase' => 'awaiting_submenu']);
@@ -784,36 +811,171 @@ class ChatController extends Controller
                     ->count();
                 $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
 
-                $rawReplies = [
-                    ['content' => $aiResponse, 'type' => 'ai'],
-                    ['content' => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.", 'type' => 'system']
-                ];
-
-                $newBotMessages = []; // Clear previous if any, though in this branch it should be empty
-                foreach ($rawReplies as $bm) {
-                    $newBotMessages[] = Message::create([
-                        'conversation_id' => $conversation->id,
-                        'sender_id'       => 0,
-                        'sender_type'     => 'admin',
-                        'message_type'    => 'text',
-                        'content'         => ($bm['type'] === 'ai' ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' : '') . $bm['content'],
-                    ]);
-                }
+                $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
+                $newBotMessages[] = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id'       => 0,
+                    'sender_type'     => 'admin',
+                    'message_type'    => 'text',
+                    'content'         => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.",
+                ]);
             }
         } elseif ($conversation->bot_phase === 'off' && is_null($conversation->admin_id)) {
             // Jika bot sudah OFF tapi admin belum klaim, bot tetap menjawab sebagai asisten pintar
             $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan lanjutan dari pelanggan (Admin belum bergabung): ");
-            
-            $newBotMessages[] = Message::create([
+
+            $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
+        }
+
+        return $this->formatBotReplies($newBotMessages, $conversation);
+    }
+
+    private function createAiReplyMessages(Conversation $conversation, string $userMessage, string $aiResponse): array
+    {
+        $messages = [];
+        $productImage = $this->detectProductImageForMessage($userMessage);
+
+        if ($productImage) {
+            $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
+        }
+
+        $messages[] = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => 0,
+            'sender_type'     => 'admin',
+            'message_type'    => 'text',
+            'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
+        ]);
+
+        if ($productImage && $this->shouldAttachProductImage($aiResponse)) {
+            $messages[] = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'text',
-                'content'         => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>' . $aiResponse,
+                'content'         => 'Berikut gambaran produk ' . $productImage['label'] . ':',
+            ]);
+
+            $messages[] = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'admin',
+                'message_type'    => 'image',
+                'content'         => asset('images/produk/' . $productImage['file']),
             ]);
         }
 
-        return $this->formatBotReplies($newBotMessages, $conversation);
+        return $messages;
+    }
+
+    private function normalizeAiResponseForProductImage(string $aiResponse, string $label): string
+    {
+        if (!$this->responseConflictsWithProductImage($aiResponse)) {
+            return $aiResponse;
+        }
+
+        return "Berikut gambaran produk {$label} dari PT BEST CORPORATION SYARIAH. Kalau kamu mau, saya juga bisa bantu jelaskan detail manfaat, kategori, atau informasi lanjutannya.";
+    }
+
+    private function shouldAttachProductImage(string $aiResponse): bool
+    {
+        return !$this->responseConflictsWithProductImage($aiResponse);
+    }
+
+    private function responseConflictsWithProductImage(string $aiResponse): bool
+    {
+        $normalized = strtolower(strip_tags($aiResponse));
+
+        $conflictingPhrases = [
+            'tidak bisa langsung memberikan foto',
+            'tidak bisa memberikan foto',
+            'tidak bisa kirim foto',
+            'tidak bisa mengirim foto',
+            'tidak dapat menampilkan gambar',
+            'tidak bisa menampilkan gambar',
+            'belum memiliki detail data untuk menampilkan gambar',
+            'tidak memiliki gambar',
+            'tidak punya gambar',
+            'maaf, saya tidak bisa langsung',
+            'sistem akan menampilkan gambar',
+            'secara otomatis di sini',
+        ];
+
+        foreach ($conflictingPhrases as $phrase) {
+            if (str_contains($normalized, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function detectProductImageForMessage(string $message): ?array
+    {
+        $normalized = strtolower($message);
+        $genericProductIntentKeywords = [
+            'produk',
+            'product',
+            'kategori produk',
+            'jenis produk',
+            'katalog',
+            'catalog',
+            'gambar produk',
+            'foto produk',
+            'barang',
+        ];
+
+        $productMap = [
+            [
+                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
+                'file' => 'produk-kecantikan.png',
+                'label' => 'kecantikan',
+            ],
+            [
+                'keywords' => ['kesehatan', 'health', 'herbal', 'vitamin', 'suplemen'],
+                'file' => 'produk-kesehatan.png',
+                'label' => 'kesehatan',
+            ],
+            [
+                'keywords' => ['otomotif', 'motor', 'mobil', 'bengkel', 'oli'],
+                'file' => 'produk-otomotif.png',
+                'label' => 'otomotif',
+            ],
+            [
+                'keywords' => ['pertanian', 'pupuk', 'tani', 'agrikultur', 'agro'],
+                'file' => 'produk-pertanian.png',
+                'label' => 'pertanian',
+            ],
+        ];
+
+        foreach ($productMap as $product) {
+            foreach ($product['keywords'] as $keyword) {
+                if (str_contains($normalized, $keyword)) {
+                    return [
+                        'file' => $product['file'],
+                        'label' => $product['label'],
+                    ];
+                }
+            }
+        }
+
+        foreach ($genericProductIntentKeywords as $keyword) {
+            if (str_contains($normalized, $keyword)) {
+                return [
+                    'file' => 'produk-best.png',
+                    'label' => 'BEST',
+                ];
+            }
+        }
+
+        if (str_contains($normalized, 'best') && str_contains($normalized, 'produk')) {
+            return [
+                'file' => 'produk-best.png',
+                'label' => 'BEST',
+            ];
+        }
+
+        return null;
     }
 
     private function formatBotReplies($messages, $conversation)
@@ -837,6 +999,75 @@ class ChatController extends Controller
         }
 
         return $formatted;
+    }
+
+    private function buildLinkMenuResponse(\App\Models\BotMenu $menu): string
+    {
+        $menuLabel = trim((string) $menu->label);
+        $menuLabelLower = mb_strtolower($menuLabel, 'UTF-8');
+        $menuList = $this->buildMainMenuListOnly();
+
+        if ($this->isYoutubeLink($menu->action_value)) {
+            return implode("\n", [
+                'Anda dapat menonton channel youtube BRILLIAN.BIZ di sini:',
+                '',
+                $menu->action_value,
+                '',
+                'Kunjungi Channel YouTube',
+                '',
+                'Pilih layanan kami lainnya:',
+                '',
+                $menuList,
+            ]);
+        }
+
+        if (str_contains($menuLabelLower, 'jadwal seminar')) {
+            return implode("\n", [
+                'Berikut jadwal seminar BRILLIAN.BIZ: Buka Link',
+                '',
+                $menu->action_value,
+                '',
+                'Pilih layanan kami lainnya:',
+                '',
+                $menuList,
+            ]);
+        }
+
+        $lines = [];
+        if (!empty($menu->message_response)) {
+            $lines[] = trim((string) $menu->message_response);
+            $lines[] = '';
+        }
+        $lines[] = $menu->action_value;
+        $lines[] = '';
+        $lines[] = 'Pilih layanan kami lainnya:';
+        $lines[] = '';
+        $lines[] = $menuList;
+
+        return implode("\n", $lines);
+    }
+
+    private function buildMainMenuListOnly(): string
+    {
+        $menus = \App\Models\BotMenu::whereNull('parent_id')
+            ->orderBy('order_index')
+            ->get(['label']);
+
+        if ($menus->isEmpty()) {
+            return 'Menu utama belum tersedia saat ini.';
+        }
+
+        return $menus
+            ->values()
+            ->map(fn ($menu, $index) => '[' . ($index + 1) . '] ' . $menu->label)
+            ->implode("\n");
+    }
+
+    private function isYoutubeLink(?string $url): bool
+    {
+        $normalized = mb_strtolower((string) $url, 'UTF-8');
+
+        return str_contains($normalized, 'youtube.com') || str_contains($normalized, 'youtu.be');
     }
 
     private function createConversation($user, $selectedMenuId = null): Conversation
@@ -892,34 +1123,16 @@ class ChatController extends Controller
         // Bot Response
         $botReplies = [];
         if ($menu) {
-            $content = $menu->message_response ?? '';
-            
             if ($menu->action_type === 'link' && $menu->action_value) {
-                $isYoutube = str_contains(strtolower($menu->action_value), 'youtube.com') || str_contains(strtolower($menu->action_value), 'youtu.be');
-                if ($isYoutube) {
-                    $embedUrl = false;
-                    if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $menu->action_value, $match)) {
-                        $embedUrl = "https://www.youtube.com/embed/" . $match[1];
-                    }
-                    
-                    if ($embedUrl) {
-                        $content .= '<div class="mt-3 mb-1 overflow-hidden rounded-xl border border-gray-100 shadow-sm w-full max-w-[280px]"><div class="relative w-full" style="padding-bottom: 56.25%;"><iframe class="absolute top-0 left-0 w-full h-full" src="' . $embedUrl . '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><div class="p-2 bg-white"><a href="' . $menu->action_value . '" target="_blank" class="flex items-center justify-center gap-2 px-3 py-1.5 w-full bg-red-600 text-white rounded-full font-bold no-underline hover:bg-red-700 transition-all" style="font-size: 11px;"><i class="fab fa-youtube"></i> Buka di YouTube</a></div></div>';
-                    } else {
-                        $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fab fa-youtube"></i> Kunjungi Channel</a></div>';
-                    }
-                } else {
-                    $content .= '<div class="mt-2"><a href="' . $menu->action_value . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold no-underline shadow-md hover:bg-red-700 transition-all" style="font-size: 11px; text-decoration: none; color: white;"><i class="fas fa-external-link-alt"></i> Buka Link</a></div>';
-                }
+                $content = $this->buildLinkMenuResponse($menu);
+            } else {
+                $content = $menu->message_response ?? '';
             }
-            
+
             if ($content) $botReplies[] = $content;
-            
-            if ($menu->action_type === 'submenu') {
-                // No need to send text list, Alpine.js will render buttons
-            } elseif ($menu->action_type === 'link') {
-                // Also show main menu again for links
+
+            if ($menu->action_type === 'link') {
                 $conversation->update(['bot_phase' => 'awaiting_main_menu']);
-                $botReplies[] = "Pilih layanan kami lainnya:";
             } elseif ($menu->action_type === 'connect_cs') {
                 if ($isAnonymousCS) {
                      $conversation->update(['bot_phase' => 'offer_agent_transfer']);

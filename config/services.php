@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'openclaw' => [
+        'base_url' => env('OPENCLAW_BASE_URL', 'http://127.0.0.1:18789'),
+        'hook_path' => env('OPENCLAW_HOOK_PATH', '/hooks/agent'),
+        'hook_token' => env('OPENCLAW_HOOK_TOKEN'),
+        'agent_name' => env('OPENCLAW_AGENT_NAME', 'Website AI'),
+        'model' => env('OPENCLAW_MODEL', 'codex'),
+        'timeout_seconds' => env('OPENCLAW_TIMEOUT_SECONDS', 30),
+    ],
+
 ];
