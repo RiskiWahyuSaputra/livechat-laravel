@@ -2,82 +2,65 @@
 
 namespace App\Services;
 
+use App\Models\QuickReply;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GeminiService
 {
-    protected $apiKey;
+    protected string $apiKey;
+    protected string $provider;
+    protected string $preferredModel;
+    protected int $responseCacheSeconds = 600;
+    protected int $openClawBackoffSeconds = 300;
 
-    public function __construct()
+    public function __construct(protected OpenClawService $openClawService)
     {
-        $this->apiKey = trim(Setting::get('gemini_api_key', env('GEMINI_API_KEY') ?? ''));
+        $this->apiKey = trim((string) Setting::get('gemini_api_key', env('GEMINI_API_KEY', '')));
+        $this->provider = strtolower(trim((string) Setting::get('ai_provider', env('AI_PROVIDER', 'gemini'))));
+        $this->preferredModel = trim((string) Setting::get('gemini_model', env('GEMINI_MODEL', 'gemma-4-26b-a4b-it')));
     }
 
-    public function askGemini($prompt, $additionalInstruction = "")
+    public function askGemini(string $prompt, string $additionalInstruction = ''): string
     {
-        if (empty($this->apiKey)) return "Sistem AI belum siap.";
+        $fullInstruction = $this->buildAssistantInstruction($additionalInstruction);
+        $cacheKey = $this->responseCacheKey($prompt, $fullInstruction);
+        $cachedResponse = Cache::get($cacheKey);
 
-        // Coba model-model ini secara berurutan
-        $models = [
-            'gemini-1.5-flash', 
-            'gemini-1.5-pro',
-            'gemini-2.0-flash',
-            'gemini-pro'
-        ];
-        
-        $baseInstruction = "Kamu adalah asisten AI resmi dari PT BEST CORPORATION SYARIAH bernama BEST AI.
-        TUGAS KAMU:
-        1. Hanya jawab pertanyaan yang berkaitan dengan profil, produk, layanan, pendaftaran, dan informasi seputar PT BEST CORPORATION SYARIAH.
-        2. Jika pertanyaan di luar topik tersebut (seperti politik, agama umum, tips masak, teknologi lain, dll), tolak dengan sopan dan arahkan pelanggan untuk bertanya seputar PT BEST CORP.
-        3. Jika memberikan jawaban dalam bentuk daftar atau list, wajib gunakan format angka (1, 2, 3, dst).
-        4. Jawab dengan singkat, padat, dan ramah dalam bahasa Indonesia. Gunakan kata 'kamu' bukan 'Anda', tone santai tapi tetap profesional.
-        5. jangan gunakan ** untuk membuat teks menjadi bold.
-        6. JANGAN PERNAH menggunakan tanda kurung [] atau placeholder seperti '[Sebutkan produk...]'.
-        7. Jika pelanggan ingin bantuan manusia atau bertanya tentang Agent, beritahu mereka untuk mengklik tombol Hubungi Agent yang tersedia di bawah jawaban kamu.
-        8. Jika informasi tidak ditemukan di KNOWLEDGE BASE di bawah, gunakan hasil pencarian Google yang tersedia untuk menjawab.
-        9. Jika tetap tidak ditemukan di keduanya, beritahu pelanggan bahwa kamu belum memiliki data detailnya dan minta mereka menunggu admin, JANGAN MENEBAK.
-        10. PENTING: JANGAN PERNAH memberikan kalimat salam pembuka (seperti 'Halo!', 'Selamat pagi', 'Terima kasih telah menghubungi kami', dll) di awal jawabanmu, karena sistem sudah menyapanya di layar chatbot. Langsung jawab intinya saja.";
-        
-        // Tambahkan Knowledge Base dari QuickReply
-        $quickReplies = \App\Models\QuickReply::all();
-        $knowledgeBase = "\n\nKNOWLEDGE BASE (Gunakan informasi ini untuk menjawab):\n";
-        foreach ($quickReplies as $qr) {
-            $knowledgeBase .= "- {$qr->title}: {$qr->content}\n";
+        if (is_string($cachedResponse) && trim($cachedResponse) !== '') {
+            return $cachedResponse;
         }
 
-        $fullInstruction = $baseInstruction . $knowledgeBase . " " . $additionalInstruction;
+        if ($this->shouldUseOpenClaw()) {
+            $openClawResponse = $this->openClawService->ask($prompt, $fullInstruction);
 
-        foreach ($models as $model) {
-            $aiText = $this->tryModel($model, $fullInstruction, $prompt);
-            if ($aiText) return $aiText;
-        }
+            if ($this->isUsableResponse($openClawResponse)) {
+                Cache::put($cacheKey, $openClawResponse, $this->responseCacheSeconds);
 
-        // Jika semua model hardcoded gagal, coba ambil satu model dari API secara dinamis
-        $availableModels = $this->getAvailableModels();
-        if (!empty($availableModels)) {
-            Log::info("Mencoba model alternatif dari API...");
-            foreach ($availableModels as $modelData) {
-                $modelName = $modelData['name']; // ini biasanya "models/..."
-                // Hapus prefix "models/" jika ada karena URL sudah punya "models/"
-                $modelId = str_replace('models/', '', $modelName);
-                
-                // Lewati jika sudah dicoba di loop sebelumnya
-                if (in_array($modelId, $models)) continue;
-
-                $aiText = $this->tryModel($modelId, $fullInstruction, $prompt);
-                if ($aiText) return $aiText;
+                return $openClawResponse;
             }
+
+            Cache::put($this->openClawBackoffCacheKey(), true, $this->openClawBackoffSeconds);
+            Log::warning('OpenClaw tidak mengembalikan jawaban. Fallback ke Gemini API.', [
+                'backoff_seconds' => $this->openClawBackoffSeconds,
+            ]);
         }
 
-        return "Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.";
+        $geminiResponse = $this->askGeminiApi($prompt, $fullInstruction);
+
+        if ($this->isUsableResponse($geminiResponse)) {
+            Cache::put($cacheKey, $geminiResponse, $this->responseCacheSeconds);
+
+            return $geminiResponse;
+        }
+
+        return $this->fallbackMessage();
     }
 
     public function summarizeConversation($history)
     {
-        if (empty($this->apiKey)) return null;
-
         $prompt = "Berikut adalah riwayat percakapan antara Pelanggan dan Admin Support PT BEST CORP. 
         TUGAS ANDA: 
         1. Analisis apakah ada informasi Penting/Pertanyaan Baru yang berhasil dijawab oleh Admin dengan BAIK.
@@ -95,108 +78,259 @@ class GeminiService
         RIWAYAT CHAT:
         $history";
 
-        // Gunakan model yang mumpuni untuk ekstraksi
-        $models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-        
-        foreach ($models as $model) {
-            $response = $this            ->tryModel($model, "Kamu adalah AI Knowledge Extractor.", $prompt);
-            if ($response) {
-                // Bersihkan respon dari markdown jika AI membandel
-                $cleaned = preg_replace('/```json|```/', '', $response);
-                $data = json_decode(trim($cleaned), true);
-                if (is_array($data)) return $data;
+        if ($this->shouldUseOpenClaw()) {
+            $response = $this->openClawService->ask($prompt, 'Kamu adalah AI Knowledge Extractor.');
+            $data = $this->decodeKnowledgePayload($response);
+
+            if (is_array($data)) {
+                return $data;
+            }
+
+            Cache::put($this->openClawBackoffCacheKey(), true, $this->openClawBackoffSeconds);
+            Log::warning('OpenClaw tidak mengembalikan ringkasan knowledge. Fallback ke Gemini API.');
+        }
+
+        $response = $this->askGeminiApi($prompt, 'Kamu adalah AI Knowledge Extractor.', [
+            $this->preferredModel,
+            'gemma-4-26b-a4b-it',
+            'gemini-2.0-flash-lite',
+        ]);
+
+        if ($response) {
+            $data = $this->decodeKnowledgePayload($response);
+
+            if (is_array($data)) {
+                return $data;
             }
         }
 
         return null;
     }
 
-    private function tryModel($model, $fullInstruction, $prompt)
+    public function isFallbackResponse(?string $response): bool
     {
-        // Mencoba dengan Grounding (Google Search) terlebih dahulu
-        $result = $this->executeRequest($model, $fullInstruction, $prompt, true);
-        
-        // Jika gagal atau tidak ada teks, coba lagi TANPA Grounding
-        if (!$result) {
-            Log::info("Gemini model {$model} gagal dengan Grounding, mencoba tanpa Grounding...");
-            $result = $this->executeRequest($model, $fullInstruction, $prompt, false);
+        $normalized = strtolower(trim(strip_tags((string) $response)));
+
+        if ($normalized === '') {
+            return true;
         }
 
-        return $result;
+        $fallbackPhrases = [
+            'maaf, sistem best ai lagi mengalami kendala',
+            'coba lagi beberapa saat ya',
+            'terhubung langsung dengan customer service kami',
+        ];
+
+        foreach ($fallbackPhrases as $phrase) {
+            if (str_contains($normalized, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    private function executeRequest($model, $fullInstruction, $prompt, $useGrounding = true)
+    private function askGeminiApi(string $prompt, string $fullInstruction, ?array $preferredModels = null): ?string
     {
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->apiKey;
+        if ($this->apiKey === '') {
+            return null;
+        }
+
+        foreach ($this->modelCandidates($preferredModels) as $model) {
+            $aiText = $this->executeRequest($model, $fullInstruction, $prompt);
+
+            if ($this->isUsableResponse($aiText)) {
+                return $aiText;
+            }
+        }
+
+        return null;
+    }
+
+    private function executeRequest(string $model, string $fullInstruction, string $prompt): ?string
+    {
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$this->apiKey}";
 
         try {
-            $payload = [
-                'contents' => [
-                    ['role' => 'user', 'parts' => [['text' => $prompt]]]
-                ],
-                'system_instruction' => [
-                    'parts' => [['text' => $fullInstruction]]
-                ],
-            ];
-
-            if ($useGrounding) {
-                $payload['tools'] = [['google_search_retrieval' => new \stdClass()]];
-            }
-
             $response = Http::withoutVerifying()
-                ->timeout($useGrounding ? 15 : 8)
+                ->timeout(8)
                 ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($url, $payload);
+                ->post($url, [
+                    'contents' => [
+                        [
+                            'role' => 'user',
+                            'parts' => [
+                                ['text' => $prompt],
+                            ],
+                        ],
+                    ],
+                    'system_instruction' => [
+                        'parts' => [
+                            ['text' => $fullInstruction],
+                        ],
+                    ],
+                ]);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $candidates = $data['candidates'] ?? [];
-                
-                if (!empty($candidates) && isset($candidates[0]['content']['parts'])) {
-                    $fullText = "";
-                    foreach ($candidates[0]['content']['parts'] as $part) {
-                        if (isset($part['text'])) {
-                            $fullText .= $part['text'];
-                        }
-                    }
+            if (!$response->successful()) {
+                $this->markModelFailure($model, $response->status());
+                Log::warning("Gemini model {$model} API Error: {$response->status()}", [
+                    'body' => $response->json(),
+                ]);
 
-                    if (!empty(trim($fullText))) {
-                        Log::info("Gemini Berhasil menggunakan model: {$model} " . ($useGrounding ? "(With Search)" : "(No Search)"));
-                        return trim($fullText);
-                    }
-                }
-                
-                $finishReason = $candidates[0]['finishReason'] ?? 'UNKNOWN';
-                Log::warning("Gemini model {$model} selesai tanpa teks. Reason: {$finishReason}", ['body' => $data]);
-            } else {
-                Log::warning("Gemini model {$model} API Error: " . $response->status(), ['body' => $response->json()]);
+                return null;
             }
 
-        } catch (\Exception $e) {
+            $data = $response->json();
+            $parts = $data['candidates'][0]['content']['parts'] ?? [];
+            $fullText = '';
+
+            foreach ($parts as $part) {
+                if (isset($part['text']) && is_string($part['text'])) {
+                    $fullText .= $part['text'];
+                }
+            }
+
+            $fullText = trim($fullText);
+
+            if ($fullText !== '') {
+                Cache::forget($this->modelFailureCacheKey($model));
+                Log::info("Gemini berhasil menggunakan model: {$model}");
+
+                return $fullText;
+            }
+
+            Log::warning("Gemini model {$model} selesai tanpa teks.", [
+                'finish_reason' => $data['candidates'][0]['finishReason'] ?? 'UNKNOWN',
+            ]);
+        } catch (\Throwable $e) {
             Log::error("Gemini Exception ({$model}): " . $e->getMessage());
         }
 
         return null;
     }
 
-    private function getAvailableModels()
+    private function modelCandidates(?array $preferredModels = null): array
     {
-        try {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models?key=" . $this->apiKey;
-            $res = Http::withoutVerifying()->get($url);
-            if ($res->successful()) {
-                $data = $res->json();
-                return $data['models'] ?? [];
-            }
-        } catch (\Exception $e) {
-            Log::error("Gagal mengambil daftar model: " . $e->getMessage());
-        }
-        return [];
+        $defaults = [
+            $this->preferredModel,
+            'gemma-4-26b-a4b-it',
+            'gemini-2.0-flash-lite',
+        ];
+
+        return array_values(array_filter(
+            array_unique(array_filter($preferredModels ?? $defaults, static fn ($model) => is_string($model) && trim($model) !== '')),
+            fn (string $model) => !$this->isModelInBackoffWindow($model)
+        ));
     }
 
-    private function logAvailableModels()
+    private function fallbackMessage(): string
     {
-        $models = $this->getAvailableModels();
-        Log::info("Daftar Model Tersedia:", ['count' => count($models), 'models' => $models]);
+        return 'Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.';
+    }
+
+    private function shouldUseOpenClaw(): bool
+    {
+        return $this->provider === 'openclaw'
+            && !$this->isOpenClawInBackoffWindow();
+    }
+
+    private function isOpenClawInBackoffWindow(): bool
+    {
+        return (bool) Cache::get($this->openClawBackoffCacheKey(), false);
+    }
+
+    private function openClawBackoffCacheKey(): string
+    {
+        return 'best_ai_openclaw_backoff';
+    }
+
+    private function responseCacheKey(string $prompt, string $fullInstruction): string
+    {
+        return 'best_ai_response_' . sha1(
+            $this->provider . '|' . $this->preferredModel . '|' . $this->normalizePromptForCache($prompt) . '|' . $fullInstruction
+        );
+    }
+
+    private function isUsableResponse(?string $response): bool
+    {
+        return is_string($response) && trim($response) !== '' && !$this->isFallbackResponse($response);
+    }
+
+    private function normalizePromptForCache(string $prompt): string
+    {
+        $normalized = preg_replace('/\s+\[(web|wa) user \d+ #\d+\]$/i', '', trim($prompt));
+
+        return is_string($normalized) && $normalized !== '' ? $normalized : trim($prompt);
+    }
+
+    private function isModelInBackoffWindow(string $model): bool
+    {
+        return (bool) Cache::get($this->modelFailureCacheKey($model), false);
+    }
+
+    private function modelFailureCacheKey(string $model): string
+    {
+        return 'best_ai_model_backoff_' . sha1($model);
+    }
+
+    private function markModelFailure(string $model, int $statusCode): void
+    {
+        $seconds = match ($statusCode) {
+            404, 400 => 3600,
+            429 => 120,
+            default => 300,
+        };
+
+        Cache::put($this->modelFailureCacheKey($model), true, $seconds);
+    }
+
+    private function buildAssistantInstruction(string $additionalInstruction = ''): string
+    {
+        $baseInstruction = "Kamu adalah BEST AI, asisten virtual resmi milik PT BEST CORPORATION SYARIAH.
+        IDENTITAS DAN BATASAN:
+        1. Kamu hanya boleh menjawab hal-hal yang berkaitan dengan PT BEST CORPORATION SYARIAH, termasuk profil perusahaan, produk, layanan, pendaftaran, benefit, promo, prosedur, dan informasi resmi lain yang berhubungan langsung dengan PT BEST CORPORATION SYARIAH.
+        2. Jika pengguna bertanya di luar konteks PT BEST CORPORATION SYARIAH, kamu wajib menolak dengan sopan. Jangan menjawab isi pertanyaan tersebut.
+        3. Saat menolak, arahkan pengguna untuk kembali bertanya seputar PT BEST CORPORATION SYARIAH. Contoh gaya jawaban: 'Maaf, saya hanya bisa membantu pertanyaan seputar PT BEST CORPORATION SYARIAH. Kalau kamu mau, silakan tanyakan produk, layanan, atau informasi BEST ya.'
+        4. Jangan pernah mengarang jawaban. Jika informasi tidak ada di knowledge base atau data yang tersedia, katakan dengan jujur bahwa kamu belum memiliki detail datanya dan sarankan menunggu admin atau agent.
+        GAYA JAWABAN:
+        5. Jawab singkat, padat, jelas, dan ramah dalam bahasa Indonesia.
+        6. Gunakan kata 'kamu', bukan 'Anda'.
+        7. Jika membuat daftar, gunakan format angka: 1, 2, 3, dan seterusnya.
+        8. Jangan gunakan tanda ** untuk bold.
+        9. Jangan gunakan tanda kurung siku [] atau placeholder palsu.
+        10. Jangan beri salam pembuka di awal jawaban. Langsung jawab inti.
+        11. Jika pengguna meminta bantuan manusia, admin, atau agent, arahkan untuk klik tombol Hubungi Agent yang tersedia.
+        12. Prioritaskan knowledge base di bawah sebagai sumber utama jawaban.
+        13. Jika pengguna menanyakan kategori produk BEST seperti kecantikan, kesehatan, otomotif, pertanian, atau produk BEST secara umum, sistem dapat menampilkan gambar pendukung produk secara otomatis.
+        14. Karena sistem bisa menampilkan gambar pendukung, jangan pernah bilang kamu tidak bisa mengirim foto, tidak bisa menampilkan gambar, atau tidak punya gambar produk jika memang pertanyaannya masih seputar kategori produk BEST.";
+
+        $knowledgeRows = Cache::remember('best_ai_quick_reply_knowledge', 300, function () {
+            return QuickReply::query()
+                ->get(['title', 'content'])
+                ->map(fn ($quickReply) => [
+                    'title' => $quickReply->title,
+                    'content' => $quickReply->content,
+                ])
+                ->all();
+        });
+
+        $knowledgeBase = "\n\nKNOWLEDGE BASE (Gunakan informasi ini untuk menjawab):\n";
+        foreach ($knowledgeRows as $quickReply) {
+            $knowledgeBase .= "- {$quickReply['title']}: {$quickReply['content']}\n";
+        }
+
+        return trim($baseInstruction . $knowledgeBase . ' ' . $additionalInstruction);
+    }
+
+    private function decodeKnowledgePayload(?string $response): ?array
+    {
+        if (!$response) {
+            return null;
+        }
+
+        $cleaned = preg_replace('/```json|```/', '', $response);
+        $data = json_decode(trim((string) $cleaned), true);
+
+        return is_array($data) ? $data : null;
     }
 }

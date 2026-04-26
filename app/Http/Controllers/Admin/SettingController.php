@@ -17,13 +17,15 @@ class SettingController extends Controller
 
     public function update(Request $request)
     {
-        $settings = $request->except('_token');
+        $settings = $request->except(['_token', '_method']);
 
         foreach ($settings as $key => $value) {
             // Tentukan group berdasarkan prefix key (opsional)
             $group = 'general';
-            if (str_starts_with($key, 'whapi_')) $group = 'whapi';
             if (str_starts_with($key, 'gemini_')) $group = 'gemini';
+            if (str_starts_with($key, 'openclaw_')) $group = 'openclaw';
+            if (str_starts_with($key, 'ai_')) $group = 'ai';
+            if (str_starts_with($key, 'messaging_')) $group = 'messaging';
 
             Setting::set($key, $value, $group);
         }

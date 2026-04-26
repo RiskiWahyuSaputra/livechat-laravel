@@ -23,7 +23,7 @@
     </style>
 </head>
     <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
-      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() ?: 'null' }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}', {{ Js::from($botCategories) }})">
+      x-data="chatApp({{ $conversation->id }}, {{ Auth::id() ?: 'null' }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}', {{ Js::from($botCategories) }}, {{ Js::from($activeConversation->bot_phase === 'awaiting_submenu' ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id]) : []) }})">
 
     <!-- Header Navbar Minimalist -->
     <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
@@ -113,16 +113,29 @@
                                 <!-- Pesan Gambar -->
                                 <template x-if="msg.message_type === 'image'">
                                     <div class="space-y-2">
-                                        <img :src="msg.content" 
-                                             class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
-                                             @click="window.open(msg.content, '_blank')"
-                                             x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                        <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                            <img :src="msg.content" 
+                                                 class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100" 
+                                                 @click="window.open(msg.content, '_blank')"
+                                                 x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                        </template>
+                                        <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                            <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-xs md:text-sm">
+                                                Media gambar dari WhatsApp diterima, tetapi gateway belum mengirim URL file gambar ke web.
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
 
                                 <!-- Pesan File -->
                                 <template x-if="msg.message_type === 'file'">
                                     <div class="w-full">
+                                        <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                            <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-xs md:text-sm">
+                                                Media file dari WhatsApp diterima, tetapi gateway belum mengirim URL file ke web.
+                                            </div>
+                                        </template>
+                                        <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
                                         <div class="flex items-center gap-3 min-w-0">
                                             <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
                                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -135,6 +148,7 @@
                                                 </a>
                                             </div>
                                         </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
@@ -157,14 +171,44 @@
                             <!-- Bot Transfer Options (Muncul di pesan bot terakhir saat fase offer_agent_transfer) -->
                             <template x-if="msg.sender_id == 0 && botPhase === 'offer_agent_transfer' && isLastBotMessage(index, messages)">
                                 <div class="mt-3 flex flex-col sm:flex-row gap-2 w-full">
-                                    <button @click="selectOption('LANJUT')" 
+                                    <button @click="selectOption('Tanya BEST AI')" 
                                             class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-2">
-                                        <i class="fas fa-comment-dots"></i> Tanya Lagi
+                                        <i class="fas fa-comment-dots"></i> Tanya BEST AI
                                     </button>
-                                    <button @click="selectOption('AGENT')" 
+                                    <button @click="selectOption('Hubungi Agent')" 
                                             class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[11px] font-bold transition-all shadow-md flex-1 text-center flex items-center justify-center gap-2">
                                         <i class="fas fa-headset"></i> Hubungi Agent
                                     </button>
+                                </div>
+                            </template>
+
+                            <!-- Bot Initial Chat Options (Muncul di pesan bot terakhir saat fase chatting_with_ai) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'chatting_with_ai' && isLastBotMessage(index, messages)">
+                                <div class="mt-3 flex flex-col sm:flex-row gap-2 w-full">
+                                    <button @click="selectOption('Tanya BEST AI')" 
+                                            class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 text-center flex items-center justify-center gap-2">
+                                        <i class="fas fa-comment-dots"></i> Tanya BEST AI
+                                    </button>
+                                    <button @click="selectOption('Hubungi Agent')" 
+                                            class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-xl text-[11px] font-bold transition-all shadow-md flex-1 text-center flex items-center justify-center gap-2">
+                                        <i class="fas fa-headset"></i> Hubungi Agent
+                                    </button>
+                                </div>
+                            </template>
+
+                            <!-- Bot Submenu Options (Muncul di pesan bot terakhir saat fase awaiting_submenu) -->
+                            <template x-if="msg.sender_id == 0 && botPhase === 'awaiting_submenu' && isLastBotMessage(index, messages)">
+                                <div class="mt-3 flex flex-wrap gap-2 w-full">
+                                    <template x-for="sub in botSubmenus.filter(s => {
+                                        // Filter only submenus that belong to the menu just picked by user
+                                        let lastUserMsg = [...messages].reverse().find(m => m.sender_type === 'user');
+                                        return lastUserMsg && String(lastUserMsg.content).toLowerCase().trim() === 'hubungi cs' ? s.parent_id == 13 : true;
+                                    })" :key="sub.id">
+                                        <button @click="selectOption(sub.label)" 
+                                                class="px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all shadow-sm flex-1 min-w-[140px] text-center">
+                                            <span x-text="sub.label"></span>
+                                        </button>
+                                    </template>
                                 </div>
                             </template>
                         </div>
@@ -205,9 +249,10 @@
                 </button>
                 <input type="file" x-ref="fileInput" class="hidden" @change="uploadFile">
 
-                <textarea x-model="newMessage" 
-                          @input="sendTypingEvent"
-                          @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
+                <textarea x-ref="messageInput"
+                          x-model="newMessage" 
+                          @input="sendTypingEvent(); resizeComposer()"
+                          @keydown="handleComposerKeydown($event)"
                           placeholder="Ketik balasan Anda..." 
                           class="flex-1 max-h-32 min-h-[40px] md:min-h-[44px] bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl px-3.5 py-2 md:py-2.5 text-[13px] md:text-sm transition-colors resize-none overflow-y-auto"
                           rows="1"></textarea>
@@ -224,12 +269,13 @@
     <!-- Logic Alpine JS Tetap Sama, Tidak Diubah -->
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase, botCategories) => ({
+            Alpine.data('chatApp', (conversationId, userId, initialStatus, initialMessages, initialBotPhase, botCategories, initialSubmenus) => ({
                 conversationId: conversationId,
                 userId: userId,
                 status: initialStatus,
                 messages: initialMessages,
                 botPhase: initialBotPhase || 'off',
+                botSubmenus: initialSubmenus || [],
                 newMessage: '',
                 isSending: false,
                 isTyping: false,
@@ -240,6 +286,7 @@
                 init() {
                     this.scrollToBottom();
                     this.listenForEvents();
+                    this.$nextTick(() => this.resizeComposer());
 
                     // Polling fallback: sync status dari server setiap 20 detik
                     setInterval(async () => {
@@ -254,9 +301,46 @@
                                 console.log('🔄 Polling sync: status berubah dari', this.status, '→', data.conversation.status);
                                 this.status = data.conversation.status;
                                 if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                                if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                             }
                         } catch (e) { /* silent */ }
                     }, 20000);
+                },
+
+                handleComposerKeydown(event) {
+                    if (event.key !== 'Enter') return;
+
+                    if (event.shiftKey) {
+                        event.preventDefault();
+
+                        const textarea = this.$refs.messageInput;
+                        if (!textarea) return;
+
+                        const start = textarea.selectionStart ?? this.newMessage.length;
+                        const end = textarea.selectionEnd ?? this.newMessage.length;
+                        const before = this.newMessage.slice(0, start);
+                        const after = this.newMessage.slice(end);
+
+                        this.newMessage = `${before}\n${after}`;
+
+                        this.$nextTick(() => {
+                            textarea.focus();
+                            const cursorPosition = start + 1;
+                            textarea.setSelectionRange(cursorPosition, cursorPosition);
+                            this.resizeComposer();
+                        });
+                        return;
+                    }
+
+                    event.preventDefault();
+                    this.sendMessage();
+                },
+
+                resizeComposer() {
+                    if (!this.$refs.messageInput) return;
+
+                    this.$refs.messageInput.style.height = 'auto';
+                    this.$refs.messageInput.style.height = `${Math.min(this.$refs.messageInput.scrollHeight, 128)}px`;
                 },
 
                 get statusText() {
@@ -300,6 +384,7 @@
                                 if (data.conversation) {
                                     this.status = data.conversation.status;
                                     if (data.conversation.bot_phase) this.botPhase = data.conversation.bot_phase;
+                                    if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                                 }
                                 if (data.messages) {
                                     this.messages = data.messages;
@@ -361,6 +446,7 @@
 
                     const content = this.newMessage;
                     this.newMessage = ''; 
+                    this.resizeComposer();
                     this.isSending = true;
 
                     const tempId = Date.now();
@@ -410,6 +496,9 @@
                             // Sync botPhase dari response backend (SINGLE SOURCE OF TRUTH)
                             if (data.bot_phase) {
                                 this.botPhase = data.bot_phase;
+                            }
+                            if (data.bot_submenus) {
+                                this.botSubmenus = data.bot_submenus;
                             }
                         }
 

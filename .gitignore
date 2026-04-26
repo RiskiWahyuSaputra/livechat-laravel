@@ -25,3 +25,6 @@ Thumbs.db
 *.py
 *.sh
 *.bat
+
+undefined/temp/
+node-compile-cache/

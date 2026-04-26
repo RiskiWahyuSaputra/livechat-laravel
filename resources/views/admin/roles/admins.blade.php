@@ -8,7 +8,7 @@
 const adminRolesData = {
     showModal: false,
     isEdit: false,
-    form: { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [], level: 1 },
+    form: { id: '', username: '', email: '', password: '', role: '', is_superadmin: false, permissions: [], level: 1 },
     availablePermissions: {{ Js::from($permissions) }},
     rolesList: {{ Js::from($rolesList) }},
     permissionGroups: {
@@ -16,7 +16,20 @@ const adminRolesData = {
         'Modul Pelanggan': ['manage_customers'],
         'Modul Sistem & Keamanan': ['manage_roles']
     },
+    getDefaultRole() {
+        const firstAssignableRole = this.rolesList.find(role => role.slug !== 'super_admin');
+        return firstAssignableRole ? firstAssignableRole.slug : 'agent';
+    },
+    getRoleLevel(roleSlug, fallback = 2) {
+        const selectedRole = this.rolesList.find(role => role.slug === roleSlug);
+        return selectedRole ? selectedRole.level : fallback;
+    },
     init() {
+        if (!this.form.role) {
+            this.form.role = this.getDefaultRole();
+            this.form.level = this.getRoleLevel(this.form.role, this.form.level);
+        }
+
         @if($errors->any())
             this.showModal = true;
             this.isEdit = {{ old('id') ? 'true' : 'false' }};
@@ -47,7 +60,8 @@ const adminRolesData = {
     },
     openCreate() {
         this.isEdit = false;
-        this.form = { id: '', username: '', email: '', password: '', role: 'agent', is_superadmin: false, permissions: [], level: 2 };
+        const defaultRole = this.getDefaultRole();
+        this.form = { id: '', username: '', email: '', password: '', role: defaultRole, is_superadmin: false, permissions: [], level: this.getRoleLevel(defaultRole) };
         this.showModal = true;
     },
     openEdit(admin) {

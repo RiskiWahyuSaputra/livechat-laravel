@@ -7,7 +7,7 @@ use App\Models\Admin;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class RoleController extends Controller
 {
@@ -27,28 +27,45 @@ class RoleController extends Controller
 
         $admins = Admin::with('roleModel')->orderBy('is_superadmin', 'desc')->latest()->get();
         $permissions = $this->availablePermissions;
-        $rolesList = Role::all();
+        $rolesQuery = Role::query();
+
+        if ($this->rolesTableHasLevelColumn()) {
+            $rolesQuery->orderBy('level');
+        }
+
+        $rolesList = $rolesQuery
+            ->orderBy('name')
+            ->get()
+            ->map(function (Role $role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'slug' => $role->slug,
+                    'description' => $role->description,
+                    'level' => $this->resolveRoleLevel($role->slug, $role),
+                ];
+            })
+            ->values();
+
         return view('admin.roles.admins', compact('admins', 'permissions', 'rolesList'));
     }
 
     private function syncLegacyRoles()
     {
-        $defaultDescriptions = [
-            'super_admin' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
-            'agent' => 'Menangani pesan pelanggan dan mengelola percakapan di Live Chat Workspace.',
-            'agent1' => 'Atasan/Supervisor Agent - Memiliki wewenang untuk menangani eskalasi dari Agent 2.',
-            'agent2' => 'Staff Agent - Menangani percakapan awal dan dapat melakukan eskalasi ke Agent 1.',
-        ];
-
         // Pastikan role default ada dengan deskripsi dan level
-        foreach ($defaultRoles as $slug => $data) {
+        foreach ($this->defaultRoles() as $slug => $data) {
+            $payload = [
+                'name' => $data['name'],
+                'description' => $data['description'],
+            ];
+
+            if ($this->rolesTableHasLevelColumn()) {
+                $payload['level'] = $data['level'];
+            }
+
             Role::updateOrCreate(
                 ['slug' => $slug],
-                [
-                    'name' => $data['name'],
-                    'description' => $data['description'],
-                    'level' => $data['level']
-                ]
+                $payload
             );
         }
 
@@ -59,6 +76,27 @@ class RoleController extends Controller
                 $admin->update(['role_id' => $role->id]);
             }
         }
+    }
+
+    private function defaultRoles(): array
+    {
+        return [
+            'super_admin' => [
+                'name' => 'Superadmin',
+                'description' => 'Akses penuh ke seluruh sistem, modul, dan pengaturan keamanan.',
+                'level' => 1,
+            ],
+            'agent1' => [
+                'name' => 'Agent 1 (Supervisor)',
+                'description' => 'Atasan/Supervisor Agent - Memiliki wewenang untuk menangani eskalasi dari Agent 2.',
+                'level' => 2,
+            ],
+            'agent2' => [
+                'name' => 'Agent 2 (Staff)',
+                'description' => 'Staff Agent - Menangani percakapan awal dan dapat melakukan eskalasi ke Agent 1.',
+                'level' => 3,
+            ],
+        ];
     }
 
     public function store(Request $request)
@@ -81,7 +119,7 @@ class RoleController extends Controller
         if ($is_superadmin) {
             $level = 1;
         } elseif ($role) {
-            $level = $role->level;
+            $level = $this->resolveRoleLevel($request->role, $role, (int) $request->level);
         }
 
         Admin::create([
@@ -118,7 +156,7 @@ class RoleController extends Controller
         if ($is_superadmin) {
             $level = 1;
         } elseif ($role) {
-            $level = $role->level;
+            $level = $this->resolveRoleLevel($request->role, $role, (int) $request->level);
         }
 
         $data = [
@@ -148,5 +186,25 @@ class RoleController extends Controller
 
         $admin->delete();
         return redirect()->route('admin.admins.index')->with('success', 'Admin berhasil dihapus.');
+    }
+
+    private function rolesTableHasLevelColumn(): bool
+    {
+        static $hasLevelColumn;
+
+        if ($hasLevelColumn === null) {
+            $hasLevelColumn = Schema::hasColumn('roles', 'level');
+        }
+
+        return $hasLevelColumn;
+    }
+
+    private function resolveRoleLevel(string $roleSlug, ?Role $role = null, int $fallback = 2): int
+    {
+        if ($this->rolesTableHasLevelColumn() && $role && $role->level !== null) {
+            return (int) $role->level;
+        }
+
+        return $this->defaultRoles()[$roleSlug]['level'] ?? $fallback;
     }
 }
