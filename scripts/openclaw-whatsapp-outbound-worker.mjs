@@ -185,17 +185,27 @@ function buildHeaders() {
 function runCommand(command, args) {
   return new Promise((resolve) => {
     const isWin = process.platform === "win32";
-    
-    // Manual escaping for Windows shell
-    const escapedArgs = isWin 
-      ? args.map(arg => `"${String(arg).replace(/"/g, '""')}"`)
-      : args;
 
-    const child = spawn(command, escapedArgs, {
-      shell: isWin,
-      windowsHide: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    let spawnCmd, spawnArgs, spawnOpts;
+
+    if (isWin) {
+      // cmd.exe splits the command string at literal newline characters even inside
+      // double-quoted arguments, so multiline messages are truncated to the first line.
+      // PowerShell handles multiline string arguments correctly when calling external
+      // programs, so we use it instead of cmd.exe on Windows.
+      const psEscaped = [command, ...args]
+        .map((a) => `'${String(a).replace(/'/g, "''")}'`)
+        .join(" ");
+      spawnCmd = "powershell.exe";
+      spawnArgs = ["-NoProfile", "-NonInteractive", "-Command", `& ${psEscaped}`];
+      spawnOpts = { shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] };
+    } else {
+      spawnCmd = command;
+      spawnArgs = args;
+      spawnOpts = { shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] };
+    }
+
+    const child = spawn(spawnCmd, spawnArgs, spawnOpts);
 
     let stdout = "";
     let stderr = "";
