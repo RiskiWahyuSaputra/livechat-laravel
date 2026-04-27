@@ -802,29 +802,39 @@ class ConversationFlowService
     private function buildMainMenuPromptWithGreeting(bool $includeGreeting = true): string
     {
         $menus = $this->rootMenus();
-        
-        $lines = [];
+        $parts = [];
 
         if ($includeGreeting) {
-            $lines[] = trim((string) Setting::get(
-                'bot_greeting_message',
-                'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
-            ));
+            $parts[] = trim((string) Setting::get('bot_greeting_message', 'Selamat datang!'));
         }
 
         if ($menus->isEmpty()) {
-             $lines[] = "Menu Utama belum tersedia.";
+             $parts[] = "Menu belum tersedia.";
         } else {
             $menuList = [];
             foreach ($menus as $index => $menu) {
-                $menuList[] = "(" . ($index + 1) . ") " . $menu->label;
+                $menuList[] = "[" . ($index + 1) . "] " . $menu->label;
             }
-            $lines[] = "PILIHAN MENU: " . implode(", ", $menuList);
+            $parts[] = "PILIHAN MENU: " . implode(" | ", $menuList);
         }
         
-        $lines[] = "Ketik angka atau nama menu pilihan Anda.";
+        $parts[] = "(Ketik angka/nama menu pilihan Anda)";
 
-        return implode("\n", $lines);
+        return implode(" - ", $parts);
+    }
+
+    private function buildSubmenuPrompt(?int $parentId = null): ?string
+    {
+        if (!$parentId) return null;
+        $children = BotMenu::where('parent_id', $parentId)->orderBy('order_index')->get(['label']);
+        if ($children->isEmpty()) return null;
+
+        $menuList = [];
+        foreach ($children as $index => $child) {
+            $menuList[] = "[" . ($index + 1) . "] " . $child->label;
+        }
+
+        return "PILIHAN SUBMENU: " . implode(" | ", $menuList) . " (Ketik angka pilihan Anda)";
     }
 
     private function buildLinkMenuResponse(BotMenu $menu): string
@@ -917,26 +927,7 @@ class ConversationFlowService
         return implode("\n", $lines);
     }
 
-    private function buildSubmenuPrompt(?int $parentId = null): ?string
-    {
-        if (!$parentId) {
-            return null;
-        }
 
-        $children = BotMenu::where('parent_id', $parentId)->orderBy('order_index')->get(['label']);
-        if ($children->isEmpty()) {
-            return null;
-        }
-
-        $lines = ['Pilih salah satu submenu berikut:'];
-        foreach ($children as $index => $child) {
-            $lines[] = '[' . ($index + 1) . '] ' . $child->label;
-        }
-        $lines[] = '';
-        $lines[] = 'Balas dengan nama submenu yang kamu pilih.';
-
-        return implode("\n", $lines);
-    }
 
     public function usesBotMenuFlow(): bool
     {
