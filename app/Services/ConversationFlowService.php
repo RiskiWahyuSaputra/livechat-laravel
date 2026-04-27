@@ -810,22 +810,18 @@ class ConversationFlowService
                 'bot_greeting_message',
                 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
             ));
-            $lines[] = "";
         }
 
         if ($menus->isEmpty()) {
-             $lines[] = "Menu utama belum tersedia saat ini.";
+             $lines[] = "Menu Utama belum tersedia.";
         } else {
-            $lines[] = "Silakan pilih salah satu menu utama berikut:";
-            $lines[] = "";
-            
+            $lines[] = "--- DAFTAR MENU ---";
             foreach ($menus as $index => $menu) {
-                $lines[] = "[" . ($index + 1) . "] " . $menu->label;
+                $lines[] = "• (" . ($index + 1) . ") " . $menu->label;
             }
         }
         
-        $lines[] = "";
-        $lines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
+        $lines[] = "Ketik angka atau nama menu pilihan Anda.";
 
         return implode("\n", $lines);
     }
