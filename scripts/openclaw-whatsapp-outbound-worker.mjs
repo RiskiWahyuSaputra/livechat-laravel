@@ -129,7 +129,12 @@ async function processItem(item) {
     args.push("--message", message);
   }
 
-  log(`EXECUTING: ${cliPath} ${args.join(" ")}`);
+  const isWin = process.platform === "win32";
+  const displayArgs = isWin 
+    ? args.map(arg => `"${String(arg).replace(/"/g, '""')}"`)
+    : args;
+
+  log(`EXECUTING: ${cliPath} ${displayArgs.join(" ")}`);
 
   const result = await runCommand(cliPath, args);
   if (result.code === 0) {
@@ -175,8 +180,15 @@ function buildHeaders() {
 
 function runCommand(command, args) {
   return new Promise((resolve) => {
-    const child = spawn(command, args, {
-      shell: process.platform === "win32",
+    const isWin = process.platform === "win32";
+    
+    // Manual escaping for Windows shell
+    const escapedArgs = isWin 
+      ? args.map(arg => `"${String(arg).replace(/"/g, '""')}"`)
+      : args;
+
+    const child = spawn(command, escapedArgs, {
+      shell: isWin,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
