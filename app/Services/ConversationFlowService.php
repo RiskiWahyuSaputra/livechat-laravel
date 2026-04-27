@@ -806,26 +806,23 @@ class ConversationFlowService
             return 'Menu utama belum tersedia saat ini.';
         }
 
-        $lines = [];
-
+        $text = "";
         if ($includeGreeting) {
-            $lines[] = trim((string) Setting::get(
+            $text .= trim((string) Setting::get(
                 'bot_greeting_message',
                 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
-            ));
-            $lines[] = '';
+            )) . "\n\n";
         }
 
-        $lines[] = 'Silakan pilih salah satu menu utama berikut:';
-        $lines[] = '';
+        $text .= "Silakan pilih salah satu menu utama berikut:\n\n";
 
         foreach ($menus as $index => $menu) {
-            $lines[] = '[' . ($index + 1) . '] ' . $menu->label;
+            $text .= "[" . ($index + 1) . "] " . $menu->label . "\n";
         }
-        $lines[] = '';
-        $lines[] = 'Balas dengan angka atau nama menu yang kamu pilih.';
+        
+        $text .= "\nBalas dengan angka atau nama menu yang kamu pilih.";
 
-        return implode("\n", $lines);
+        return $text;
     }
 
     private function buildLinkMenuResponse(BotMenu $menu): string
