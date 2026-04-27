@@ -129,9 +129,7 @@ async function processItem(item) {
     args.push("--message", message);
   }
 
-  if (mediaUrl) {
-    args.push("--media", mediaUrl);
-  }
+  log(`EXECUTING: ${cliPath} ${args.join(" ")}`);
 
   const result = await runCommand(cliPath, args);
   if (result.code === 0) {
