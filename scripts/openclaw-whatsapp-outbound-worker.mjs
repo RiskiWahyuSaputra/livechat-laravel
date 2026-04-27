@@ -48,7 +48,7 @@ if (!pullUrl || !ackUrl) {
   process.exit(1);
 }
 
-log(`worker started pull=${pullUrl} ack=${ackUrl} cli=${cliPath}`);
+log(`worker started pull=${pullUrl} cli=${cliPath}`);
 
 while (!stopping) {
   try {
@@ -127,6 +127,10 @@ async function processItem(item) {
 
   if (message) {
     args.push("--message", message);
+  }
+
+  if (mediaUrl) {
+    args.push("--media", mediaUrl);
   }
 
   const isWin = process.platform === "win32";
@@ -254,7 +258,7 @@ function log(message) {
     fs.mkdirSync(path.dirname(logFile), { recursive: true });
     fs.appendFileSync(logFile, `${line}\n`, "utf8");
   } catch {
-    // Ignore file logging failures and still print to stdout.
+    // Ignore
   }
 
   process.stdout.write(`${line}\n`);
