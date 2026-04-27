@@ -814,16 +814,16 @@ class ConversationFlowService
                 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
             ));
             $lines[] = '';
-        } else {
-            $lines[] = 'Silakan pilih salah satu menu utama berikut:';
-            $lines[] = '';
         }
+
+        $lines[] = 'Silakan pilih salah satu menu utama berikut:';
+        $lines[] = '';
 
         foreach ($menus as $index => $menu) {
             $lines[] = '[' . ($index + 1) . '] ' . $menu->label;
         }
         $lines[] = '';
-        $lines[] = 'Balas dengan nama menu yang kamu pilih.';
+        $lines[] = 'Balas dengan angka atau nama menu yang kamu pilih.';
 
         return implode("\n", $lines);
     }
