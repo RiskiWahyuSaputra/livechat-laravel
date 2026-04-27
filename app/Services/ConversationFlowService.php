@@ -802,25 +802,31 @@ class ConversationFlowService
     private function buildMainMenuPromptWithGreeting(bool $includeGreeting = true): string
     {
         $menus = $this->rootMenus();
-        $parts = [];
+        $lines = [];
 
         if ($includeGreeting) {
-            $parts[] = trim((string) Setting::get('bot_greeting_message', 'Selamat datang!'));
+            $lines[] = trim((string) Setting::get(
+                'bot_greeting_message',
+                'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
+            ));
+            $lines[] = "";
         }
 
         if ($menus->isEmpty()) {
-             $parts[] = "Menu belum tersedia.";
+             $lines[] = "Menu utama belum tersedia saat ini.";
         } else {
-            $menuList = [];
+            $lines[] = "Silakan pilih salah satu menu utama berikut:";
+            $lines[] = "";
+            
             foreach ($menus as $index => $menu) {
-                $menuList[] = "[" . ($index + 1) . "] " . $menu->label;
+                $lines[] = "[" . ($index + 1) . "] " . $menu->label;
             }
-            $parts[] = "PILIHAN MENU: " . implode(" | ", $menuList);
         }
         
-        $parts[] = "(Ketik angka/nama menu pilihan Anda)";
+        $lines[] = "";
+        $lines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
 
-        return implode(" - ", $parts);
+        return implode("\n", $lines);
     }
 
     private function buildSubmenuPrompt(?int $parentId = null): ?string
@@ -829,12 +835,15 @@ class ConversationFlowService
         $children = BotMenu::where('parent_id', $parentId)->orderBy('order_index')->get(['label']);
         if ($children->isEmpty()) return null;
 
-        $menuList = [];
+        $lines = ["Silakan pilih salah satu submenu berikut:", ""];
         foreach ($children as $index => $child) {
-            $menuList[] = "[" . ($index + 1) . "] " . $child->label;
+            $lines[] = "[" . ($index + 1) . "] " . $child->label;
         }
+        
+        $lines[] = "";
+        $lines[] = "Balas dengan angka atau nama menu pilihan Anda.";
 
-        return "PILIHAN SUBMENU: " . implode(" | ", $menuList) . " (Ketik angka pilihan Anda)";
+        return implode("\n", $lines);
     }
 
     private function buildLinkMenuResponse(BotMenu $menu): string
