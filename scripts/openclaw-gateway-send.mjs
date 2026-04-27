@@ -151,16 +151,28 @@ async function handleConnectChallenge(frame) {
     }
 
     if (buttonObj && Array.isArray(buttonObj)) {
-      // The gateway requires /message to be a string and rejects a 'buttons' property at the root.
-      // We will provide the text directly in /message and append buttons as text.
-      params.message = finalMessage;
-      
-      if (params.message) {
-        params.message += "\n";
-        buttonObj.forEach((btn, idx) => {
-          const label = btn.reply?.title || btn.title || "Option";
-          params.message += `\n[${idx + 1}] ${label}`;
-        });
+      // WhatsApp via OpenClaw gateway does not support interactive buttons.
+      // Convert buttons to a numbered text list instead.
+      // If the message text already contains a numbered list (e.g. [1] Menu...),
+      // do NOT append again to avoid duplication — the list is already in the text.
+      // If the message has no numbered list, append buttons as numbered options.
+      // If the message is empty, generate the list as the sole message body.
+      const hasNumberedList = /\[\d+\]/.test(finalMessage);
+
+      if (hasNumberedList) {
+        // Prompt text already has numbered list — just send it as-is.
+        params.message = finalMessage;
+      } else {
+        const listText = buttonObj
+          .map((btn, idx) => {
+            const label = btn.reply?.title || btn.title || "Option";
+            return `[${idx + 1}] ${label}`;
+          })
+          .join("\n");
+
+        params.message = finalMessage
+          ? `${finalMessage}\n\n${listText}`
+          : listText;
       }
     } else {
       if (finalMessage) params.message = finalMessage;

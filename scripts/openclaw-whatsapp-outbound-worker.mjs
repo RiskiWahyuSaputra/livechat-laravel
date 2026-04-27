@@ -248,6 +248,13 @@ function formatMessage(message, buttons) {
     return text;
   }
 
+  // If the message already contains a numbered list (e.g. [1] Menu...),
+  // do not append buttons again to avoid duplication in WhatsApp.
+  const hasNumberedList = /\[\d+\]/.test(text);
+  if (hasNumberedList) {
+    return text;
+  }
+
   return [text, lines.join("\n")].filter(Boolean).join("\n\n");
 }
 
