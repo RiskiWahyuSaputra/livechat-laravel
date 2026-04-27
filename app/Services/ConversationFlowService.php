@@ -818,17 +818,19 @@ class ConversationFlowService
              $finalLines[] = "Menu utama belum tersedia saat ini.";
         } else {
             $finalLines[] = "Silakan pilih salah satu menu utama berikut:";
-            $finalLines[] = ""; // Spasi
+            $finalLines[] = " "; 
             
             foreach ($menus as $index => $menu) {
-                $finalLines[] = "[" . ($index + 1) . "] " . $menu->label;
+                // Gunakan simbol bulat agar tetap terlihat seperti daftar
+                $finalLines[] = "• [" . ($index + 1) . "] " . $menu->label;
             }
         }
         
-        $finalLines[] = "";
+        $finalLines[] = " ";
         $finalLines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
 
-        return implode("\n", $finalLines);
+        // Gunakan separator yang berbeda untuk tes
+        return implode("  ", $finalLines);
     }
 
     private function buildLinkMenuResponse(BotMenu $menu): string
