@@ -802,27 +802,33 @@ class ConversationFlowService
     private function buildMainMenuPromptWithGreeting(bool $includeGreeting = true): string
     {
         $menus = $this->rootMenus();
-        if ($menus->isEmpty()) {
-            return 'Menu utama belum tersedia saat ini.';
-        }
+        
+        $finalLines = [];
 
-        $text = "";
         if ($includeGreeting) {
-            $text .= trim((string) Setting::get(
+            $greeting = trim((string) Setting::get(
                 'bot_greeting_message',
                 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
-            )) . "\n\n";
+            ));
+            $finalLines[] = $greeting;
+            $finalLines[] = ""; // Spasi
         }
 
-        $text .= "Silakan pilih salah satu menu utama berikut:\n\n";
-
-        foreach ($menus as $index => $menu) {
-            $text .= "[" . ($index + 1) . "] " . $menu->label . "\n";
+        if ($menus->isEmpty()) {
+             $finalLines[] = "Menu utama belum tersedia saat ini.";
+        } else {
+            $finalLines[] = "Silakan pilih salah satu menu utama berikut:";
+            $finalLines[] = ""; // Spasi
+            
+            foreach ($menus as $index => $menu) {
+                $finalLines[] = "[" . ($index + 1) . "] " . $menu->label;
+            }
         }
         
-        $text .= "\nBalas dengan angka atau nama menu yang kamu pilih.";
+        $finalLines[] = "";
+        $finalLines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
 
-        return $text;
+        return implode("\n", $finalLines);
     }
 
     private function buildLinkMenuResponse(BotMenu $menu): string
