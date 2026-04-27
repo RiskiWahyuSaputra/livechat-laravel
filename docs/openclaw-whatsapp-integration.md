@@ -76,3 +76,43 @@ Jika Laravel berjalan dari proses Apache/PHP yang tidak mewarisi profile shell A
 
 - `OPENCLAW_STATE_DIR`
 - `OPENCLAW_CONFIG_PATH`
+
+## Outbound polling worker
+
+Untuk gateway OpenClaw versi baru, mode yang paling stabil adalah membiarkan laptop gateway mengirim pesan keluar secara lokal melalui CLI resmi OpenClaw.
+
+### Server Laravel
+
+Set transport WhatsApp ke mode polling:
+
+- `OPENCLAW_WHATSAPP_TRANSPORT=poll`
+
+Laravel akan mengantrikan outbound WhatsApp ke cache/database server. Laptop gateway lalu mengambil antrean itu lewat HTTPS ke server.
+
+### Laptop gateway
+
+Laptop gateway tidak perlu menerima koneksi masuk tambahan. Cukup jalankan worker polling ini dari folder repo:
+
+```bash
+node scripts/openclaw-whatsapp-outbound-worker.mjs
+```
+
+Env minimal di laptop gateway:
+
+- `APP_URL=https://domain-laravel-anda.com`
+- `OPENCLAW_BRIDGE_TOKEN=<token yang sama dengan server>`
+- `OPENCLAW_WHATSAPP_CHANNEL=whatsapp`
+- `OPENCLAW_WHATSAPP_ACCOUNT` (opsional)
+
+Worker akan polling ke endpoint server:
+
+- `POST /api/openclaw/whatsapp/outbound/pull`
+- `POST /api/openclaw/whatsapp/outbound/ack`
+
+Env tambahan opsional:
+
+- `OPENCLAW_OUTBOUND_POLL_INTERVAL_MS=2000`
+- `OPENCLAW_OUTBOUND_LEASE_SECONDS=60`
+- `OPENCLAW_OUTBOUND_WORKER_LOG`
+
+Model ini cocok untuk server publik + laptop gateway di belakang NAT, karena semua koneksi outbound berangkat dari laptop gateway ke server.
