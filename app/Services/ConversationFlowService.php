@@ -803,34 +803,31 @@ class ConversationFlowService
     {
         $menus = $this->rootMenus();
         
-        $finalLines = [];
+        $lines = [];
 
         if ($includeGreeting) {
-            $greeting = trim((string) Setting::get(
+            $lines[] = trim((string) Setting::get(
                 'bot_greeting_message',
                 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
             ));
-            $finalLines[] = $greeting;
-            $finalLines[] = ""; // Spasi
+            $lines[] = "";
         }
 
         if ($menus->isEmpty()) {
-             $finalLines[] = "Menu utama belum tersedia saat ini.";
+             $lines[] = "Menu utama belum tersedia saat ini.";
         } else {
-            $finalLines[] = "Silakan pilih salah satu menu utama berikut:";
-            $finalLines[] = " "; 
+            $lines[] = "Silakan pilih salah satu menu utama berikut:";
+            $lines[] = "";
             
             foreach ($menus as $index => $menu) {
-                // Gunakan simbol bulat agar tetap terlihat seperti daftar
-                $finalLines[] = "• [" . ($index + 1) . "] " . $menu->label;
+                $lines[] = "[" . ($index + 1) . "] " . $menu->label;
             }
         }
         
-        $finalLines[] = " ";
-        $finalLines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
+        $lines[] = "";
+        $lines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
 
-        // Gunakan separator yang berbeda untuk tes
-        return implode("  ", $finalLines);
+        return implode("\n", $lines);
     }
 
     private function buildLinkMenuResponse(BotMenu $menu): string
