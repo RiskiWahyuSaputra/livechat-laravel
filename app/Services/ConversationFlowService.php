@@ -815,10 +815,11 @@ class ConversationFlowService
         if ($menus->isEmpty()) {
              $lines[] = "Menu Utama belum tersedia.";
         } else {
-            $lines[] = "--- DAFTAR MENU ---";
+            $menuList = [];
             foreach ($menus as $index => $menu) {
-                $lines[] = "• (" . ($index + 1) . ") " . $menu->label;
+                $menuList[] = "(" . ($index + 1) . ") " . $menu->label;
             }
+            $lines[] = "PILIHAN MENU: " . implode(", ", $menuList);
         }
         
         $lines[] = "Ketik angka atau nama menu pilihan Anda.";
