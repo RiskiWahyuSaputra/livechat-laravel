@@ -311,6 +311,77 @@
         .work-box { transition:transform .35s,box-shadow .35s; border-radius:16px; }
         .work-box:hover { transform:translateY(-10px); box-shadow:0 20px 40px rgba(0,123,255,.12); }
 
+        /* Keep centered nav on desktop without breaking the mobile drawer layout */
+        @media (min-width: 992px) {
+            .user-main-nav {
+                margin: 0 auto !important;
+                display: flex !important;
+                float: none !important;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .header {
+                position: relative;
+                z-index: 11000;
+            }
+
+            .header .main-menu-wrapper {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: min(280px, 85vw);
+                max-width: 280px;
+                height: 100vh;
+                overflow-y: auto;
+                background: #fff;
+                z-index: 11001;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 0 12px 36px rgba(15, 23, 42, 0.18);
+            }
+
+            .header .main-nav.user-main-nav {
+                display: block !important;
+                margin: 0 !important;
+            }
+
+            html.menu-opened .header .main-menu-wrapper,
+            .main-wrapper.slide-nav .header .main-menu-wrapper {
+                transform: translateX(0);
+            }
+
+            .header .menu-header {
+                display: flex;
+                position: sticky;
+                top: 0;
+                background: #fff;
+                z-index: 2;
+                border-bottom: 1px solid #eef2f7;
+            }
+
+            .header .main-nav.user-main-nav > li {
+                display: block;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .header .main-nav.user-main-nav > li > a {
+                display: block;
+                padding: 15px 20px !important;
+                color: #0f172a;
+            }
+
+            .sidebar-overlay {
+                z-index: 10990;
+            }
+
+            .whatsapp-fab,
+            .chat-widget-container {
+                z-index: 9998 !important;
+            }
+        }
+
     </style>
 </head>
 
@@ -348,7 +419,7 @@
 							</a>
 							<a id="menu_close" class="menu-close" href="javascript:void(0);"> <i class="fas fa-times"></i></a>
 						</div>
-						<ul class="main-nav" style="margin: 0 auto !important; display: flex; float: none !important;">
+						<ul class="main-nav user-main-nav">
 							<li class="active">
 								<a href="{{ route('user.home') }}">Beranda</a>
 							</li>
