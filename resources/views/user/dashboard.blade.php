@@ -187,30 +187,31 @@
         @media (max-width: 991px) {
             .hero-title { font-size: 2.5rem; }
             .hero-section { padding: 60px 0; }
+            .hero-section,
+            .feature-section,
+            .service-section,
+            .work-section,
+            .stats-section,
+            .testimonial-section,
+            .faq-section,
+            .cta-section {
+                overflow-x: hidden;
+            }
             .hero-visual-container {
                 overflow: hidden;
             }
-            .hero-bg-blob {
-                width: 320px;
-                height: 320px;
-                max-width: 100%;
-            }
-            .floating-1 {
-                right: 0;
-            }
-            .floating-2 {
-                left: 0;
-            }
+            .hero-bg-blob,
+            .floating-element,
             .bg-blob-1,
-            .bg-blob-2 {
-                width: 220px;
-                height: 220px;
+            .bg-blob-2,
+            .stats-section::before,
+            .stats-section::after,
+            .cta-section::before,
+            .cta-section::after {
+                display: none !important;
             }
-            .bg-blob-1 {
-                right: -80px;
-            }
-            .bg-blob-2 {
-                left: -80px;
+            .hero-main-card {
+                padding: 24px;
             }
         }
 
