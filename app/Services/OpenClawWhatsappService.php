@@ -21,9 +21,12 @@ class OpenClawWhatsappService
     protected string $account;
     protected string $bridgeToken;
     protected string $publicBaseUrl;
+    protected string $transport;
     protected bool $enabled;
 
-    public function __construct()
+    public function __construct(
+        protected OpenClawWhatsappOutboundQueue $outboundQueue
+    )
     {
         $this->cliPath = trim((string) Setting::get('openclaw_cli_path', env('OPENCLAW_CLI_PATH', 'openclaw')));
         $this->nodePath = trim((string) Setting::get('openclaw_node_path', env('OPENCLAW_NODE_PATH', 'node')));
@@ -37,6 +40,7 @@ class OpenClawWhatsappService
         $this->account = trim((string) Setting::get('openclaw_whatsapp_account', env('OPENCLAW_WHATSAPP_ACCOUNT', '')));
         $this->bridgeToken = trim((string) Setting::get('openclaw_bridge_token', env('OPENCLAW_BRIDGE_TOKEN', '')));
         $this->publicBaseUrl = rtrim((string) Setting::get('openclaw_public_base_url', env('OPENCLAW_PUBLIC_BASE_URL', env('ASSET_URL', env('APP_URL', '')))), '/');
+        $this->transport = trim((string) Setting::get('openclaw_whatsapp_transport', env('OPENCLAW_WHATSAPP_TRANSPORT', 'gateway')));
         $this->enabled = filter_var(Setting::get('openclaw_whatsapp_enabled', env('OPENCLAW_WHATSAPP_ENABLED', true)), FILTER_VALIDATE_BOOL);
 
         if ($this->gatewayOrigin === '') {
@@ -70,6 +74,10 @@ class OpenClawWhatsappService
 
     public function markAsRead(User $user, string $messageId): bool
     {
+        if ($this->usesPollingTransport()) {
+            return false;
+        }
+
         if (!$this->isEnabled()) {
             return false;
         }
@@ -126,6 +134,15 @@ class OpenClawWhatsappService
                 'original_media_url' => $mediaUrl,
                 'suggested_env' => 'OPENCLAW_PUBLIC_BASE_URL',
             ]);
+        }
+
+        if ($this->usesPollingTransport()) {
+            return $this->queueOutboundMessage(
+                target: $target,
+                text: $text,
+                mediaUrl: $resolvedMedia['url'],
+                buttons: $buttons,
+            );
         }
 
         $command = $this->buildGatewaySendCommand(
@@ -271,6 +288,32 @@ class OpenClawWhatsappService
         ], static fn ($value) => $value !== null && $value !== '');
 
         return array_replace($currentEnv, $_ENV, $_SERVER, $env);
+    }
+
+    private function queueOutboundMessage(string $target, string $text = '', ?string $mediaUrl = null, array $buttons = []): bool
+    {
+        $jobId = $this->outboundQueue->enqueue([
+            'action' => 'send',
+            'account' => $this->account,
+            'buttons' => $buttons,
+            'channel' => $this->channel,
+            'media_url' => $mediaUrl,
+            'message' => $text,
+            'target' => $target,
+        ]);
+
+        Log::info('OpenClaw outbound WhatsApp diantrikan untuk worker polling.', [
+            'job_id' => $jobId,
+            'target' => $target,
+            'transport' => $this->transport,
+        ]);
+
+        return true;
+    }
+
+    private function usesPollingTransport(): bool
+    {
+        return in_array(strtolower($this->transport), ['poll', 'queue', 'worker'], true);
     }
 
     private function resolveConfigPath(): string

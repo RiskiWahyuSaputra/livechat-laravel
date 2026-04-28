@@ -10,6 +10,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class ConversationFlowService
 {
@@ -345,8 +346,7 @@ class ConversationFlowService
                 ]);
             }
         } elseif ($conversation->bot_phase === 'chatting_with_ai') {
-            $normalizedMsg = strtoupper(trim($userMessage));
-            if ($normalizedMsg === 'AGENT' || str_contains($normalizedMsg, 'HUBUNGI AGENT')) {
+            if ($this->wantsAgentTransfer($userMessage)) {
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
                     $officeStart = Setting::get('office_hours_start', '08:00');
@@ -360,7 +360,6 @@ class ConversationFlowService
                     ]);
                     return $this->formatBotReplies($newBotMessages, $conversation, $broadcast);
                 }
-
                 if ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
                     $newBotMessages[] = Message::create([
@@ -388,7 +387,7 @@ class ConversationFlowService
             $conversation->update(['bot_phase' => 'offer_agent_transfer']);
             $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
 
-            if (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+            if (!$this->isAiFallbackResponse($aiResponse)) {
                 $msg = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id' => 0,
@@ -403,8 +402,7 @@ class ConversationFlowService
                 $newBotMessages[] = $msg;
             }
         } elseif ($conversation->bot_phase === 'offer_agent_transfer') {
-            $normalizedMsg = strtoupper(trim($userMessage));
-            if ($normalizedMsg === 'AGENT' || str_contains($normalizedMsg, 'HUBUNGI AGENT')) {
+            if ($this->wantsAgentTransfer($userMessage)) {
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
                     $officeStart = Setting::get('office_hours_start', '08:00');
@@ -436,7 +434,7 @@ class ConversationFlowService
                         'content' => "Oke, saya sambungkan ke Agent ya. Kamu sekarang ada di antrean ke-{$queueCount}. Tunggu sebentar ya.",
                     ]);
                 }
-            } elseif ($normalizedMsg === 'LANJUT' || str_contains($normalizedMsg, 'LANJUT TANYA') || str_contains($normalizedMsg, 'TANYA BEST AI')) {
+            } elseif ($this->wantsContinueWithAi($userMessage)) {
                 $newBotMessages[] = Message::create([
                     'conversation_id' => $conversation->id,
                     'sender_id' => 0,
@@ -456,7 +454,7 @@ class ConversationFlowService
                 $aiResponse = $this->geminiService->askGemini($userMessage, 'Pertanyaan pelanggan lanjutan ke BEST AI: ');
                 $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
 
-                if ($recentBotAsks >= 2 && !str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                if ($recentBotAsks >= 2 && !$this->isAiFallbackResponse($aiResponse)) {
                     $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                     $msg = Message::create([
                         'conversation_id' => $conversation->id,
@@ -469,7 +467,7 @@ class ConversationFlowService
                         ['type' => 'reply', 'reply' => ['id' => 'agent', 'title' => 'Hubungi Agent']]
                     ];
                     $newBotMessages[] = $msg;
-                } elseif (!str_contains($aiResponse, 'Maaf, saat ini sistem BEST AI')) {
+                } elseif (!$this->isAiFallbackResponse($aiResponse)) {
                     $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                     $msg = Message::create([
                         'conversation_id' => $conversation->id,
@@ -585,8 +583,9 @@ class ConversationFlowService
     {
         $messages = [];
         $productImage = $this->detectProductImageForMessage($userMessage);
+        $isFallbackResponse = $this->isAiFallbackResponse($aiResponse);
 
-        if ($productImage) {
+        if ($productImage && !$isFallbackResponse) {
             $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
         }
 
@@ -599,7 +598,7 @@ class ConversationFlowService
         ]);
         $messages[] = $msg;
 
-        if ($productImage && $this->shouldAttachProductImage($aiResponse)) {
+        if ($productImage && !$isFallbackResponse && $this->shouldAttachProductImage($aiResponse)) {
             $messages[] = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id' => 0,
@@ -618,6 +617,59 @@ class ConversationFlowService
         }
 
         return $messages;
+    }
+
+    private function isAiFallbackResponse(string $aiResponse): bool
+    {
+        return $this->geminiService->isFallbackResponse($aiResponse);
+    }
+
+    private function wantsAgentTransfer(string $userMessage): bool
+    {
+        $normalized = $this->normalizeBotInput($userMessage);
+
+        if (in_array($normalized, [
+            '2',
+            'agent',
+            'hubungi agent',
+            'hubungin agent',
+            'hubungi cs',
+            'hubungin cs',
+            'cs',
+            'customer service',
+        ], true)) {
+            return true;
+        }
+
+        return str_contains($normalized, 'agent')
+            || str_contains($normalized, 'customer service');
+    }
+
+    private function wantsContinueWithAi(string $userMessage): bool
+    {
+        $normalized = $this->normalizeBotInput($userMessage);
+
+        if (in_array($normalized, [
+            '1',
+            'lanjut',
+            'lanjut tanya',
+            'tanya best ai',
+            'best ai',
+            'tanya ai',
+        ], true)) {
+            return true;
+        }
+
+        return str_contains($normalized, 'lanjut')
+            || str_contains($normalized, 'tanya best ai');
+    }
+
+    private function normalizeBotInput(string $userMessage): string
+    {
+        $normalized = mb_strtolower(trim(strip_tags($userMessage)));
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+
+        return trim((string) $normalized);
     }
 
     private function normalizeAiResponseForProductImage(string $aiResponse, string $label): string
@@ -809,10 +861,6 @@ class ConversationFlowService
     private function buildMainMenuPromptWithGreeting(bool $includeGreeting = true): string
     {
         $menus = $this->rootMenus();
-        if ($menus->isEmpty()) {
-            return 'Menu utama belum tersedia saat ini.';
-        }
-
         $lines = [];
 
         if ($includeGreeting) {
@@ -822,17 +870,39 @@ class ConversationFlowService
                 $greetingKey,
                 Setting::get('bot_greeting_message', 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?'),
             ));
-            $lines[] = '';
-        } else {
-            $lines[] = 'Silakan pilih salah satu menu utama berikut:';
-            $lines[] = '';
+            $lines[] = "";
         }
 
-        foreach ($menus as $index => $menu) {
-            $lines[] = '[' . ($index + 1) . '] ' . $menu->label;
+        if ($menus->isEmpty()) {
+             $lines[] = "Menu utama belum tersedia saat ini.";
+        } else {
+            $lines[] = "Silakan pilih salah satu menu utama berikut:";
+            $lines[] = "";
+            
+            foreach ($menus as $index => $menu) {
+                $lines[] = "[" . ($index + 1) . "] " . $menu->label;
+            }
         }
-        $lines[] = '';
-        $lines[] = 'Balas dengan nama menu yang kamu pilih.';
+        
+        $lines[] = "";
+        $lines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
+
+        return implode("\n", $lines);
+    }
+
+    private function buildSubmenuPrompt(?int $parentId = null): ?string
+    {
+        if (!$parentId) return null;
+        $children = BotMenu::where('parent_id', $parentId)->orderBy('order_index')->get(['label']);
+        if ($children->isEmpty()) return null;
+
+        $lines = ["Silakan pilih salah satu submenu berikut:", ""];
+        foreach ($children as $index => $child) {
+            $lines[] = "[" . ($index + 1) . "] " . $child->label;
+        }
+        
+        $lines[] = "";
+        $lines[] = "Balas dengan angka atau nama menu pilihan Anda.";
 
         return implode("\n", $lines);
     }
@@ -927,26 +997,7 @@ class ConversationFlowService
         return implode("\n", $lines);
     }
 
-    private function buildSubmenuPrompt(?int $parentId = null): ?string
-    {
-        if (!$parentId) {
-            return null;
-        }
 
-        $children = BotMenu::where('parent_id', $parentId)->orderBy('order_index')->get(['label']);
-        if ($children->isEmpty()) {
-            return null;
-        }
-
-        $lines = ['Pilih salah satu submenu berikut:'];
-        foreach ($children as $index => $child) {
-            $lines[] = '[' . ($index + 1) . '] ' . $child->label;
-        }
-        $lines[] = '';
-        $lines[] = 'Balas dengan nama submenu yang kamu pilih.';
-
-        return implode("\n", $lines);
-    }
 
     public function usesBotMenuFlow(): bool
     {
