@@ -112,6 +112,60 @@
                 </div>
             </div>
 
+            <!-- Operational Mode Card -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                    <h5 class="fw-bold mb-0 text-success"><i class="fe fe-activity me-2"></i> Mode Operasional Chat</h5>
+                    <p class="text-muted small mt-1 mb-0">Kendalikan alur percakapan customer berdasarkan kondisi operasional.</p>
+                </div>
+                <div class="card-body pt-3 pb-4">
+                    {{-- System Mode --}}
+                    <div class="form-group mb-4">
+                        <label class="form-label fw-bold">Mode Aktif Saat Ini</label>
+                        @php $currentMode = $settings['system_mode'] ?? 'office_hour'; @endphp
+                        <div class="d-flex gap-3 flex-wrap mt-1">
+                            <label class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'office_hour' ? 'border-success bg-success bg-opacity-10' : 'border-light bg-light' }}" style="cursor:pointer">
+                                <input type="radio" name="system_mode" value="office_hour" {{ $currentMode === 'office_hour' ? 'checked' : '' }} class="form-check-input mt-0">
+                                <div>
+                                    <div class="fw-bold text-success">🟢 Jam Kerja</div>
+                                    <div class="text-muted small">Customer bisa chat & antri ke Agent</div>
+                                </div>
+                            </label>
+                            <label class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'outside_office_hour' ? 'border-warning bg-warning bg-opacity-10' : 'border-light bg-light' }}" style="cursor:pointer">
+                                <input type="radio" name="system_mode" value="outside_office_hour" {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }} class="form-check-input mt-0">
+                                <div>
+                                    <div class="fw-bold text-warning">🟡 Di Luar Jam Kerja</div>
+                                    <div class="text-muted small">Hanya dilayani AI, tidak ada Agent</div>
+                                </div>
+                            </label>
+                            <label class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'closed' ? 'border-danger bg-danger bg-opacity-10' : 'border-light bg-light' }}" style="cursor:pointer">
+                                <input type="radio" name="system_mode" value="closed" {{ $currentMode === 'closed' ? 'checked' : '' }} class="form-check-input mt-0">
+                                <div>
+                                    <div class="fw-bold text-danger">🔴 Tutup</div>
+                                    <div class="text-muted small">Chat ditolak sepenuhnya</div>
+                                </div>
+                            </label>
+                        </div>
+                        @error('system_mode') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                    </div>
+
+                    {{-- Office Hours --}}
+                    <div class="row mb-0">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Jam Buka (Senin–Jumat)</label>
+                            <input type="time" name="office_hours_start" class="form-control form-control-lg bg-light @error('office_hours_start') is-invalid @enderror" value="{{ $settings['office_hours_start'] ?? '09:00' }}">
+                            @error('office_hours_start') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Jam Tutup (Senin–Jumat)</label>
+                            <input type="time" name="office_hours_end" class="form-control form-control-lg bg-light @error('office_hours_end') is-invalid @enderror" value="{{ $settings['office_hours_end'] ?? '17:00' }}">
+                            @error('office_hours_end') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">Pesan otomatis untuk setiap mode diatur di menu <a href="{{ route('admin.bot-menus.index') }}" class="text-primary fw-bold">Alur Chat</a> → Edit Sapaan.</small>
+                </div>
+            </div>
+
             <!-- General Settings Card -->
             <div class="card shadow-sm border-0 rounded-4 mb-4">
                 <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
