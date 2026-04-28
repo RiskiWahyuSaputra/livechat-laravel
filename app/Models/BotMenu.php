@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BotMenu extends Model
 {
-    protected $fillable = ['parent_id', 'label', 'message_response', 'action_type', 'action_value', 'order_index'];
+    protected $fillable = ['flow_type', 'parent_id', 'label', 'message_response', 'action_type', 'action_value', 'order_index'];
 
     public function children()
     {

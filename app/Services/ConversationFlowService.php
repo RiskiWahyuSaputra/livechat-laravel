@@ -17,8 +17,35 @@ class ConversationFlowService
     {
     }
 
+    private function getSystemMode(): string
+    {
+        $mode = Setting::get('system_mode', 'office_hour');
+        $validModes = ['office_hour', 'outside_office_hour', 'closed'];
+        return in_array($mode, $validModes) ? $mode : 'office_hour';
+    }
+
     public function createConversation(User $user, ?int $selectedMenuId = null): array
     {
+        $systemMode = $this->getSystemMode();
+
+        // Check system mode first — reject immediately if closed
+        if ($systemMode === 'closed') {
+            $defaultMessage = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
+            $rejectMessage = Setting::get('bot_greeting_closed', $defaultMessage) ?? $defaultMessage;
+
+            return [
+                'conversation'   => null,
+                'bot_messages'   => [],
+                'rejected'       => true,
+                'reject_message' => $rejectMessage,
+            ];
+        }
+
+        // Outside office hour: create conversation but only serve via AI, no queue
+        if ($systemMode === 'outside_office_hour') {
+            return $this->createOutsideOfficeHourConversation($user);
+        }
+
         $availableAdmin = Admin::where('status', '!=', 'offline')->get()->first(fn($admin) => $admin->canTakeNewChat());
         $anyOnline = Admin::whereIn('status', ['online', 'busy'])->exists();
 
@@ -49,6 +76,7 @@ class ConversationFlowService
             'user_id' => $user->id,
             'status' => $status,
             'bot_phase' => $botPhase,
+            'selected_menu_id' => ($menu && $menu->action_type === 'submenu') ? $menu->id : null,
             'queue_position' => $queuePosition,
             'last_message_at' => now(),
         ]);
@@ -130,8 +158,10 @@ class ConversationFlowService
         }
 
         return [
-            'conversation' => $conversation,
-            'bot_messages' => $createdMessages
+            'conversation'   => $conversation,
+            'bot_messages'   => $createdMessages,
+            'rejected'       => false,
+            'reject_message' => '',
         ];
     }
 
@@ -317,6 +347,20 @@ class ConversationFlowService
         } elseif ($conversation->bot_phase === 'chatting_with_ai') {
             $normalizedMsg = strtoupper(trim($userMessage));
             if ($normalizedMsg === 'AGENT' || str_contains($normalizedMsg, 'HUBUNGI AGENT')) {
+                // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
+                if ($this->getSystemMode() === 'outside_office_hour') {
+                    $officeStart = Setting::get('office_hours_start', '08:00');
+                    $officeEnd   = Setting::get('office_hours_end', '17:00');
+                    $newBotMessages[] = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                    ]);
+                    return $this->formatBotReplies($newBotMessages, $conversation, $broadcast);
+                }
+
                 if ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
                     $newBotMessages[] = Message::create([
@@ -361,7 +405,18 @@ class ConversationFlowService
         } elseif ($conversation->bot_phase === 'offer_agent_transfer') {
             $normalizedMsg = strtoupper(trim($userMessage));
             if ($normalizedMsg === 'AGENT' || str_contains($normalizedMsg, 'HUBUNGI AGENT')) {
-                if ($user->name === 'Guest') {
+                // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
+                if ($this->getSystemMode() === 'outside_office_hour') {
+                    $officeStart = Setting::get('office_hours_start', '08:00');
+                    $officeEnd   = Setting::get('office_hours_end', '17:00');
+                    $newBotMessages[] = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id'       => 0,
+                        'sender_type'     => 'admin',
+                        'message_type'    => 'text',
+                        'content'         => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                    ]);
+                } elseif ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
@@ -469,7 +524,7 @@ class ConversationFlowService
                 }
 
                 if ($menu->action_type === 'submenu') {
-                    $conversation->update(['bot_phase' => 'awaiting_submenu']);
+                    $conversation->update(['bot_phase' => 'awaiting_submenu', 'selected_menu_id' => $menu->id]);
                     $submenuPrompt = $this->buildSubmenuPrompt($menu->id);
                     if ($submenuPrompt) {
                         $msg = Message::create([
@@ -705,24 +760,29 @@ class ConversationFlowService
 
         $submenus = [];
         if ($conversation->bot_phase === 'awaiting_submenu') {
-            // Find the last user message to determine which parent menu was selected
-            $lastUserMessage = Message::where('conversation_id', $conversation->id)
-                ->where('sender_type', 'user')
-                ->orderBy('created_at', 'desc')
-                ->first();
+            $parentMenu = $conversation->selected_menu_id
+                ? BotMenu::find($conversation->selected_menu_id)
+                : null;
 
-            if ($lastUserMessage) {
-                $parentMenu = $this->findRootMenuSelection($lastUserMessage->content);
-                if ($parentMenu) {
-                    $submenus = BotMenu::where('parent_id', $parentMenu->id)
-                        ->orderBy('order_index')
-                        ->get(['id', 'label', 'parent_id'])
-                        ->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id]);
+            // Fallback: try to resolve from last user message if selected_menu_id not set
+            if (!$parentMenu) {
+                $lastUserMessage = Message::where('conversation_id', $conversation->id)
+                    ->where('sender_type', 'user')
+                    ->orderBy('created_at', 'desc')
+                    ->skip(1)
+                    ->first();
+
+                if ($lastUserMessage) {
+                    $parentMenu = $this->findRootMenuSelection($lastUserMessage->content);
                 }
             }
-            
-            // Fallback: if we can't find by label (e.g. from WhatsApp buttons), 
-            // we could look at the last admin message to see if it was a menu prompt
+
+            if ($parentMenu) {
+                $submenus = BotMenu::where('parent_id', $parentMenu->id)
+                    ->orderBy('order_index')
+                    ->get(['id', 'label', 'parent_id'])
+                    ->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id]);
+            }
         }
 
         return [
@@ -756,9 +816,11 @@ class ConversationFlowService
         $lines = [];
 
         if ($includeGreeting) {
+            $mode = $this->getSystemMode();
+            $greetingKey = 'bot_greeting_' . $mode;
             $lines[] = trim((string) Setting::get(
-                'bot_greeting_message',
-                'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?',
+                $greetingKey,
+                Setting::get('bot_greeting_message', 'Selamat datang di layanan pelanggan BRILLIAN.BIS! Ada yang bisa kami bantu?'),
             ));
             $lines[] = '';
         } else {
@@ -931,13 +993,15 @@ class ConversationFlowService
     private function rootMenus()
     {
         return BotMenu::whereNull('parent_id')
+            ->where('flow_type', $this->getSystemMode())
             ->orderBy('order_index')
-            ->get(['id', 'label', 'action_type', 'action_value', 'message_response']);
+            ->get(['id', 'label', 'action_type', 'action_value', 'message_response', 'flow_type']);
     }
 
     private function findRootMenuByLabel(string $label): ?BotMenu
     {
         return BotMenu::whereNull('parent_id')
+            ->where('flow_type', $this->getSystemMode())
             ->whereRaw('LOWER(label) = ?', [mb_strtolower(trim($label))])
             ->first();
     }
@@ -1000,6 +1064,12 @@ class ConversationFlowService
 
     private function resolveAwaitingSubmenuParentMenu(Conversation $conversation): ?BotMenu
     {
+        // Use stored selected_menu_id — reliable, no guessing from message history
+        if ($conversation->selected_menu_id) {
+            return BotMenu::find($conversation->selected_menu_id);
+        }
+
+        // Fallback: scan last user messages (legacy path, less reliable)
         $lastUserMessage = Message::where('conversation_id', $conversation->id)
             ->where('sender_type', 'user')
             ->orderBy('created_at', 'desc')
@@ -1011,5 +1081,98 @@ class ConversationFlowService
         }
 
         return $this->findRootMenuSelection($lastUserMessage->content);
+    }
+
+    /**
+     * Notify all queued conversations that agent service is temporarily unavailable.
+     *
+     * Called when system_mode changes to `outside_office_hour` or `closed`.
+     * Finds all conversations with status `queued` or `pending` and admin_id = null,
+     * then sends a system message to each informing the customer.
+     *
+     * Validates: Requirements 6.4
+     */
+    public function notifyQueuedConversationsOfModeChange(string $newMode): void
+    {
+        if (!in_array($newMode, ['outside_office_hour', 'closed'])) {
+            return;
+        }
+
+        $message = $newMode === 'closed'
+            ? 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena sistem sedang ditutup. Kami akan segera kembali melayani Anda.'
+            : 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali saat jam operasional.';
+
+        $queuedConversations = Conversation::whereIn('status', ['queued', 'pending'])
+            ->whereNull('admin_id')
+            ->get();
+
+        foreach ($queuedConversations as $conversation) {
+            $notif = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => 0,
+                'sender_type'     => 'system',
+                'message_type'    => 'text',
+                'content'         => $message,
+            ]);
+
+            try {
+                broadcast(new MessageSent($notif));
+            } catch (\Exception $e) {
+                \Log::warning('Broadcast failed for queue notification: ' . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Create a conversation for outside_office_hour mode.
+     *
+     * Conversation is created with bot_phase = chatting_with_ai so the customer
+     * is only served by AI. queue_position stays null and status never becomes
+     * 'queued' in this mode.
+     *
+     * Validates: Requirements 3.1, 3.2, 3.4
+     */
+    private function createOutsideOfficeHourConversation(User $user): array
+    {
+        $conversation = Conversation::create([
+            'user_id'        => $user->id,
+            'status'         => 'pending',
+            'bot_phase'      => 'chatting_with_ai',
+            'queue_position' => null,
+            'last_message_at' => now(),
+        ]);
+
+        $defaultMessage = 'Mohon maaf, saat ini kami sedang di luar jam kerja. Silakan tinggalkan pesan dan kami akan segera membalas saat jam kerja dimulai.';
+        $outsideMessage = Setting::get('bot_greeting_outside_office_hour', $defaultMessage) ?? $defaultMessage;
+
+        $officeStart = Setting::get('office_hours_start', '08:00');
+        $officeEnd   = Setting::get('office_hours_end', '17:00');
+
+        $fullMessage = $outsideMessage . "\n\nJam operasional kami: {$officeStart} - {$officeEnd}.";
+
+        $botMsg = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => 0,
+            'sender_type'     => 'admin',
+            'message_type'    => 'text',
+            'content'         => $fullMessage,
+        ]);
+
+        try {
+            broadcast(new MessageSent($botMsg));
+        } catch (\Exception $e) {
+        }
+
+        try {
+            broadcast(new ConversationStatusChanged($conversation, 'system'));
+        } catch (\Exception $e) {
+        }
+
+        return [
+            'conversation'   => $conversation,
+            'bot_messages'   => [$botMsg],
+            'rejected'       => false,
+            'reject_message' => '',
+        ];
     }
 }

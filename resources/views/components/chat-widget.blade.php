@@ -19,35 +19,56 @@
 
         <!-- Header -->
         <header class="bg-white px-3 py-2 flex items-center justify-between shrink-0 shadow-sm relative border-b border-slate-100" style="background: white !important;">
-            <div class="absolute top-0 left-0 right-0 h-1 bg-blue-600"></div>
+            <div class="absolute top-0 left-0 right-0 h-1"
+                :class="isRejected ? 'bg-slate-400' : 'bg-blue-600'"></div>
             <div class="flex items-center gap-2.5 mt-0.5">
-                <div class="w-8 h-8 rounded-lg bg-[#0a1d37] flex items-center justify-center shadow-sm">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm"
+                    :class="isRejected ? 'bg-slate-400' : 'bg-[#0a1d37]'">
                     <span class="font-black text-white text-base">CS</span>
                 </div>
                 <div>
                     <h3 class="font-black text-[#0a1d37] text-xs leading-tight">Layanan Pelanggan</h3>
-                    <div class="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                        <span class="flex items-center gap-1 shrink-0"
-                            :class="{
-                                'text-blue-500': status === 'pending' || status === 'queued',
-                                'text-emerald-500': status === 'active',
-                                'text-slate-400': status === 'closed'
-                            }">
-                            <div class="w-1.5 h-1.5 rounded-full"
+                    <div class="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest mt-0.5">
+                        <template x-if="isRejected">
+                            <span class="flex items-center gap-1 text-slate-400">
+                                <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                <span>Tidak Tersedia</span>
+                            </span>
+                        </template>
+                        <template x-if="!isRejected">
+                            <span class="flex items-center gap-1 shrink-0"
                                 :class="{
-                                    'bg-blue-500 animate-pulse': status === 'pending' || status === 'queued',
-                                    'bg-emerald-500': status === 'active',
-                                    'bg-slate-400': status === 'closed'
-                                }"></div>
-                            <span x-text="statusText"></span>
-                        </span>
+                                    'text-blue-500': status === 'pending' || status === 'queued',
+                                    'text-emerald-500': status === 'active',
+                                    'text-slate-400': status === 'closed'
+                                }">
+                                <div class="w-1.5 h-1.5 rounded-full"
+                                    :class="{
+                                        'bg-blue-500 animate-pulse': status === 'pending' || status === 'queued',
+                                        'bg-emerald-500': status === 'active',
+                                        'bg-slate-400': status === 'closed'
+                                    }"></div>
+                                <span x-text="statusText"></span>
+                            </span>
+                        </template>
                     </div>
                 </div>
             </div>
         </header>
 
+        <!-- Rejected / Closed Mode UI -->
+        <div x-show="isRejected" x-cloak class="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50 text-center">
+            <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+            </div>
+            <p class="text-sm font-semibold text-slate-600 mb-1">Layanan Tidak Tersedia</p>
+            <p class="text-xs text-slate-400 leading-relaxed" x-text="rejectMessage"></p>
+        </div>
+
         <!-- Messages Area (Show if chatting and NOT in registration form) -->
-        <div x-show="isChatting && !showRegForm" id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
+        <div x-show="isChatting && !showRegForm && !isRejected" id="widget-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 relative">
             <div class="flex justify-between items-center mb-4">
                 <button @click="isChatting = false" class="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -232,7 +253,7 @@
         </div>
 
         <!-- Registration & Greeting -->
-        <div x-show="!isChatting || showRegForm" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col">
+        <div x-show="(!isChatting || showRegForm) && !isRejected" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col">
             <!-- Step 1: Greeting & Buttons -->
             <div x-show="!showRegForm" class="flex-1 flex flex-col justify-center">
                 <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6">
@@ -323,7 +344,7 @@
         </div>
 
         <!-- Typing Indicator & Footer -->
-        <div x-show="isChatting && !showRegForm" class="shrink-0 bg-white">
+        <div x-show="isChatting && !showRegForm && !isRejected" class="shrink-0 bg-white">
             <div x-show="isTyping" x-cloak class="px-4 py-1.5 flex items-center gap-2 bg-slate-50/80 border-t border-slate-100">
                 <span class="text-[10px] italic text-slate-400 font-medium" x-text="typingMessage"></span>
                 <div class="flex gap-1">
@@ -423,6 +444,10 @@
             botPhase: 'off',
             botCategories: ['Pertanyaan Umum', 'Masalah Teknis', 'Layanan Produk', 'Lainnya'],
             botSubmenus: [],
+
+            // Closed/Rejected state
+            isRejected: false,
+            rejectMessage: '',
 
             initWidget() {
                 this.fetchChatData();
@@ -668,6 +693,16 @@
                     if (data.csrf_token) this.csrfToken = data.csrf_token;
                     if (data.chat_greeting) this.chat_greeting = data.chat_greeting;
                     if (data.chat_main_menu) this.chat_main_menu = data.chat_main_menu;
+
+                    if (data.rejected) {
+                        this.isRejected = true;
+                        this.rejectMessage = data.reject_message || 'Mohon maaf, layanan chat kami sedang tidak tersedia.';
+                        this.isInitialized = true;
+                        this.isLoading = false;
+                        return;
+                    }
+
+                    this.isRejected = false;
 
                     if (data.conversation) {
                         this.conversationId = data.conversation.id;

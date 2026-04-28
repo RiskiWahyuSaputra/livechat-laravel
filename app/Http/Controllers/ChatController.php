@@ -72,6 +72,15 @@ class ChatController extends Controller
 
         if (!$activeConversation) {
             $result = $this->conversationFlowService->createConversation($user);
+            if ($result['rejected'] ?? false) {
+                return view('chat.index', [
+                    'conversation'  => null,
+                    'messages'      => collect(),
+                    'botCategories' => config('chat.complaint_categories'),
+                    'rejected'      => true,
+                    'reject_message' => $result['reject_message'],
+                ]);
+            }
             $activeConversation = $result['conversation'];
         }
 
@@ -202,8 +211,32 @@ class ChatController extends Controller
             ->whereIn('status', ['pending', 'active', 'queued'])
             ->first();
 
+        // Cek mode closed — tolak meski ada conversation lama (kecuali sudah active dengan agent)
+        $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+        if ($systemMode === 'closed') {
+            $hasActiveWithAgent = $activeConversation && $activeConversation->status === 'active' && $activeConversation->admin_id;
+            if (!$hasActiveWithAgent) {
+                $defaultMsg = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
+                $rejectMsg = \App\Models\Setting::get('bot_greeting_closed', $defaultMsg) ?? $defaultMsg;
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'rejected' => true, 'reject_message' => $rejectMsg], 503);
+                }
+                return redirect()->route('user.home')->with('error', $rejectMsg);
+            }
+        }
+
         if (!$activeConversation) {
             $result = $this->conversationFlowService->createConversation($user, $request->selected_option);
+            if ($result['rejected'] ?? false) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success'        => false,
+                        'rejected'       => true,
+                        'reject_message' => $result['reject_message'],
+                    ], 503);
+                }
+                return redirect()->route('user.home')->with('error', $result['reject_message']);
+            }
             $activeConversation = $result['conversation'];
         }
 
@@ -250,6 +283,16 @@ class ChatController extends Controller
 
         // Pastikan conversation otomatis dibuat
         $result = $this->conversationFlowService->createConversation($user, $request->selected_option);
+        if ($result['rejected'] ?? false) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success'        => false,
+                    'rejected'       => true,
+                    'reject_message' => $result['reject_message'],
+                ], 503);
+            }
+            return redirect()->route('user.home')->with('error', $result['reject_message']);
+        }
         $activeConversation = $result['conversation'];
         
         // Atur agar langsung ke fase bot 'awaiting_submenu' atau sesuai menu yang dipencet
@@ -425,11 +468,28 @@ class ChatController extends Controller
             ];
 
             if (!$token) {
+                // Cek mode closed bahkan untuk user yang belum login
+                $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+                if ($systemMode === 'closed') {
+                    $defaultMsg = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
+                    return response()->json(array_merge($publicData, [
+                        'rejected'       => true,
+                        'reject_message' => \App\Models\Setting::get('bot_greeting_closed', $defaultMsg) ?? $defaultMsg,
+                    ]));
+                }
                 return response()->json($publicData);
             }
 
             $user = User::where('email', $token)->first();
             if (!$user) {
+                $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+                if ($systemMode === 'closed') {
+                    $defaultMsg = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
+                    return response()->json(array_merge($publicData, [
+                        'rejected'       => true,
+                        'reject_message' => \App\Models\Setting::get('bot_greeting_closed', $defaultMsg) ?? $defaultMsg,
+                    ]));
+                }
                 return response()->json($publicData);
             }
 
@@ -444,8 +504,27 @@ class ChatController extends Controller
                 ->whereIn('status', ['pending', 'active', 'queued'])
                 ->first();
 
+            // Jika mode closed, tolak kecuali conversation sudah active dengan agent
+            $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+            if ($systemMode === 'closed') {
+                $hasActiveWithAgent = $activeConversation && $activeConversation->status === 'active' && $activeConversation->admin_id;
+                if (!$hasActiveWithAgent) {
+                    $defaultMsg = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
+                    return response()->json(array_merge($publicData, [
+                        'rejected'       => true,
+                        'reject_message' => \App\Models\Setting::get('bot_greeting_closed', $defaultMsg) ?? $defaultMsg,
+                    ]));
+                }
+            }
+
             if (!$activeConversation) {
                 $result = $this->conversationFlowService->createConversation($user);
+                if ($result['rejected'] ?? false) {
+                    return response()->json(array_merge($publicData, [
+                        'rejected'       => true,
+                        'reject_message' => $result['reject_message'],
+                    ]));
+                }
                 $activeConversation = $result['conversation'];
             }
 
@@ -509,6 +588,13 @@ class ChatController extends Controller
 
         if (!$conversation->isOpen() || $conversation->trashed()) {
             $result = $this->conversationFlowService->createConversation($user);
+            if ($result['rejected'] ?? false) {
+                return response()->json([
+                    'success'        => false,
+                    'rejected'       => true,
+                    'reject_message' => $result['reject_message'],
+                ], 503);
+            }
             $conversation = $result['conversation'];
         }
 
