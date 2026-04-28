@@ -1,0 +1,8 @@
+{
+    "env": {
+        "ANTHROPIC_BASE_URL": "https://api.openai.com/v1",
+        "ANTHROPIC_AUTH_TOKEN": "sk-xxxx",
+        "ANTHROPIC_API_KEY": "sk-xxxx",
+        "ANTHROPIC_MODEL": "gpt-5.3"
+    }
+}
