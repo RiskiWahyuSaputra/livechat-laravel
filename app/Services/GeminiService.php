@@ -13,6 +13,8 @@ class GeminiService
     protected string $apiKey;
     protected string $provider;
     protected string $preferredModel;
+    protected string $groqApiKey;
+    protected string $groqModel;
     protected int $responseCacheSeconds = 600;
     protected int $openClawBackoffSeconds = 300;
 
@@ -20,7 +22,9 @@ class GeminiService
     {
         $this->apiKey = trim((string) Setting::get('gemini_api_key', env('GEMINI_API_KEY', '')));
         $this->provider = strtolower(trim((string) Setting::get('ai_provider', env('AI_PROVIDER', 'gemini'))));
-        $this->preferredModel = trim((string) Setting::get('gemini_model', env('GEMINI_MODEL', 'gemma-4-26b-a4b-it')));
+        $this->preferredModel = trim((string) Setting::get('gemini_model', env('GEMINI_MODEL', 'gemini-2.0-flash-lite')));
+        $this->groqApiKey = trim((string) Setting::get('groq_api_key', env('GROQ_API_KEY', '')));
+        $this->groqModel = trim((string) Setting::get('groq_model', env('GROQ_MODEL', 'llama-3.3-70b-versatile')));
     }
 
     public function askGemini(string $prompt, string $additionalInstruction = ''): string
@@ -43,9 +47,21 @@ class GeminiService
             }
 
             Cache::put($this->openClawBackoffCacheKey(), true, $this->openClawBackoffSeconds);
-            Log::warning('OpenClaw tidak mengembalikan jawaban. Fallback ke Gemini API.', [
+            Log::warning('OpenClaw tidak mengembalikan jawaban. Fallback ke Groq/Gemini API.', [
                 'backoff_seconds' => $this->openClawBackoffSeconds,
             ]);
+        }
+
+        if ($this->shouldUseGroq()) {
+            $groqResponse = $this->askGroqApi($prompt, $fullInstruction);
+
+            if ($this->isUsableResponse($groqResponse)) {
+                Cache::put($cacheKey, $groqResponse, $this->responseCacheSeconds);
+
+                return $groqResponse;
+            }
+
+            Log::warning('Groq tidak mengembalikan jawaban. Fallback ke Gemini API.');
         }
 
         $geminiResponse = $this->askGeminiApi($prompt, $fullInstruction);
@@ -87,7 +103,18 @@ class GeminiService
             }
 
             Cache::put($this->openClawBackoffCacheKey(), true, $this->openClawBackoffSeconds);
-            Log::warning('OpenClaw tidak mengembalikan ringkasan knowledge. Fallback ke Gemini API.');
+            Log::warning('OpenClaw tidak mengembalikan ringkasan knowledge. Fallback ke Groq/Gemini API.');
+        }
+
+        if ($this->shouldUseGroq()) {
+            $response = $this->askGroqApi($prompt, 'Kamu adalah AI Knowledge Extractor.');
+            $data = $this->decodeKnowledgePayload($response);
+
+            if (is_array($data)) {
+                return $data;
+            }
+
+            Log::warning('Groq tidak mengembalikan ringkasan knowledge. Fallback ke Gemini API.');
         }
 
         $response = $this->askGeminiApi($prompt, 'Kamu adalah AI Knowledge Extractor.', [
@@ -232,6 +259,55 @@ class GeminiService
     {
         return $this->provider === 'openclaw'
             && !$this->isOpenClawInBackoffWindow();
+    }
+
+    private function shouldUseGroq(): bool
+    {
+        return $this->provider === 'groq' && $this->groqApiKey !== '';
+    }
+
+    private function askGroqApi(string $prompt, string $fullInstruction): ?string
+    {
+        if ($this->groqApiKey === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(10)
+                ->withToken($this->groqApiKey)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => $this->groqModel,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $fullInstruction],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                    'max_tokens' => 1024,
+                ]);
+
+            if (!$response->successful()) {
+                Log::warning("Groq API Error: {$response->status()}", [
+                    'body' => $response->json(),
+                ]);
+
+                return null;
+            }
+
+            $text = $response->json('choices.0.message.content');
+
+            if (is_string($text) && trim($text) !== '') {
+                Log::info("Groq berhasil menjawab dengan model: {$this->groqModel}");
+
+                return trim($text);
+            }
+
+            Log::warning("Groq mengembalikan respons kosong.");
+        } catch (\Throwable $e) {
+            Log::error("Groq Exception: " . $e->getMessage());
+        }
+
+        return null;
     }
 
     private function isOpenClawInBackoffWindow(): bool
