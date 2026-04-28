@@ -256,6 +256,61 @@
             from { transform: translateY(-100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+
+        /* ===== STATS SECTION ===== */
+        .stats-section { padding: 70px 0; background: linear-gradient(135deg,#0a1d37 0%,#1a3a6e 100%); position:relative; overflow:hidden; }
+        .stats-section::before { content:''; position:absolute; top:-80px; right:-80px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.04); }
+        .stats-section::after { content:''; position:absolute; bottom:-60px; left:-60px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.03); }
+        .stat-card { text-align:center; padding:30px 20px; border-radius:20px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(10px); transition:transform .3s,box-shadow .3s; }
+        .stat-card:hover { transform:translateY(-8px); box-shadow:0 20px 40px rgba(0,0,0,.3); }
+        .stat-number { font-size:3rem; font-weight:900; color:#fff; line-height:1; background:linear-gradient(135deg,#fff,#90cdf4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .stat-label { color:rgba(255,255,255,.7); font-size:.9rem; margin-top:8px; letter-spacing:.5px; }
+        .stat-icon { font-size:2rem; margin-bottom:15px; color:rgba(255,255,255,.5); }
+
+        /* ===== TESTIMONIAL SECTION ===== */
+        .testimonial-section { padding:80px 0; background:#f8fbff; }
+        .testimonial-card { background:#fff; border-radius:20px; padding:35px 30px; box-shadow:0 10px 40px rgba(0,123,255,.07); border:1px solid rgba(0,123,255,.08); position:relative; height:100%; transition:transform .3s,box-shadow .3s; }
+        .testimonial-card:hover { transform:translateY(-8px); box-shadow:0 20px 50px rgba(0,123,255,.13); }
+        .testimonial-card::before { content:'\201C'; position:absolute; top:20px; left:25px; font-size:5rem; color:#007bff; opacity:.12; font-family:Georgia,serif; line-height:1; }
+        .testimonial-avatar { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#007bff,#0056b3); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:1.1rem; flex-shrink:0; }
+        .testimonial-stars { color:#f59e0b; font-size:.85rem; margin-bottom:10px; }
+        .testi-text { color:#555; font-size:.95rem; line-height:1.7; font-style:italic; margin-bottom:20px; }
+
+        /* ===== FAQ SECTION ===== */
+        .faq-section { padding:80px 0; background:#fff; }
+        .faq-section .accordion-button { font-weight:700; color:#0a1d37 !important; background:#f8fbff !important; border-radius:12px !important; }
+        .faq-section .accordion-button:not(.collapsed) { background:linear-gradient(135deg,#007bff,#0056b3) !important; color:#fff !important; box-shadow:0 4px 15px rgba(0,123,255,.3); }
+        .faq-section .accordion-item { border:1px solid rgba(0,123,255,.1); border-radius:14px !important; margin-bottom:12px; overflow:visible !important; }
+        .faq-section .accordion-body { color:#333 !important; line-height:1.8 !important; background:#fff !important; padding:20px 24px !important; font-size:.95rem !important; display:block !important; }
+        .faq-section .accordion-collapse { overflow:visible !important; }
+        .faq-section .accordion-button::after { filter:invert(0); }
+        .faq-section .accordion-button:not(.collapsed)::after { filter:invert(1); }
+
+        /* WhatsApp FAB — matches chat FAB size & position */
+        .whatsapp-fab { position:fixed; bottom:104px; right:24px; width:64px; height:64px; background:#25D366; border-radius:50% !important; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.6rem; text-decoration:none; z-index:9998; box-shadow:0 25px 50px -12px rgba(37,211,102,.4); transition:all .3s; animation:waPulse 2s infinite; }
+        @media(min-width:768px){ .whatsapp-fab { bottom:112px; right:32px; } }
+        .whatsapp-fab:hover { background:#128C7E !important; color:#fff; transform:scale(1.1); }
+        @keyframes waPulse { 0%,100%{box-shadow:0 25px 50px -12px rgba(37,211,102,.4)} 50%{box-shadow:0 25px 50px -12px rgba(37,211,102,.6)} }
+
+        /* ===== CTA BANNER ===== */
+        .cta-section { padding:80px 0; background:linear-gradient(135deg,#007bff 0%,#0a1d37 100%); position:relative; overflow:hidden; }
+        .cta-section::before { content:''; position:absolute; top:-100px; right:-100px; width:400px; height:400px; border-radius:50%; background:rgba(255,255,255,.05); animation:spin 20s linear infinite; }
+        .cta-section::after { content:''; position:absolute; bottom:-80px; left:-80px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.04); animation:spin 25s linear infinite reverse; }
+        @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        .cta-btn-white { background:#fff; color:#007bff; border:none; padding:14px 35px; border-radius:50px; font-weight:700; font-size:1rem; transition:all .3s; box-shadow:0 5px 20px rgba(0,0,0,.15); }
+        .cta-btn-white:hover { transform:translateY(-3px); box-shadow:0 10px 30px rgba(0,0,0,.25); color:#0056b3; }
+        .cta-btn-outline { background:transparent; color:#fff; border:2px solid rgba(255,255,255,.6); padding:14px 35px; border-radius:50px; font-weight:700; font-size:1rem; transition:all .3s; }
+        .cta-btn-outline:hover { background:rgba(255,255,255,.15); border-color:#fff; transform:translateY(-3px); color:#fff; }
+
+        /* ===== ENHANCED ANIMATIONS ===== */
+        @keyframes pulse-ring { 0% { transform:scale(.9); opacity:.7; } 70% { transform:scale(1.1); opacity:0; } 100% { transform:scale(.9); opacity:0; } }
+        .pulse-dot { position:relative; display:inline-block; }
+        .pulse-dot::before { content:''; position:absolute; inset:-4px; border-radius:50%; background:rgba(40,167,69,.4); animation:pulse-ring 2s ease-out infinite; }
+        @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+        .shimmer-badge { background:linear-gradient(90deg,#e0f0ff 25%,#b8daff 50%,#e0f0ff 75%); background-size:200% 100%; animation:shimmer 2.5s infinite; border-radius:50px; padding:6px 16px; font-size:.8rem; font-weight:600; color:#004aad; display:inline-block; margin-bottom:16px; }
+        .work-box { transition:transform .35s,box-shadow .35s; border-radius:16px; }
+        .work-box:hover { transform:translateY(-10px); box-shadow:0 20px 40px rgba(0,123,255,.12); }
+
     </style>
 </head>
 
@@ -352,7 +407,8 @@
 					<!-- Text Content -->
 					<div class="col-lg-6 aos" data-aos="fade-up">
 						<div class="hero-content">
-							<h1 class="hero-title">Wujudkan <span class="text-primary">Kebebasan</span> Finansial Anda.</h1>
+							<div class="shimmer-badge">✨ Platform Bisnis Syariah Terpercaya</div>
+						<h1 class="hero-title">Wujudkan <span class="text-primary">Kebebasan</span> Finansial Anda.</h1>
 							<p class="hero-description">Selamat datang di portal dukungan BRILLIAN BIZ. Kami menyediakan ekosistem bisnis syariah terpercaya untuk mendukung pertumbuhan finansial Anda.</p>
 							<div class="hero-cta-group">
 								<button class="btn btn-primary btn-lg rounded-pill px-4 py-3" type="button" @click="isOpen = true">
@@ -398,6 +454,43 @@
 			</div>
 		</section>
 		<!-- /Hero Section -->
+
+		<!-- Stats Section -->
+		<section class="stats-section">
+			<div class="container">
+				<div class="row g-4 justify-content-center">
+					<div class="col-6 col-md-3 aos" data-aos="fade-up" data-aos-delay="0">
+						<div class="stat-card">
+							<div class="stat-icon"><i class="fas fa-users"></i></div>
+							<div class="stat-number" data-count="10000">0</div>
+							<div class="stat-label">Mitra Aktif</div>
+						</div>
+					</div>
+					<div class="col-6 col-md-3 aos" data-aos="fade-up" data-aos-delay="100">
+						<div class="stat-card">
+							<div class="stat-icon"><i class="fas fa-box-open"></i></div>
+							<div class="stat-number" data-count="50">0</div>
+							<div class="stat-label">Produk Unggulan</div>
+						</div>
+					</div>
+					<div class="col-6 col-md-3 aos" data-aos="fade-up" data-aos-delay="200">
+						<div class="stat-card">
+							<div class="stat-icon"><i class="fas fa-map-marked-alt"></i></div>
+							<div class="stat-number" data-count="34">0</div>
+							<div class="stat-label">Provinsi Terjangkau</div>
+						</div>
+					</div>
+					<div class="col-6 col-md-3 aos" data-aos="fade-up" data-aos-delay="300">
+						<div class="stat-card">
+							<div class="stat-icon"><i class="fas fa-award"></i></div>
+							<div class="stat-number" data-count="12">0</div>
+							<div class="stat-label">Penghargaan</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- /Stats Section -->
 		
 		<!-- Feature Section -->
 		<section class="feature-section" id="produk">			
@@ -574,6 +667,165 @@
 		</section>
 		<!-- /Work Section -->
 
+		<!-- Testimonial Section -->
+		<section class="testimonial-section">
+			<div class="container">
+				<div class="text-center mb-5 aos" data-aos="fade-up">
+					<div class="shimmer-badge">💬 Kata Mereka</div>
+					<h2 style="color:#0a1d37;font-weight:800;">Testimoni Mitra Kami</h2>
+					<p class="text-muted">Ribuan mitra telah merasakan manfaat bergabung bersama BRILLIAN BIZ</p>
+				</div>
+				<div class="row g-4">
+					<div class="col-md-4 aos" data-aos="fade-up" data-aos-delay="0">
+						<div class="testimonial-card">
+							<div class="testimonial-stars">★★★★★</div>
+							<p class="testi-text">"Bergabung dengan BRILLIAN BIZ adalah keputusan terbaik saya. Dalam 6 bulan, penghasilan saya meningkat 3x lipat!"</p>
+							<div class="d-flex align-items-center gap-3">
+								<div class="testimonial-avatar">AS</div>
+								<div><strong style="color:#0a1d37;">Andi Saputra</strong><br><small class="text-muted">Mitra Platinum, Jakarta</small></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-4 aos" data-aos="fade-up" data-aos-delay="150">
+						<div class="testimonial-card">
+							<div class="testimonial-stars">★★★★★</div>
+							<p class="testi-text">"Produknya berkualitas tinggi dan sistem bisnisnya transparan. Saya sangat merekomendasikan BRILLIAN BIZ!"</p>
+							<div class="d-flex align-items-center gap-3">
+								<div class="testimonial-avatar" style="background:linear-gradient(135deg,#28a745,#20c997);">SR</div>
+								<div><strong style="color:#0a1d37;">Sari Rahayu</strong><br><small class="text-muted">Mitra Gold, Bandung</small></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-4 aos" data-aos="fade-up" data-aos-delay="300">
+						<div class="testimonial-card">
+							<div class="testimonial-stars">★★★★★</div>
+							<p class="testi-text">"Dukungan tim BRILLIAN BIZ luar biasa. Setiap pertanyaan langsung dijawab via LiveChat, sangat responsif!"</p>
+							<div class="d-flex align-items-center gap-3">
+								<div class="testimonial-avatar" style="background:linear-gradient(135deg,#fd7e14,#dc3545);">BW</div>
+								<div><strong style="color:#0a1d37;">Budi Wijaya</strong><br><small class="text-muted">Mitra Silver, Surabaya</small></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- /Testimonial Section -->
+
+		<!-- FAQ Section -->
+		<section class="faq-section">
+			<div class="container">
+				<div class="row justify-content-center">
+					<div class="col-lg-8">
+						<div class="text-center mb-5 aos" data-aos="fade-up">
+							<div class="shimmer-badge">❓ Pertanyaan Umum</div>
+							<h2 style="color:#0a1d37;font-weight:800;">FAQ</h2>
+							<p class="text-muted">Temukan jawaban atas pertanyaan yang sering ditanyakan</p>
+						</div>
+
+						<style>
+							.faq-custom-item { background:#fff; border-radius:16px; margin-bottom:14px; box-shadow:0 4px 20px rgba(0,123,255,.07); border:1.5px solid rgba(0,123,255,.1); overflow:hidden; transition:box-shadow .3s,border-color .3s; }
+							.faq-custom-item:hover { box-shadow:0 8px 30px rgba(0,123,255,.13); border-color:rgba(0,123,255,.25); }
+							.faq-custom-header { display:flex !important; flex-direction:row !important; align-items:center !important; gap:16px; padding:20px 24px; cursor:pointer; transition:background .3s; user-select:none; }
+							.faq-custom-header.active { background:linear-gradient(135deg,#007bff,#0056b3) !important; }
+							.faq-custom-badge { width:36px; height:36px; border-radius:10px; display:flex !important; align-items:center; justify-content:center; font-weight:900; font-size:.85rem; flex-shrink:0; transition:all .3s; background:#e8f0fe; color:#007bff; }
+							.faq-custom-header.active .faq-custom-badge { background:rgba(255,255,255,.2) !important; color:#fff !important; }
+							.faq-custom-title { flex:1; font-weight:700; font-size:1rem; color:#0a1d37; transition:color .3s; }
+							.faq-custom-header.active .faq-custom-title { color:#fff; }
+							.faq-custom-icon { width:30px; height:30px; border-radius:50%; display:flex !important; align-items:center; justify-content:center; flex-shrink:0; background:#f0f7ff; transition:all .3s; }
+							.faq-custom-header.active .faq-custom-icon { background:rgba(255,255,255,.2); }
+							.faq-custom-icon i { font-size:.7rem; color:#007bff; transition:transform .4s cubic-bezier(.4,0,.2,1),color .3s; }
+							.faq-custom-header.active .faq-custom-icon i { color:#fff; transform:rotate(180deg); }
+							.faq-custom-body { max-height:0; overflow:hidden; transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .3s; }
+							.faq-custom-body.open { max-height:200px; }
+							.faq-custom-body-inner { padding:0 24px 22px 76px; color:#555; font-size:.95rem; line-height:1.8; }
+						</style>
+
+						<div class="faq-custom-item aos" data-aos="fade-up" data-aos-delay="0">
+							<div class="faq-custom-header active" onclick="toggleFaq(this)">
+								<div class="faq-custom-badge">01</div>
+								<div class="faq-custom-title">Apa itu BRILLIAN BIZ?</div>
+								<div class="faq-custom-icon"><i class="fas fa-chevron-down"></i></div>
+							</div>
+							<div class="faq-custom-body open">
+								<div class="faq-custom-body-inner">BRILLIAN BIZ (PT Bandung Eco Sinergi Teknologi) adalah perusahaan Direct Selling yang berkomitmen membantu masyarakat mencapai kebebasan finansial melalui sistem bisnis syariah yang adil dan transparan.</div>
+							</div>
+						</div>
+
+						<div class="faq-custom-item aos" data-aos="fade-up" data-aos-delay="100">
+							<div class="faq-custom-header" onclick="toggleFaq(this)">
+								<div class="faq-custom-badge">02</div>
+								<div class="faq-custom-title">Bagaimana cara bergabung sebagai mitra?</div>
+								<div class="faq-custom-icon"><i class="fas fa-chevron-down"></i></div>
+							</div>
+							<div class="faq-custom-body">
+								<div class="faq-custom-body-inner">Anda dapat bergabung dengan menghubungi tim kami melalui LiveChat di website ini atau menghubungi mitra terdekat. Proses pendaftaran mudah dan cepat.</div>
+							</div>
+						</div>
+
+						<div class="faq-custom-item aos" data-aos="fade-up" data-aos-delay="200">
+							<div class="faq-custom-header" onclick="toggleFaq(this)">
+								<div class="faq-custom-badge">03</div>
+								<div class="faq-custom-title">Apakah bisnis ini sesuai syariah?</div>
+								<div class="faq-custom-icon"><i class="fas fa-chevron-down"></i></div>
+							</div>
+							<div class="faq-custom-body">
+								<div class="faq-custom-body-inner">Ya! Sistem pemasaran kami telah sesuai dengan fatwa DSN-MUI tentang Penjualan Langsung Berjenjang Syariah (PLBS), sehingga Anda dapat berbisnis dengan tenang dan berkah.</div>
+							</div>
+						</div>
+
+						<div class="faq-custom-item aos" data-aos="fade-up" data-aos-delay="300">
+							<div class="faq-custom-header" onclick="toggleFaq(this)">
+								<div class="faq-custom-badge">04</div>
+								<div class="faq-custom-title">Berapa potensi penghasilan sebagai mitra?</div>
+								<div class="faq-custom-icon"><i class="fas fa-chevron-down"></i></div>
+							</div>
+							<div class="faq-custom-body">
+								<div class="faq-custom-body-inner">Penghasilan tidak terbatas tergantung usaha dan dedikasi Anda. Mitra aktif kami rata-rata menghasilkan tambahan income 3-10 juta per bulan, bahkan ada yang mencapai ratusan juta.</div>
+							</div>
+						</div>
+
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- /FAQ Section -->
+
+		<script>
+		function toggleFaq(header) {
+			const allHeaders = document.querySelectorAll('.faq-custom-header');
+			const allBodies = document.querySelectorAll('.faq-custom-body');
+			const body = header.nextElementSibling;
+			const isActive = header.classList.contains('active');
+
+			// Close all
+			allHeaders.forEach(h => h.classList.remove('active'));
+			allBodies.forEach(b => b.classList.remove('open'));
+
+			// Open clicked if was closed
+			if (!isActive) {
+				header.classList.add('active');
+				body.classList.add('open');
+			}
+		}
+		</script>
+
+
+		<!-- CTA Section -->
+		<section class="cta-section">
+			<div class="container text-center" style="position:relative;z-index:2;">
+				<div class="aos" data-aos="fade-up">
+					<h2 style="color:#fff;font-weight:900;font-size:2.5rem;margin-bottom:1rem;">Siap Memulai Perjalanan Anda?</h2>
+					<p style="color:rgba(255,255,255,.8);font-size:1.1rem;margin-bottom:2rem;">Bergabunglah dengan 10.000+ mitra dan raih kebebasan finansial bersama BRILLIAN BIZ</p>
+					<div class="d-flex gap-3 justify-content-center flex-wrap">
+						<button class="cta-btn-white" x-data @click="$dispatch('open-chat')"><i class="feather-message-square me-2"></i>Chat Sekarang</button>
+						<a href="{{ route('user.about') }}" class="cta-btn-outline"><i class="feather-info me-2"></i>Pelajari Lebih Lanjut</a>
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- /CTA Section -->
+
+
 		<!-- Footer -->
 		<footer class="footer">
 		
@@ -672,6 +924,12 @@
 
     @include('components.chat-widget')
 
+	<!-- WhatsApp FAB -->
+	<a id="whatsapp-fab" class="whatsapp-fab" href="https://wa.me/6283179191601" target="_blank" title="Chat via WhatsApp">
+		<i class="fab fa-whatsapp"></i>
+	</a>
+	<!-- /WhatsApp FAB -->
+
 	<!-- scrollToTop start -->
 	<div class="progress-wrap active-progress">
 		<svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
@@ -705,5 +963,26 @@
 	<script src="{{ asset('template/assets/js/script.js') }}"></script>
 
     @stack('scripts')
+    <script>
+    // Animated counter
+    function animateCounter(el) {
+        const target = +el.getAttribute('data-count');
+        const duration = 2000;
+        const step = target / (duration / 16);
+        let current = 0;
+        const timer = setInterval(() => {
+            current += step;
+            if (current >= target) { current = target; clearInterval(timer); }
+            el.textContent = target >= 1000 ? Math.floor(current).toLocaleString('id-ID') + '+' : Math.floor(current) + (target <= 50 ? '+' : '');
+        }, 16);
+    }
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); observer.unobserve(e.target); } });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('.stat-number[data-count]').forEach(el => observer.observe(el));
+
+    // Open chat from CTA
+    document.addEventListener('open-chat', () => { if (window.Alpine) { document.querySelector('[x-data]').__x.$data.isOpen = true; } });
+    </script>
 </body>
 </html>
