@@ -67,7 +67,7 @@
         .whatsapp-fab:hover { background:#128C7E !important; color:#fff; transform:scale(1.1); }
         @keyframes waPulse { 0%,100%{box-shadow:0 25px 50px -12px rgba(37,211,102,.4)} 50%{box-shadow:0 25px 50px -12px rgba(37,211,102,.6)} }
         /* Blue chat FAB — must be above WhatsApp FAB */
-        .chat-widget-container { z-index: 9999 !important; }
+        .chat-widget-container { z-index: 10020 !important; }
         /* Force circular shape — Bootstrap template overrides Tailwind rounded-full */
         .rounded-full { border-radius: 9999px !important; }
 
@@ -135,9 +135,12 @@
                 z-index: 10990;
             }
 
-            .whatsapp-fab,
-            .chat-widget-container {
+            .whatsapp-fab {
                 z-index: 9998 !important;
+            }
+
+            .chat-widget-container {
+                z-index: 10020 !important;
             }
         }
     </style>
@@ -156,6 +159,9 @@
 						</a>
 						<a href="{{ route('user.home') }}" class="navbar-brand logo">
 							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 45px;">
+						</a>
+						<a href="{{ route('user.home') }}" class="navbar-brand logo-small">
+							<img src="{{ asset('images/logo-brilian-min.png') }}" class="img-fluid" alt="Logo" style="max-height: 35px;">
 						</a>
 					</div>
 					<div class="main-menu-wrapper">

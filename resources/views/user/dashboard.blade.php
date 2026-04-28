@@ -47,7 +47,7 @@
             overflow-x: clip;
         }
         .chat-widget-container {
-            z-index: 9999;
+            z-index: 10020 !important;
         }
         /* Ensure circle shape */
         .rounded-full {
@@ -409,9 +409,12 @@
                 z-index: 10990;
             }
 
-            .whatsapp-fab,
-            .chat-widget-container {
+            .whatsapp-fab {
                 z-index: 9998 !important;
+            }
+
+            .chat-widget-container {
+                z-index: 10020 !important;
             }
         }
 
