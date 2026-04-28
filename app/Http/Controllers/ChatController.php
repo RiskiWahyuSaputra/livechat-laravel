@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Events\ConversationStatusChanged;
 use App\Events\MessageSent;
+use App\Events\MessageUpdated;
+use App\Events\MessageDeleted;
 use App\Events\TypingIndicator;
 use App\Models\Admin;
 use App\Models\Conversation;
@@ -12,6 +14,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 use App\Models\User;
@@ -638,6 +641,69 @@ class ChatController extends Controller
             'bot_phase'   => $result['bot_phase'],
             'bot_submenus' => $botSubmenus,
         ]);
+    }
+
+    /**
+     * Update pesan yang dikirim oleh user (jika diperbolehkan).
+     */
+    public function updateMessage(Request $request, Message $message)
+    {
+        $request->validate([
+            'content' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user || $message->sender_id != $user->id || $message->sender_type !== 'user') {
+            Log::warning('Edit gagal: Akses ditolak.', [
+                'user_id' => $user->id ?? 'null',
+                'msg_sender_id' => $message->sender_id,
+                'msg_sender_type' => $message->sender_type,
+                'cookie_token' => $token ?? 'null'
+            ]);
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        $message->update(['content' => $request->content]);
+
+        broadcast(new MessageUpdated($message))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'message' => [
+                'id'      => $message->id,
+                'content' => $message->content,
+            ]
+        ]);
+    }
+
+    /**
+     * Hapus pesan yang dikirim oleh user.
+     */
+    public function deleteMessage(Request $request, Message $message)
+    {
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user || $message->sender_id != $user->id || $message->sender_type !== 'user') {
+            Log::warning('Hapus gagal: Akses ditolak.', [
+                'user_id' => $user->id ?? 'null',
+                'msg_sender_id' => $message->sender_id,
+                'msg_sender_type' => $message->sender_type,
+                'cookie_token' => $token ?? 'null'
+            ]);
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        $messageId = $message->id;
+        $conversationId = $message->conversation_id;
+
+        $message->delete();
+
+        broadcast(new MessageDeleted($messageId, $conversationId))->toOthers();
+
+        return response()->json(['success' => true]);
     }
 
     public function typing(Request $request)

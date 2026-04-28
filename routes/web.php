@@ -32,6 +32,8 @@ Route::get('/chat', [ChatController::class, 'showChat'])->name('chat.index');
 Route::get('/chat-widget', [ChatController::class, 'showWidget'])->name('chat.widget');
 Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init');
 Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.send');
+Route::patch('/chat/message/{message}', [ChatController::class, 'updateMessage'])->name('chat.message.update');
+Route::delete('/chat/message/{message}', [ChatController::class, 'deleteMessage'])->name('chat.message.destroy');
 Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
 
 // Routes yang butuh login user (jika ada fitur user biasa)
@@ -62,6 +64,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/chat', [DashboardController::class, 'chatWorkspace'])->name('chat');
                 Route::get('/conversation/{conversation}', [DashboardController::class , 'showConversation'])->name('conversation.show');
                 Route::post('/chat/send', [DashboardController::class , 'sendMessage'])->name('chat.send');
+                Route::patch('/chat/message/{message}', [DashboardController::class, 'updateMessage'])->name('chat.message.update');
+                Route::delete('/chat/message/{message}', [DashboardController::class, 'deleteMessage'])->name('chat.message.destroy');
                 Route::post('/chat/typing', [DashboardController::class , 'typing'])->name('chat.typing');
                 Route::post('/conversation/{conversation}/claim', [DashboardController::class , 'claimConversation'])->name('conversation.claim');
                 Route::post('/conversation/{conversation}/handover', [DashboardController::class , 'handoverConversation'])->name('conversation.handover');

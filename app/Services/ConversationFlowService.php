@@ -35,9 +35,9 @@ class ConversationFlowService
             $rejectMessage = Setting::get('bot_greeting_closed', $defaultMessage) ?? $defaultMessage;
 
             return [
-                'conversation'   => null,
-                'bot_messages'   => [],
-                'rejected'       => true,
+                'conversation' => null,
+                'bot_messages' => [],
+                'rejected' => true,
                 'reject_message' => $rejectMessage,
             ];
         }
@@ -159,9 +159,9 @@ class ConversationFlowService
         }
 
         return [
-            'conversation'   => $conversation,
-            'bot_messages'   => $createdMessages,
-            'rejected'       => false,
+            'conversation' => $conversation,
+            'bot_messages' => $createdMessages,
+            'rejected' => false,
             'reject_message' => '',
         ];
     }
@@ -178,7 +178,6 @@ class ConversationFlowService
 
         $conversation->update([
             'last_message_at' => now(),
-            'reminder_count' => 0,
         ]);
 
         if ($broadcast) {
@@ -279,7 +278,7 @@ class ConversationFlowService
         } elseif ($conversation->bot_phase === 'awaiting_submenu') {
             $parentMenu = $this->resolveAwaitingSubmenuParentMenu($conversation);
             $child = $this->findSubmenuSelection($userMessage, $parentMenu?->id);
-            
+
             // Web fallback: if label matching fails but it's a known submenu option
             if (!$child) {
                 $normalizedInput = mb_strtolower(trim($userMessage));
@@ -310,7 +309,7 @@ class ConversationFlowService
                         // For specific departments, we also transition to offer_agent_transfer
                         $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                         $content = $child->message_response ?: 'Hai! Saya BEST AI, asisten virtual kamu. Ceritakan aja kendala atau pertanyaan kamu, nanti saya bantu sebisa saya. Kalau mau langsung ngobrol sama Agent, klik tombol **Hubungi Agent** di bawah ya.';
-                        
+
                         $msg = Message::create([
                             'conversation_id' => $conversation->id,
                             'sender_id' => 0,
@@ -350,13 +349,13 @@ class ConversationFlowService
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
                     $officeStart = Setting::get('office_hours_start', '08:00');
-                    $officeEnd   = Setting::get('office_hours_end', '17:00');
+                    $officeEnd = Setting::get('office_hours_end', '17:00');
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
-                        'sender_id'       => 0,
-                        'sender_type'     => 'admin',
-                        'message_type'    => 'text',
-                        'content'         => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                        'sender_id' => 0,
+                        'sender_type' => 'admin',
+                        'message_type' => 'text',
+                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
                     ]);
                     return $this->formatBotReplies($newBotMessages, $conversation, $broadcast);
                 }
@@ -406,13 +405,13 @@ class ConversationFlowService
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
                     $officeStart = Setting::get('office_hours_start', '08:00');
-                    $officeEnd   = Setting::get('office_hours_end', '17:00');
+                    $officeEnd = Setting::get('office_hours_end', '17:00');
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
-                        'sender_id'       => 0,
-                        'sender_type'     => 'admin',
-                        'message_type'    => 'text',
-                        'content'         => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                        'sender_id' => 0,
+                        'sender_type' => 'admin',
+                        'message_type' => 'text',
+                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
                     ]);
                 } elseif ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
@@ -486,20 +485,20 @@ class ConversationFlowService
                 }
             }
         } elseif ($conversation->bot_phase === 'require_registration') {
-             // Generate token if not exists
-             if (!$user->registration_token) {
-                 $user->update(['registration_token' => Str::random(32)]);
-             }
+            // Generate token if not exists
+            if (!$user->registration_token) {
+                $user->update(['registration_token' => Str::random(32)]);
+            }
 
-             $regUrl = route('chat.register.whatsapp', ['token' => $user->registration_token]);
+            $regUrl = route('chat.register.whatsapp', ['token' => $user->registration_token]);
 
-             $newBotMessages[] = Message::create([
-                 'conversation_id' => $conversation->id,
-                 'sender_id'       => 0,
-                 'sender_type'     => 'admin',
-                 'message_type'    => 'text',
-                 'content'         => "Silakan isi data diri Anda melalui link berikut agar dapat terhubung dengan Agent:\n\n" . $regUrl,
-             ]);
+            $newBotMessages[] = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => 0,
+                'sender_type' => 'admin',
+                'message_type' => 'text',
+                'content' => "Silakan isi data diri Anda melalui link berikut agar dapat terhubung dengan Agent:\n\n" . $regUrl,
+            ]);
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = $this->findRootMenuSelection($userMessage);
             if ($menu) {
@@ -628,16 +627,18 @@ class ConversationFlowService
     {
         $normalized = $this->normalizeBotInput($userMessage);
 
-        if (in_array($normalized, [
-            '2',
-            'agent',
-            'hubungi agent',
-            'hubungin agent',
-            'hubungi cs',
-            'hubungin cs',
-            'cs',
-            'customer service',
-        ], true)) {
+        if (
+            in_array($normalized, [
+                '2',
+                'agent',
+                'hubungi agent',
+                'hubungin agent',
+                'hubungi cs',
+                'hubungin cs',
+                'cs',
+                'customer service',
+            ], true)
+        ) {
             return true;
         }
 
@@ -649,14 +650,16 @@ class ConversationFlowService
     {
         $normalized = $this->normalizeBotInput($userMessage);
 
-        if (in_array($normalized, [
-            '1',
-            'lanjut',
-            'lanjut tanya',
-            'tanya best ai',
-            'best ai',
-            'tanya ai',
-        ], true)) {
+        if (
+            in_array($normalized, [
+                '1',
+                'lanjut',
+                'lanjut tanya',
+                'tanya best ai',
+                'best ai',
+                'tanya ai',
+            ], true)
+        ) {
             return true;
         }
 
@@ -874,16 +877,16 @@ class ConversationFlowService
         }
 
         if ($menus->isEmpty()) {
-             $lines[] = "Menu utama belum tersedia saat ini.";
+            $lines[] = "Menu utama belum tersedia saat ini.";
         } else {
             $lines[] = "Silakan pilih salah satu menu utama berikut:";
             $lines[] = "";
-            
+
             foreach ($menus as $index => $menu) {
                 $lines[] = "[" . ($index + 1) . "] " . $menu->label;
             }
         }
-        
+
         $lines[] = "";
         $lines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
 
@@ -892,15 +895,17 @@ class ConversationFlowService
 
     private function buildSubmenuPrompt(?int $parentId = null): ?string
     {
-        if (!$parentId) return null;
+        if (!$parentId)
+            return null;
         $children = BotMenu::where('parent_id', $parentId)->orderBy('order_index')->get(['label']);
-        if ($children->isEmpty()) return null;
+        if ($children->isEmpty())
+            return null;
 
         $lines = ["Silakan pilih salah satu submenu berikut:", ""];
         foreach ($children as $index => $child) {
             $lines[] = "[" . ($index + 1) . "] " . $child->label;
         }
-        
+
         $lines[] = "";
         $lines[] = "Balas dengan angka atau nama menu pilihan Anda.";
 
@@ -962,7 +967,7 @@ class ConversationFlowService
 
         return $menus
             ->values()
-            ->map(fn ($menu, $index) => '[' . ($index + 1) . '] ' . $menu->label)
+            ->map(fn($menu, $index) => '[' . ($index + 1) . '] ' . $menu->label)
             ->implode("\n");
     }
 
@@ -1003,7 +1008,7 @@ class ConversationFlowService
     {
         $count = $this->rootMenus()->count();
         if ($count === 0) {
-             \Illuminate\Support\Facades\Log::warning('usesBotMenuFlow: Root menus count is 0');
+            \Illuminate\Support\Facades\Log::warning('usesBotMenuFlow: Root menus count is 0');
         }
         return $count > 0;
     }
@@ -1160,10 +1165,10 @@ class ConversationFlowService
         foreach ($queuedConversations as $conversation) {
             $notif = Message::create([
                 'conversation_id' => $conversation->id,
-                'sender_id'       => 0,
-                'sender_type'     => 'system',
-                'message_type'    => 'text',
-                'content'         => $message,
+                'sender_id' => 0,
+                'sender_type' => 'system',
+                'message_type' => 'text',
+                'content' => $message,
             ]);
 
             try {
@@ -1186,9 +1191,9 @@ class ConversationFlowService
     private function createOutsideOfficeHourConversation(User $user): array
     {
         $conversation = Conversation::create([
-            'user_id'        => $user->id,
-            'status'         => 'pending',
-            'bot_phase'      => 'chatting_with_ai',
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'bot_phase' => 'chatting_with_ai',
             'queue_position' => null,
             'last_message_at' => now(),
         ]);
@@ -1197,16 +1202,16 @@ class ConversationFlowService
         $outsideMessage = Setting::get('bot_greeting_outside_office_hour', $defaultMessage) ?? $defaultMessage;
 
         $officeStart = Setting::get('office_hours_start', '08:00');
-        $officeEnd   = Setting::get('office_hours_end', '17:00');
+        $officeEnd = Setting::get('office_hours_end', '17:00');
 
         $fullMessage = $outsideMessage . "\n\nJam operasional kami: {$officeStart} - {$officeEnd}.";
 
         $botMsg = Message::create([
             'conversation_id' => $conversation->id,
-            'sender_id'       => 0,
-            'sender_type'     => 'admin',
-            'message_type'    => 'text',
-            'content'         => $fullMessage,
+            'sender_id' => 0,
+            'sender_type' => 'admin',
+            'message_type' => 'text',
+            'content' => $fullMessage,
         ]);
 
         try {
@@ -1220,9 +1225,9 @@ class ConversationFlowService
         }
 
         return [
-            'conversation'   => $conversation,
-            'bot_messages'   => [$botMsg],
-            'rejected'       => false,
+            'conversation' => $conversation,
+            'bot_messages' => [$botMsg],
+            'rejected' => false,
             'reject_message' => '',
         ];
     }

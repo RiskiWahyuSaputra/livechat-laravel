@@ -12,7 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('roles', function (Blueprint $table) {
-            $table->integer('level')->default(2)->after('name')->comment('1 is the highest level');
+            if (!Schema::hasColumn('roles', 'slug')) {
+                $table->string('slug')->unique()->after('name')->nullable();
+            }
+            if (!Schema::hasColumn('roles', 'description')) {
+                $table->text('description')->nullable()->after('slug');
+            }
         });
     }
 
@@ -22,7 +27,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('roles', function (Blueprint $table) {
-            $table->dropColumn('level');
+            $table->dropColumn(['slug', 'description']);
         });
     }
 };

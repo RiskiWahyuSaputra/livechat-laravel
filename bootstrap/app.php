@@ -24,7 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'chat/register',
             'chat/register-anonymous',
             'chat/update-profile',
-            'chat/typing'
+            'chat/typing',
+            'chat/message/*',
+            'admin/chat/message/*'
         ]);
 
         $middleware->alias([

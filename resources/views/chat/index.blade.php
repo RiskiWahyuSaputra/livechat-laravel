@@ -20,10 +20,99 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* ── Message Options (WhatsApp Style) ── */
+        .bubble-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+        .msg-options-btn {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, color 0.2s;
+            z-index: 10;
+            color: #fff;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+        .bubble-wrapper:hover .msg-options-btn {
+            opacity: 1;
+        }
+        /* Memberikan ruang agar teks tidak bertubrukan dengan tombol dropdown */
+        .bubble-wrapper .bubble-content {
+            padding-right: 34px !important;
+        }
+        .msg-options-btn:hover {
+            color: #cbd5e1;
+        }
+
+        .msg-context-menu {
+            position: fixed;
+            z-index: 9999;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            width: 150px;
+            overflow: hidden;
+            border: 1px solid #f1f5f9;
+            animation: menuFadeIn 0.15s ease-out;
+        }
+        @keyframes menuFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .menu-item {
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .menu-item:hover {
+            background: #f8fafc;
+        }
+        .menu-item.destructive {
+            color: #ef4444;
+        }
+        .menu-item i {
+            font-size: 14px;
+            opacity: 0.7;
+        }
     </style>
 </head>
     <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden" 
+      @click="closeMenu()"
       x-data="chatApp({{ $conversation->id }}, {{ Auth::id() ?: 'null' }}, '{{ $conversation->status }}', {{ Js::from($messages) }}, '{{ $conversation->bot_phase }}', {{ Js::from($botCategories) }}, {{ Js::from($activeConversation->bot_phase === 'awaiting_submenu' ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id]) : []) }})">
+
+    <!-- CONTEXT MENU / DROPDOWN -->
+    <div x-show="menu.show" 
+         x-cloak
+         class="msg-context-menu" 
+         :style="`top: ${menu.y}px; left: ${menu.x}px;`"
+         @click.outside="closeMenu()">
+        <div class="menu-item" @click="editMessage(menu.msgId)">
+            <i class="fas fa-edit"></i>
+            Edit Pesan
+        </div>
+        <div class="menu-item destructive" @click="deleteMessage(menu.msgId)">
+            <i class="fas fa-trash-alt"></i>
+            Hapus Pesan
+        </div>
+    </div>
 
     <!-- Header Navbar Minimalist -->
     <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
@@ -98,10 +187,19 @@
                                   x-text="msg.sender_id == 0 ? 'Live Support' : 'Live Support Agent'"></span>
                             <span x-show="msg.sender_type === 'user'" class="text-[9px] md:text-[11px] text-slate-400 font-medium mb-1 mr-1">Anda</span>
                             
-                            <div class="px-3.5 py-2 md:px-5 md:py-3 rounded-2xl text-[13px] md:text-[15px] leading-relaxed relative break-words overflow-hidden shadow-sm"
-                                 :class="msg.sender_type === 'admin' 
-                                    ? 'bg-blue-600 text-white rounded-bl-sm border border-blue-700' 
-                                    : 'bg-white text-slate-800 rounded-br-sm border border-slate-200'">
+                            <div class="bubble-wrapper">
+                                <!-- Option Button -->
+                                <template x-if="msg.sender_type === 'user'">
+                                    <div class="msg-options-btn" @click.stop="openMenu(msg.id, $event)">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </div>
+                                </template>
+
+                                <div class="bubble-content px-3.5 py-2 md:px-5 md:py-3 rounded-2xl text-[13px] md:text-[15px] leading-relaxed relative break-words overflow-hidden shadow-sm"
+                                     :class="msg.sender_type === 'admin' 
+                                        ? 'bg-blue-600 text-white rounded-bl-sm border border-blue-700' 
+                                        : 'bg-white text-slate-800 rounded-br-sm border border-slate-200'"
+                                     @contextmenu.prevent="handleContextMenu($event, msg.id)">
                                 
                                 <!-- Pesan Teks -->
                                 <template x-if="!msg.message_type || msg.message_type === 'text'">
@@ -151,6 +249,7 @@
                                         </template>
                                     </div>
                                 </template>
+                                </div>
                             </div>
                             
                             <!-- Timestamp -->
@@ -237,6 +336,17 @@
                 Sesi obrolan ini telah ditutup.
             </div>
 
+            <!-- Editing Indicator -->
+            <div x-show="editingMsgId !== null" 
+                 class="px-4 py-2 bg-blue-50 border-t border-blue-100 flex items-center justify-between" 
+                 x-cloak>
+                <div class="flex items-center gap-2 text-blue-600 font-bold text-[10px] md:text-xs">
+                    <i class="fas fa-edit"></i>
+                    Mengedit pesan...
+                </div>
+                <button type="button" @click="cancelEdit()" class="text-[10px] md:text-xs text-slate-400 hover:text-slate-600 font-black uppercase">BATAL</button>
+            </div>
+
             <!-- Form Input Bawah -->
             <form @submit.prevent="sendMessage" 
                   method="POST" action="{{ route('chat.send') }}"
@@ -282,6 +392,13 @@
                 typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
                 botCategories: botCategories,
+                editingMsgId: null,
+                menu: {
+                    show: false,
+                    msgId: null,
+                    x: 0,
+                    y: 0
+                },
 
                 init() {
                     this.scrollToBottom();
@@ -438,6 +555,13 @@
                                     this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
                                 }
                             }
+                        })
+                        .listen('.message.updated', (e) => {
+                            const msg = this.messages.find(m => m.id === e.id);
+                            if (msg) msg.content = e.content;
+                        })
+                        .listen('.message.deleted', (e) => {
+                            this.messages = this.messages.filter(m => m.id !== e.id);
                         });
                 },
 
@@ -445,68 +569,201 @@
                     if (!this.newMessage.trim() || this.isSending) return;
 
                     const content = this.newMessage;
+                    const isEditing = this.editingMsgId !== null;
+                    const editId = this.editingMsgId;
+
                     this.newMessage = ''; 
                     this.resizeComposer();
                     this.isSending = true;
+                    this.editingMsgId = null;
 
-                    const tempId = Date.now();
-                    this.messages.push({
-                        temp_id: tempId,
-                        sender_type: 'user',
-                        message_type: 'text',
-                        content: content,
-                        created_at: ''
+                    if (!isEditing) {
+                        const tempId = Date.now();
+                        this.messages.push({
+                            temp_id: tempId,
+                            sender_type: 'user',
+                            message_type: 'text',
+                            content: content,
+                            created_at: ''
+                        });
+                        this.scrollToBottom();
+
+                        try {
+                            const formData = new FormData();
+                            formData.append('conversation_id', this.conversationId);
+                            formData.append('content', content);
+
+                            const response = await fetch('{{ route('chat.send', [], false) }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: formData
+                            });
+
+                            const data = await response.json();
+                            
+                            const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                            if (msgIndex !== -1 && data.success) {
+                                this.messages[msgIndex].id = data.message.id;
+                                this.messages[msgIndex].message_type = data.message.message_type;
+                                this.messages[msgIndex].content = data.message.content;
+                                this.messages[msgIndex].created_at = data.message.created_at;
+                                
+                                // Tambahkan balasan bot jika ada (biasanya untuk fase bot)
+                                if (data.bot_replies && data.bot_replies.length > 0) {
+                                    data.bot_replies.forEach(botMsg => {
+                                        // Hindari duplikat jika Echo sudah menambahkannya
+                                        if (!this.messages.find(m => m.id === botMsg.id)) {
+                                            this.messages.push(botMsg);
+                                        }
+                                    });
+                                    this.scrollToBottom();
+                                }
+
+                                // Sync botPhase dari response backend (SINGLE SOURCE OF TRUTH)
+                                if (data.bot_phase) {
+                                    this.botPhase = data.bot_phase;
+                                }
+                                if (data.bot_submenus) {
+                                    this.botSubmenus = data.bot_submenus;
+                                }
+                            }
+
+                        } catch (error) {
+                            this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        } finally {
+                            this.isSending = false;
+                            this.sendTypingEvent(false);
+                        }
+                    } else {
+                        // Handle Update
+                        try {
+                            const response = await fetch(`/chat/message/${editId}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({ content: content })
+                            });
+
+                            const data = await response.json();
+                            if (!response.ok) throw new Error(data.error || 'Gagal memperbarui pesan.');
+
+                            const msg = this.messages.find(m => m.id === editId);
+                            if (msg) msg.content = content;
+                        } catch (error) {
+                            alert(error.message);
+                            this.newMessage = content;
+                            this.editingMsgId = editId;
+                        } finally {
+                            this.isSending = false;
+                        }
+                    }
+                    
+                    this.$nextTick(() => {
+                        if (this.$refs.messageInput) this.$refs.messageInput.focus();
                     });
-                    this.scrollToBottom();
+                },
+
+                openMenu(msgId, event) {
+                    this.menu.msgId = msgId;
+                    this.menu.show = true;
+                    
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    this.menu.x = rect.left - 130; 
+                    this.menu.y = rect.top + 25;
+
+                    this.$nextTick(() => {
+                        const menuWidth = 150;
+                        if (this.menu.x + menuWidth > window.innerWidth) {
+                            this.menu.x = window.innerWidth - menuWidth - 10;
+                        }
+                    });
+                },
+
+                handleContextMenu(event, msgId) {
+                    const msg = this.messages.find(m => m.id === msgId);
+                    if (!msg || msg.sender_type !== 'user') return;
+
+                    this.menu.msgId = msgId;
+                    this.menu.show = true;
+                    this.menu.x = event.clientX;
+                    this.menu.y = event.clientY;
+
+                    this.$nextTick(() => {
+                        const menuWidth = 150;
+                        const menuHeight = 80;
+                        if (this.menu.x + menuWidth > window.innerWidth) this.menu.x -= menuWidth;
+                        if (this.menu.y + menuHeight > window.innerHeight) this.menu.y -= menuHeight;
+                    });
+                },
+
+                closeMenu() {
+                    this.menu.show = false;
+                },
+
+                editMessage(msgId) {
+                    const msg = this.messages.find(m => m.id === msgId);
+                    if (!msg) return;
+                    
+                    if (msg.sender_type !== 'user') {
+                        alert('Anda hanya dapat mengedit pesan Anda sendiri.');
+                        this.closeMenu();
+                        return;
+                    }
+
+                    this.editingMsgId = msgId;
+                    this.newMessage = msg.content.replace(/<br>/g, '\n');
+                    this.closeMenu();
+                    
+                    this.$nextTick(() => {
+                        this.$refs.messageInput.focus();
+                        this.resizeComposer();
+                    });
+                },
+
+                cancelEdit() {
+                    this.editingMsgId = null;
+                    this.newMessage = '';
+                    this.resizeComposer();
+                },
+
+                async deleteMessage(msgId) {
+                    const msg = this.messages.find(m => m.id === msgId);
+                    if (!msg) return;
+
+                    if (msg.sender_type !== 'user') {
+                        alert('Anda hanya dapat menghapus pesan Anda sendiri.');
+                        this.closeMenu();
+                        return;
+                    }
+
+                    if (!confirm('Apakah Anda yakin ingin menghapus pesan ini?')) {
+                        this.closeMenu();
+                        return;
+                    }
 
                     try {
-                        const formData = new FormData();
-                        formData.append('conversation_id', this.conversationId);
-                        formData.append('content', content);
-
-                        const response = await fetch('{{ route('chat.send', [], false) }}', {
-                            method: 'POST',
+                        const response = await fetch(`/chat/message/${msgId}`, {
+                            method: 'DELETE',
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                 'Accept': 'application/json'
-                            },
-                            body: formData
+                            }
                         });
 
                         const data = await response.json();
-                        
-                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
-                        if (msgIndex !== -1 && data.success) {
-                            this.messages[msgIndex].id = data.message.id;
-                            this.messages[msgIndex].message_type = data.message.message_type;
-                            this.messages[msgIndex].content = data.message.content;
-                            this.messages[msgIndex].created_at = data.message.created_at;
-                            
-                            // Tambahkan balasan bot jika ada (biasanya untuk fase bot)
-                            if (data.bot_replies && data.bot_replies.length > 0) {
-                                data.bot_replies.forEach(botMsg => {
-                                    // Hindari duplikat jika Echo sudah menambahkannya
-                                    if (!this.messages.find(m => m.id === botMsg.id)) {
-                                        this.messages.push(botMsg);
-                                    }
-                                });
-                                this.scrollToBottom();
-                            }
+                        if (!response.ok) throw new Error(data.error || 'Gagal menghapus pesan.');
 
-                            // Sync botPhase dari response backend (SINGLE SOURCE OF TRUTH)
-                            if (data.bot_phase) {
-                                this.botPhase = data.bot_phase;
-                            }
-                            if (data.bot_submenus) {
-                                this.botSubmenus = data.bot_submenus;
-                            }
-                        }
-
+                        this.messages = this.messages.filter(m => m.id !== msgId);
                     } catch (error) {
-                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        alert(error.message);
                     } finally {
-                        this.isSending = false;
-                        this.sendTypingEvent(false);
+                        this.closeMenu();
                     }
                 },
 

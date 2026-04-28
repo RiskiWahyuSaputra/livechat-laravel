@@ -1,4 +1,75 @@
 <!-- Chat Widget Container -->
+<style>
+    .bubble-wrapper {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+    }
+    .msg-options-btn {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s, color 0.2s;
+        z-index: 10;
+        color: #fff;
+        filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+    }
+    .bubble-wrapper:hover .msg-options-btn {
+        opacity: 1;
+    }
+    .bubble-wrapper .bubble-content {
+        padding-right: 32px !important;
+    }
+    .msg-options-btn:hover {
+        color: #cbd5e1;
+    }
+
+    .msg-context-menu {
+        position: fixed;
+        z-index: 9999;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        width: 140px;
+        overflow: hidden;
+        border: 1px solid #f1f5f9;
+        animation: menuFadeIn 0.15s ease-out;
+    }
+    @keyframes menuFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .menu-item {
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: background 0.1s;
+    }
+    .menu-item:hover {
+        background: #f8fafc;
+    }
+    .menu-item.destructive {
+        color: #ef4444;
+    }
+    .menu-item i {
+        font-size: 13px;
+        opacity: 0.7;
+    }
+</style>
 <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end chat-widget-container">
     
     <!-- Chat Popup Window -->
@@ -10,7 +81,24 @@
          x-transition:leave-start="opacity-100 scale-100 translate-y-0"
          x-transition:leave-end="opacity-0 scale-50 translate-y-4"
          class="bg-white w-[340px] sm:w-[380px] h-[500px] max-h-[75vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden mb-4 relative"
-         style="display: none;">
+         style="display: none;"
+         @click="closeMenu()">
+        
+        <!-- CONTEXT MENU / DROPDOWN -->
+        <div x-show="menu.show" 
+             x-cloak
+             class="msg-context-menu" 
+             :style="`top: ${menu.y}px; left: ${menu.x}px;`"
+             @click.outside="closeMenu()">
+            <div class="menu-item" @click="editMessage(menu.msgId)">
+                <i class="fas fa-edit"></i>
+                Edit Pesan
+            </div>
+            <div class="menu-item destructive" @click="deleteMessage(menu.msgId)">
+                <i class="fas fa-trash-alt"></i>
+                Hapus Pesan
+            </div>
+        </div>
         
         <!-- Loading Overlay -->
         <div x-show="isLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -94,52 +182,62 @@
                         <div class="max-w-[88%] flex flex-col min-w-0" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                             <span x-show="msg.sender_type !== 'user'" class="text-[10px] text-slate-400 font-medium mb-0.5 ml-1">Live Support</span>
 
-                            <div class="px-3 py-2 md:px-3.5 md:py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm relative overflow-hidden min-w-0 max-w-full"
-                                :class="msg.sender_type === 'user' 
-                                    ? 'bg-blue-600 text-white rounded-br-sm' 
-                                    : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'">
-
-                                <!-- Pesan Teks -->
-                                <template x-if="!msg.message_type || msg.message_type === 'text'">
-                                    <div class="break-words">
-                                        <div x-html="formatMessage(msg.content)"></div>
+                            <div class="bubble-wrapper">
+                                <!-- Option Button -->
+                                <template x-if="msg.sender_type === 'user'">
+                                    <div class="msg-options-btn" @click.stop="openMenu(msg.id, $event)">
+                                        <i class="fas fa-chevron-down"></i>
                                     </div>
                                 </template>
 
-                                <!-- Pesan Gambar -->
-                                <template x-if="msg.message_type === 'image'">
-                                    <div class="max-w-full">
-                                        <div class="space-y-2">
-                                            <img :src="msg.content" 
-                                                 class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
-                                                 @click="window.open(msg.content, '_blank')"
-                                                 x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                <div class="bubble-content px-3 py-2 md:px-3.5 md:py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm relative overflow-hidden min-w-0 max-w-full"
+                                    :class="msg.sender_type === 'user' 
+                                        ? 'bg-blue-600 text-white rounded-br-sm' 
+                                        : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'"
+                                    @contextmenu.prevent="handleContextMenu($event, msg.id)">
+    
+                                    <!-- Pesan Teks -->
+                                    <template x-if="!msg.message_type || msg.message_type === 'text'">
+                                        <div class="break-words">
+                                            <div x-html="formatMessage(msg.content)"></div>
                                         </div>
-                                    </div>
-                                </template>
-
-                                <!-- Pesan File -->
-                                <template x-if="msg.message_type === 'file'">
-                                    <div class="w-full min-w-0">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-white/10">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-[11px] font-bold truncate leading-tight mb-1" x-text="msg.content.split('/').pop()"></p>
-                                                <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:opacity-80" :class="msg.sender_type === 'user' ? 'text-white underline' : 'text-blue-600 underline'">
-                                                    <span>Unduh</span>
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                                </a>
+                                    </template>
+    
+                                    <!-- Pesan Gambar -->
+                                    <template x-if="msg.message_type === 'image'">
+                                        <div class="max-w-full">
+                                            <div class="space-y-2">
+                                                <img :src="msg.content" 
+                                                     class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
+                                                     @click="window.open(msg.content, '_blank')"
+                                                     x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
                                             </div>
                                         </div>
-                                    </div>
-                                </template>
+                                    </template>
+    
+                                    <!-- Pesan File -->
+                                    <template x-if="msg.message_type === 'file'">
+                                        <div class="w-full min-w-0">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-white/10">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-[11px] font-bold truncate leading-tight mb-1" x-text="msg.content.split('/').pop()"></p>
+                                                    <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:opacity-80" :class="msg.sender_type === 'user' ? 'text-white underline' : 'text-blue-600 underline'">
+                                                        <span>Unduh</span>
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                             <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
 
                             <!-- Bot Categories Inline -->
-                            <template x-if="msg.sender_id == 0 && index === messages.length - 1">
+                            <template x-if="(msg.sender_id == 0 || msg.sender_type === 'admin') && index === messages.length - 1">
                                 <div class="mt-2 flex flex-wrap gap-1.5 w-full">
                                     <!-- Phase: awaiting_category -->
                                     <template x-if="botPhase === 'awaiting_category'">
@@ -358,6 +456,17 @@
                 Sesi pertanyaan ini telah ditutup oleh agen.
             </div>
 
+            <!-- Editing Indicator -->
+            <div x-show="editingMsgId !== null" 
+                 class="px-4 py-2 bg-blue-50 border-t border-blue-100 flex items-center justify-between" 
+                 x-cloak>
+                <div class="flex items-center gap-2 text-blue-600 font-bold text-[10px]">
+                    <i class="fas fa-edit"></i>
+                    Mengedit pesan...
+                </div>
+                <button type="button" @click="cancelEdit()" class="text-[10px] text-slate-400 hover:text-slate-600 font-black uppercase">BATAL</button>
+            </div>
+
             <form @submit.prevent="sendMessage" 
                   x-show="status !== 'closed'" class="border-t border-slate-200 p-2.5 bg-white flex items-end gap-2 relative">
                 <button type="button" 
@@ -445,6 +554,14 @@
             botCategories: ['Pertanyaan Umum', 'Masalah Teknis', 'Layanan Produk', 'Lainnya'],
             botSubmenus: [],
 
+            editingMsgId: null,
+            menu: {
+                show: false,
+                msgId: null,
+                x: 0,
+                y: 0
+            },
+
             // Closed/Rejected state
             isRejected: false,
             rejectMessage: '',
@@ -469,9 +586,21 @@
                 }
             },
 
-            formatMessage(content) {
-                if (!content) return '';
-                return content.replace(/\n/g, '<br>');
+            formatMessage(text) {
+                if (!text) return '';
+                
+                const badge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                
+                if (String(text).includes(badge)) {
+                    let parts = String(text).split(badge);
+                    let safeParts = parts.map(p => String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                    let joined = safeParts.join(badge).replace(/\n/g, '<br>');
+                    return joined.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                }
+
+                let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                let withBr = safeText.replace(/\n/g, '<br>');
+                return withBr.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             },
 
             get statusText() {
@@ -768,6 +897,13 @@
                                 clearTimeout(this.typingTimeout);
                                 if (this.isTyping) this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
                             }
+                        })
+                        .listen('.message.updated', (e) => {
+                            const msg = this.messages.find(m => m.id === e.id);
+                            if (msg) msg.content = e.content;
+                        })
+                        .listen('.message.deleted', (e) => {
+                            this.messages = this.messages.filter(m => m.id !== e.id);
                         });
                 } catch (err) {}
             },
@@ -802,46 +938,186 @@
                     return;
                 }
                 this.isSending = true;
-                const tempId = Date.now();
-                this.messages.push({
-                    temp_id: tempId,
-                    sender_type: 'user',
-                    message_type: 'text',
-                    content: content,
-                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                const isEditing = this.editingMsgId !== null;
+                const editId = this.editingMsgId;
+                this.editingMsgId = null;
+
+                if (!isEditing) {
+                    const tempId = Date.now();
+                    this.messages.push({
+                        temp_id: tempId,
+                        sender_type: 'user',
+                        message_type: 'text',
+                        content: content,
+                        created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+                    this.scrollToBottom();
+                    try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('content', content);
+                        const response = await fetch('{{ route('chat.send') }}', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                            body: formData
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.success) {
+                            const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                            if (msgIndex !== -1) {
+                                this.messages[msgIndex].id = data.message.id;
+                                this.messages[msgIndex].content = data.message.content;
+                            }
+                            if (data.bot_replies) data.bot_replies.forEach(botMsg => {
+                                if (!this.messages.some(m => m.id === botMsg.id)) this.messages.push(botMsg);
+                            });
+                            if (data.bot_phase) {
+                                this.botPhase = data.bot_phase;
+                                if (data.bot_phase === 'require_registration') this.showRegForm = true;
+                            }
+                        } else {
+                            this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        }
+                    } catch (error) {
+                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                    } finally {
+                        this.isSending = false;
+                        this.sendTypingEvent(false);
+                    }
+                } else {
+                    // Handle Update
+                    try {
+                        const updateUrl = "{{ route('chat.message.update', ['message' => '__ID__']) }}".replace('__ID__', editId);
+                        const formData = new FormData();
+                        formData.append('content', content);
+                        formData.append('_method', 'PATCH');
+                        formData.append('_token', '{{ csrf_token() }}');
+                        
+                        const response = await fetch(updateUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Gagal memperbarui pesan.');
+
+                        const msg = this.messages.find(m => m.id === editId);
+                        if (msg) msg.content = content;
+                    } catch (error) {
+                        alert(error.message);
+                        this.newMessage = content;
+                        this.editingMsgId = editId;
+                    } finally {
+                        this.isSending = false;
+                    }
+                }
+                
+                this.$nextTick(() => {
+                    if (this.$refs.messageInput) this.$refs.messageInput.focus();
                 });
-                this.scrollToBottom();
+            },
+
+            openMenu(msgId, event) {
+                this.menu.msgId = msgId;
+                this.menu.show = true;
+                
+                const rect = event.currentTarget.getBoundingClientRect();
+                this.menu.x = rect.left - 120; 
+                this.menu.y = rect.top + 20;
+
+                this.$nextTick(() => {
+                    const menuWidth = 140;
+                    if (this.menu.x + menuWidth > window.innerWidth) {
+                        this.menu.x = window.innerWidth - menuWidth - 10;
+                    }
+                });
+            },
+
+            handleContextMenu(event, msgId) {
+                const msg = this.messages.find(m => m.id === msgId);
+                if (!msg || msg.sender_type !== 'user') return;
+
+                this.menu.msgId = msgId;
+                this.menu.show = true;
+                this.menu.x = event.clientX;
+                this.menu.y = event.clientY;
+
+                this.$nextTick(() => {
+                    const menuWidth = 140;
+                    const menuHeight = 80;
+                    if (this.menu.x + menuWidth > window.innerWidth) this.menu.x -= menuWidth;
+                    if (this.menu.y + menuHeight > window.innerHeight) this.menu.y -= menuHeight;
+                });
+            },
+
+            closeMenu() {
+                this.menu.show = false;
+            },
+
+            editMessage(msgId) {
+                const msg = this.messages.find(m => m.id === msgId);
+                if (!msg) return;
+                
+                if (msg.sender_type !== 'user') {
+                    alert('Anda hanya dapat mengedit pesan Anda sendiri.');
+                    this.closeMenu();
+                    return;
+                }
+
+                this.editingMsgId = msgId;
+                this.newMessage = msg.content.replace(/<br>/g, '\n');
+                this.closeMenu();
+                
+                this.$nextTick(() => {
+                    if (this.$refs.messageInput) this.$refs.messageInput.focus();
+                });
+            },
+
+            cancelEdit() {
+                this.editingMsgId = null;
+                this.newMessage = '';
+            },
+
+            async deleteMessage(msgId) {
+                const msg = this.messages.find(m => m.id === msgId);
+                if (!msg) return;
+
+                if (msg.sender_type !== 'user') {
+                    alert('Anda hanya dapat menghapus pesan Anda sendiri.');
+                    this.closeMenu();
+                    return;
+                }
+
+                if (!confirm('Apakah Anda yakin ingin menghapus pesan ini?')) {
+                    this.closeMenu();
+                    return;
+                }
+
                 try {
+                    const deleteUrl = "{{ route('chat.message.destroy', ['message' => '__ID__']) }}".replace('__ID__', msgId);
                     const formData = new FormData();
-                    formData.append('conversation_id', this.conversationId);
-                    formData.append('content', content);
-                    const response = await fetch('{{ route('chat.send') }}', {
+                    formData.append('_method', 'DELETE');
+                    formData.append('_token', '{{ csrf_token() }}');
+
+                    const response = await fetch(deleteUrl, {
                         method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                        headers: {
+                            'Accept': 'application/json'
+                        },
                         body: formData
                     });
+
                     const data = await response.json();
-                    if (response.ok && data.success) {
-                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
-                        if (msgIndex !== -1) {
-                            this.messages[msgIndex].id = data.message.id;
-                            this.messages[msgIndex].content = data.message.content;
-                        }
-                        if (data.bot_replies) data.bot_replies.forEach(botMsg => {
-                            if (!this.messages.some(m => m.id === botMsg.id)) this.messages.push(botMsg);
-                        });
-                        if (data.bot_phase) {
-                            this.botPhase = data.bot_phase;
-                            if (data.bot_phase === 'require_registration') this.showRegForm = true;
-                        }
-                    } else {
-                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
-                    }
+                    if (!response.ok) throw new Error(data.error || 'Gagal menghapus pesan.');
+
+                    this.messages = this.messages.filter(m => m.id !== msgId);
                 } catch (error) {
-                    this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                    alert(error.message);
                 } finally {
-                    this.isSending = false;
-                    this.sendTypingEvent(false);
+                    this.closeMenu();
                 }
             },
 

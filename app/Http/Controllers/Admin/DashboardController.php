@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Events\ConversationStatusChanged;
 use App\Events\MessageSent;
+use App\Events\MessageUpdated;
+use App\Events\MessageDeleted;
 use App\Events\TypingIndicator;
 use App\Events\UserShouldBeLoggedOut;
 use App\Http\Controllers\Controller;
@@ -409,6 +411,69 @@ class DashboardController extends Controller
                 'created_at'   => $message->created_at->format('H:i'),
             ],
         ]);
+    }
+
+    /**
+     * Update pesan yang sudah dikirim.
+     */
+    public function updateMessage(Request $request, Message $message)
+    {
+        $request->validate([
+            'content' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $admin = Auth::guard('admin')->user();
+
+        // Pastikan hanya pengirim atau superadmin yang bisa edit
+        if ($message->sender_id != $admin->id && !$admin->is_superadmin) {
+            return response()->json(['error' => 'Anda tidak memiliki akses untuk mengedit pesan ini.'], 403);
+        }
+
+        $message->update([
+            'content' => $request->content,
+        ]);
+
+        broadcast(new MessageUpdated($message))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'message' => [
+                'id'      => $message->id,
+                'content' => $message->content,
+            ]
+        ]);
+    }
+
+    /**
+     * Hapus pesan secara permanen (atau soft delete tergantung kebutuhan).
+     */
+    public function deleteMessage(Request $request, Message $message)
+    {
+        $admin = Auth::guard('admin')->user();
+
+        if (!$admin) {
+            \Log::warning('Hapus pesan admin gagal: Admin tidak terautentikasi.');
+            return response()->json(['error' => 'Sesi admin berakhir.'], 401);
+        }
+
+        // Pastikan hanya pengirim atau superadmin yang bisa hapus
+        if ($message->sender_id != $admin->id && !$admin->is_superadmin && $admin->role !== 'agent1') {
+            \Log::warning('Hapus pesan admin ditolak: Hak akses tidak cukup.', [
+                'admin_id' => $admin->id,
+                'admin_role' => $admin->role,
+                'msg_sender_id' => $message->sender_id
+            ]);
+            return response()->json(['error' => 'Anda tidak memiliki akses untuk menghapus pesan ini.'], 403);
+        }
+
+        $messageId = $message->id;
+        $conversationId = $message->conversation_id;
+
+        $message->delete();
+
+        broadcast(new MessageDeleted($messageId, $conversationId))->toOthers();
+
+        return response()->json(['success' => true]);
     }
 
     /**

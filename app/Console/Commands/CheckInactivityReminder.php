@@ -31,6 +31,7 @@ class CheckInactivityReminder extends Command
      */
     public function handle()
     {
+        return; // Temporarily disabled due to missing reminder_count column in database
         // Ambil percakapan yang aktif
         $conversations = Conversation::whereIn('status', ['pending', 'active', 'queued'])
             ->whereNotNull('last_message_at')
@@ -43,7 +44,7 @@ class CheckInactivityReminder extends Command
             // Interval pengingat (setiap 5 menit)
             $interval = 5;
             $maxTime = config('session.lifetime', 30);
-            
+
             // Hitung harusnya sudah berapa kali diingatkan
             $expectedReminderCount = floor($minutesInactive / $interval);
 
@@ -67,13 +68,13 @@ class CheckInactivityReminder extends Command
     private function sendReminder(Conversation $conversation, $count, $remainingTime)
     {
         $messageContent = "Sesi chat Anda akan berakhir dalam {$remainingTime} menit jika tidak ada aktivitas.";
-        
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
-            'sender_id'       => 0, // System
-            'sender_type'     => 'system',
-            'message_type'    => 'text',
-            'content'         => $messageContent,
+            'sender_id' => 0, // System
+            'sender_type' => 'system',
+            'message_type' => 'text',
+            'content' => $messageContent,
         ]);
 
         $conversation->update([
@@ -100,20 +101,20 @@ class CheckInactivityReminder extends Command
 
         $message = Message::create([
             'conversation_id' => $conversation->id,
-            'sender_id'       => 0,
-            'sender_type'     => 'system',
-            'message_type'    => 'text',
-            'content'         => 'Sesi chat Anda telah berakhir secara otomatis karena tidak ada aktivitas selama 30 menit.',
+            'sender_id' => 0,
+            'sender_type' => 'system',
+            'message_type' => 'text',
+            'content' => 'Sesi chat Anda telah berakhir secara otomatis karena tidak ada aktivitas selama 30 menit.',
         ]);
 
         try {
             broadcast(new MessageSent($message));
             broadcast(new ConversationStatusChanged($conversation, 'System'));
-            
+
             if ($conversation->customer) {
                 event(new UserShouldBeLoggedOut($conversation->customer));
             }
-            
+
             $this->info("Conversation #{$conversation->id} closed due to inactivity.");
         } catch (\Exception $e) {
             $this->error("Failed to broadcast closure: " . $e->getMessage());

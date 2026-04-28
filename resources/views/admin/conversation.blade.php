@@ -219,7 +219,7 @@
         .send-btn.whisper:hover { box-shadow: 0 4px 14px rgba(245,158,11,0.4); transform: translateY(-1px); }
         .send-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
-        /* Slash dropdown */
+        /* ── Slash dropdown ── */
         .slash-dropdown {
             position: absolute; bottom: calc(100% + 8px); left: 0; right: 0;
             background: #fff; border: 1px solid #e2e8f0;
@@ -240,11 +240,107 @@
         .slash-dropdown-item:hover, .slash-dropdown-item.selected {
             background: #eef2ff; color: #4338ca; font-weight: 500;
         }
+
+        /* ── Message Options (WhatsApp Style) ── */
+        .bubble-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+        .msg-options-btn {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, color 0.2s;
+            z-index: 10;
+            color: #fff;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+        .bubble-admin .msg-options-btn {
+            background: transparent;
+            color: #fff;
+        }
+        .bubble-wrapper:hover .msg-options-btn {
+            opacity: 1;
+        }
+        /* Memberikan ruang agar teks tidak bertubrukan dengan tombol dropdown */
+        .bubble-wrapper .bubble {
+            padding-right: 34px !important;
+        }
+        .msg-options-btn:hover {
+            color: #475569;
+        }
+        .bubble-admin .msg-options-btn:hover {
+            color: #fff;
+        }
+
+        .msg-context-menu {
+            position: fixed;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 140px;
+            z-index: 9999;
+            overflow: hidden;
+            border: 1px solid #eef2f6;
+            animation: menuFadeIn 0.15s ease-out;
+        }
+        @keyframes menuFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .menu-item {
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #334155;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .menu-item:hover {
+            background: #f8fafc;
+        }
+        .menu-item.destructive {
+            color: #ef4444;
+        }
+        .menu-item i {
+            font-size: 14px;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body class="text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden"
       style="background:#f0f2f8; margin:0;"
+      @click="closeMenu()"
       x-data="adminChat({{ $conversation->id }}, {{ $admin->id }}, {{ Js::from($messages) }}, '{{ $conversation->status }}', {{ $conversation->admin_id }})">
+
+    <!-- CONTEXT MENU / DROPDOWN -->
+    <div x-show="menu.show" 
+         x-cloak
+         class="msg-context-menu" 
+         :style="`top: ${menu.y}px; left: ${menu.x}px;`"
+         @click.outside="closeMenu()">
+        <div class="menu-item" @click="editMessage(menu.msgId)">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Edit Pesan
+        </div>
+        <div class="menu-item destructive" @click="deleteMessage(menu.msgId)">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Hapus Pesan
+        </div>
+    </div>
 
     <!-- MESSAGES AREA -->
     <main id="messages-container" style="flex:1; overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:2px;">
@@ -286,48 +382,67 @@
 
                         <!-- Image -->
                         <template x-if="msg.message_type === 'image'">
-                            <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'" style="padding:6px;">
-                                <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
-                                    <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:pointer;" class="hover:opacity-90 transition-opacity" @click="window.open(msg.content, '_blank')">
-                                </template>
-                                <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
-                                    <div style="padding:10px 12px; border-radius:12px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.5; border:1px solid #fcd34d;">
-                                        Media gambar dari WhatsApp diterima, tetapi gateway belum mengirim URL file gambar ke panel web.
-                                    </div>
-                                </template>
+                            <div class="bubble-wrapper">
+                                <div class="msg-options-btn" @click.stop="openMenu(msg.id, $event)">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                                <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'" 
+                                     style="padding:6px;"
+                                     @contextmenu.prevent="handleContextMenu($event, msg.id)">
+                                    <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                        <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:pointer;" class="hover:opacity-90 transition-opacity" @click="window.open(msg.content, '_blank')">
+                                    </template>
+                                    <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                        <div style="padding:10px 12px; border-radius:12px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.5; border:1px solid #fcd34d;">
+                                            Media gambar dari WhatsApp diterima, tetapi gateway belum mengirim URL file gambar ke panel web.
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </template>
 
                         <!-- File -->
                         <template x-if="msg.message_type === 'file'">
-                            <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'">
-                                <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
-                                    <div style="padding:10px 12px; border-radius:12px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.5; border:1px solid #fcd34d;">
-                                        Media file dari WhatsApp diterima, tetapi gateway belum mengirim URL file ke panel web.
-                                    </div>
-                                </template>
-                                <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
-                                <div class="file-attachment">
-                                    <div class="file-icon">
-                                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    </div>
-                                    <div style="flex:1; min-width:0;">
-                                        <p style="margin:0 0 4px; font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="msg.content.split('/').pop()"></p>
-                                        <a :href="msg.content" target="_blank"
-                                           style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;"
-                                           :style="msg.sender_type === 'admin' ? 'color:rgba(255,255,255,0.85)' : 'color:#6366f1'">
-                                            Unduh File ↓
-                                        </a>
-                                    </div>
+                            <div class="bubble-wrapper">
+                                <div class="msg-options-btn" @click.stop="openMenu(msg.id, $event)">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                                 </div>
-                                </template>
+                                <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'"
+                                     @contextmenu.prevent="handleContextMenu($event, msg.id)">
+                                    <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                        <div style="padding:10px 12px; border-radius:12px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.5; border:1px solid #fcd34d;">
+                                            Media file dari WhatsApp diterima, tetapi gateway belum mengirim URL file ke panel web.
+                                        </div>
+                                    </template>
+                                    <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
+                                    <div class="file-attachment">
+                                        <div class="file-icon">
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                        </div>
+                                        <div style="flex:1; min-width:0;">
+                                            <p style="margin:0 0 4px; font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="msg.content.split('/').pop()"></p>
+                                            <a :href="msg.content" target="_blank"
+                                               style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;"
+                                               :style="msg.sender_type === 'admin' ? 'color:rgba(255,255,255,0.85)' : 'color:#6366f1'">
+                                                Unduh File ↓
+                                            </a>
+                                        </div>
+                                    </div>
+                                    </template>
+                                </div>
                             </div>
                         </template>
 
                         <!-- Text -->
                         <template x-if="msg.message_type === 'text'">
-                            <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'">
-                                <span x-html="formatMessage(msg.content)"></span>
+                            <div class="bubble-wrapper">
+                                <div class="msg-options-btn" @click.stop="openMenu(msg.id, $event)">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                                <div class="bubble" :class="msg.sender_type === 'admin' ? 'bubble-admin' : 'bubble-user'"
+                                     @contextmenu.prevent="handleContextMenu($event, msg.id)">
+                                    <span x-html="formatMessage(msg.content)"></span>
+                                </div>
                             </div>
                         </template>
 
@@ -361,6 +476,16 @@
         </div>
 
         <!-- Input Form -->
+        <div x-show="editingMsgId !== null" 
+             class="px-4 py-1 bg-blue-50 border-t border-blue-100 flex items-center justify-between" 
+             x-cloak>
+            <div class="flex items-center gap-2 text-blue-600 font-medium text-xs">
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Mengedit pesan...
+            </div>
+            <button type="button" @click="cancelEdit()" class="text-xs text-slate-400 hover:text-slate-600 font-bold">BATAL</button>
+        </div>
+
         <form class="input-form"
               method="POST" action="{{ route('admin.chat.send') }}"
               :class="(!canReply) ? 'opacity-50 pointer-events-none' : ''"
@@ -428,6 +553,114 @@
                 lastActivity: Date.now(),
                 reminderSentCount: 0,
                 inactivityTimeout: 30 * 60 * 1000,
+                editingMsgId: null,
+
+                // Message Menu State
+                menu: {
+                    show: false,
+                    msgId: null,
+                    x: 0,
+                    y: 0
+                },
+
+                openMenu(msgId, event) {
+                    this.menu.msgId = msgId;
+                    this.menu.show = true;
+                    
+                    // Positioning relative to viewport
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    this.menu.x = rect.left - 110; // Adjust to show menu to the left of the icon
+                    this.menu.y = rect.top + 25;
+
+                    // Ensure menu doesn't go off screen
+                    this.$nextTick(() => {
+                        const menuWidth = 140;
+                        if (this.menu.x + menuWidth > window.innerWidth) {
+                            this.menu.x = window.innerWidth - menuWidth - 10;
+                        }
+                    });
+                },
+
+                handleContextMenu(event, msgId) {
+                    this.menu.msgId = msgId;
+                    this.menu.show = true;
+                    this.menu.x = event.clientX;
+                    this.menu.y = event.clientY;
+
+                    // Prevent menu from going off screen
+                    this.$nextTick(() => {
+                        const menuWidth = 140;
+                        const menuHeight = 80;
+                        if (this.menu.x + menuWidth > window.innerWidth) this.menu.x -= menuWidth;
+                        if (this.menu.y + menuHeight > window.innerHeight) this.menu.y -= menuHeight;
+                    });
+                },
+
+                closeMenu() {
+                    this.menu.show = false;
+                },
+
+                editMessage(msgId) {
+                    const msg = this.messages.find(m => m.id === msgId);
+                    if (!msg) return;
+                    
+                    if (msg.sender_type !== 'admin') {
+                        alert('Anda hanya dapat mengedit pesan yang Anda kirim.');
+                        this.closeMenu();
+                        return;
+                    }
+
+                    this.editingMsgId = msgId;
+                    this.newMessage = msg.content.replace(/<br>/g, '\n'); // Convert breaks back to newlines
+                    this.closeMenu();
+                    
+                    this.$nextTick(() => {
+                        this.$refs.messageInput.focus();
+                    });
+                },
+
+                cancelEdit() {
+                    this.editingMsgId = null;
+                    this.newMessage = '';
+                },
+
+                async deleteMessage(msgId) {
+                    const msg = this.messages.find(m => m.id === msgId);
+                    if (!msg) return;
+
+                    if (msg.sender_type !== 'admin' && !confirm('Anda menghapus pesan pelanggan (Admin/Supervisor Only). Lanjutkan?')) {
+                        this.closeMenu();
+                        return;
+                    }
+
+                    if (!confirm('Apakah Anda yakin ingin menghapus pesan ini?')) {
+                        this.closeMenu();
+                        return;
+                    }
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('_method', 'DELETE');
+                        formData.append('_token', '{{ csrf_token() }}');
+
+                        const response = await fetch(`/admin/chat/message/${msgId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Gagal menghapus pesan.');
+
+                        this.messages = this.messages.filter(m => m.id !== msgId);
+                    } catch (error) {
+                        alert(error.message);
+                    } finally {
+                        this.closeMenu();
+                    }
+                },
 
                 handleInput(e) {
                     this.sendTypingEvent(true);
@@ -605,6 +838,15 @@
                                             this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
                                         }
                                     }
+                                })
+                                .listen('.message.updated', (e) => {
+                                    const msg = this.messages.find(m => m.id === e.id);
+                                    if (msg) {
+                                        msg.content = e.content;
+                                    }
+                                })
+                                .listen('.message.deleted', (e) => {
+                                    this.messages = this.messages.filter(m => m.id !== e.id);
                                 });
                         } else {
                             retries++;
@@ -616,62 +858,134 @@
                     }, 500);
                 },
 
-                async sendMessage() {
+                async updateMessage() {
                     if (!this.newMessage.trim() || this.isSending) return;
-
-                    this.lastActivity = Date.now();
-                    this.reminderSentCount = 0;
+                    
+                    const msgId = this.editingMsgId;
                     const content = this.newMessage;
-                    const type = this.messageType;
-                    this.newMessage = ''; 
                     this.isSending = true;
-
-                    const tempId = Date.now();
-                    this.messages.push({
-                        temp_id: tempId,
-                        sender_type: 'admin',
-                        message_type: type,
-                        content: content,
-                        created_at: new Date().toISOString()
-                    });
-                    this.scrollToBottom();
 
                     try {
                         const formData = new FormData();
-                        formData.append('conversation_id', this.conversationId);
-                        formData.append('message_type', type);
                         formData.append('content', content);
+                        formData.append('_method', 'PATCH');
+                        formData.append('_token', '{{ csrf_token() }}');
 
-                        const response = await fetch('{{ route('admin.chat.send') }}', {
+                        const response = await fetch(`/admin/chat/message/${msgId}`, {
                             method: 'POST',
                             headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                 'Accept': 'application/json'
                             },
                             body: formData
                         });
 
                         const data = await response.json();
-                        if (!response.ok) throw new Error(data.error || data.message || 'Server Error ' + response.status);
-                        
-                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                        if (!response.ok) throw new Error(data.error || 'Gagal memperbarui pesan.');
+
+                        const msgIndex = this.messages.findIndex(m => m.id === msgId);
                         if (msgIndex !== -1) {
-                            this.messages[msgIndex].id = data.message.id;
-                            this.messages[msgIndex].message_type = data.message.message_type;
                             this.messages[msgIndex].content = data.message.content;
                         }
+                        this.cancelEdit();
                     } catch (error) {
-                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
                         alert(error.message);
                     } finally {
                         this.isSending = false;
-                        this.sendTypingEvent(false); 
-                        this.$nextTick(() => {
-                            if (this.$refs && this.$refs.messageInput) {
-                                this.$refs.messageInput.focus();
-                            }
-                        });
                     }
+                },
+
+                async sendMessage() {
+                    if (this.editingMsgId !== null) {
+                        return this.updateMessage();
+                    }
+                    if (!this.newMessage.trim() || this.isSending) return;
+
+                    this.lastActivity = Date.now();
+                    this.reminderSentCount = 0;
+                    
+                    const content = this.newMessage;
+                    const type = this.messageType;
+                    const isEditing = this.editingMsgId !== null;
+                    const editId = this.editingMsgId;
+
+                    this.newMessage = ''; 
+                    this.isSending = true;
+                    this.editingMsgId = null;
+
+                    if (!isEditing) {
+                        const tempId = Date.now();
+                        this.messages.push({
+                            temp_id: tempId,
+                            sender_type: 'admin',
+                            message_type: type,
+                            content: content,
+                            created_at: new Date().toISOString()
+                        });
+                        this.scrollToBottom();
+
+                        try {
+                            const formData = new FormData();
+                            formData.append('conversation_id', this.conversationId);
+                            formData.append('message_type', type);
+                            formData.append('content', content);
+
+                            const response = await fetch('{{ route('admin.chat.send') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: formData
+                            });
+
+                            const data = await response.json();
+                            if (!response.ok) throw new Error(data.error || data.message || 'Server Error ' + response.status);
+                            
+                            const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                            if (msgIndex !== -1) {
+                                this.messages[msgIndex].id = data.message.id;
+                                this.messages[msgIndex].message_type = data.message.message_type;
+                                this.messages[msgIndex].content = data.message.content;
+                            }
+                        } catch (error) {
+                            this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                            alert(error.message);
+                        } finally {
+                            this.isSending = false;
+                            this.sendTypingEvent(false); 
+                        }
+                    } else {
+                        // Logic for Update
+                        try {
+                            const response = await fetch(`/admin/chat/message/${editId}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({ content: content })
+                            });
+
+                            const data = await response.json();
+                            if (!response.ok) throw new Error(data.error || 'Gagal memperbarui pesan.');
+
+                            const msg = this.messages.find(m => m.id === editId);
+                            if (msg) msg.content = content;
+                        } catch (error) {
+                            alert(error.message);
+                            this.newMessage = content; // Restore text
+                            this.editingMsgId = editId;
+                        } finally {
+                            this.isSending = false;
+                        }
+                    }
+
+                    this.$nextTick(() => {
+                        if (this.$refs && this.$refs.messageInput) {
+                            this.$refs.messageInput.focus();
+                        }
+                    });
                 },
 
                 async uploadFile(e) {
