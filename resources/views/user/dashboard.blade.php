@@ -39,6 +39,13 @@
 
     <style>
         [x-cloak] { display: none !important; }
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        .main-wrapper {
+            overflow-x: clip;
+        }
         .chat-widget-container {
             z-index: 9999;
         }
@@ -180,6 +187,31 @@
         @media (max-width: 991px) {
             .hero-title { font-size: 2.5rem; }
             .hero-section { padding: 60px 0; }
+            .hero-visual-container {
+                overflow: hidden;
+            }
+            .hero-bg-blob {
+                width: 320px;
+                height: 320px;
+                max-width: 100%;
+            }
+            .floating-1 {
+                right: 0;
+            }
+            .floating-2 {
+                left: 0;
+            }
+            .bg-blob-1,
+            .bg-blob-2 {
+                width: 220px;
+                height: 220px;
+            }
+            .bg-blob-1 {
+                right: -80px;
+            }
+            .bg-blob-2 {
+                left: -80px;
+            }
         }
 
         /* Remove blue background on navbar user profile hover */
