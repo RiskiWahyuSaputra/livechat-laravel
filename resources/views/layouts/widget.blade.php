@@ -48,7 +48,7 @@
         }
     </style>
 </head>
-<body class="bg-transparent antialiased user-homepage">
+<body class="bg-transparent antialiased user-homepage" x-data="chatWidget()" x-init="initWidget()">
     <div class="chat-widget-wrapper chat-widget-container">
         @yield('content')
     </div>
