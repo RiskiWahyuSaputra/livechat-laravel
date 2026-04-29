@@ -1164,7 +1164,7 @@ class ConversationFlowService
 
         $queuedConversations = Conversation::whereIn('status', ['queued', 'pending'])
             ->whereNull('admin_id')
-            ->with('user')
+            ->with('customer')
             ->get();
 
         foreach ($queuedConversations as $conversation) {
@@ -1183,9 +1183,9 @@ class ConversationFlowService
             }
 
             // Also send via WhatsApp if the user came from WhatsApp
-            if ($conversation->user && $conversation->user->origin === 'WhatsApp') {
+            if ($conversation->customer && $conversation->customer->origin === 'WhatsApp') {
                 try {
-                    $this->openClawWhatsappService->sendText($conversation->user, $message);
+                    $this->openClawWhatsappService->sendText($conversation->customer, $message);
                 } catch (\Exception $e) {
                     \Log::warning('WhatsApp notify failed for conversation ' . $conversation->id . ': ' . $e->getMessage());
                 }
