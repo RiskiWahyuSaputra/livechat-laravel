@@ -1,5 +1,5 @@
 <!-- Chat Widget Container -->
-<div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex flex-col items-end chat-widget-container">
+<div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[10020] flex flex-col items-end chat-widget-container">
     
     <!-- Chat Popup Window -->
     <div x-show="isOpen" x-cloak
