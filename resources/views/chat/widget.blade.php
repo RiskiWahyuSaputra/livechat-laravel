@@ -1,19 +1,23 @@
 @extends('layouts.widget')
 
 @section('content')
-    <div x-data="{ isOpen: true }">
-        <x-chat-widget :isAuthenticated="$isAuthenticated" />
-    </div>
+    <x-chat-widget :isAuthenticated="$isAuthenticated" />
 
     <script>
-        // Override chatWidget data to always be open in this view
+        // Override chatWidget BEFORE Alpine initializes so isOpen starts as true
+        // and the close button sends a postMessage to parent window instead of closing locally
         document.addEventListener('alpine:init', () => {
             const originalChatWidget = Alpine.data('chatWidget');
             Alpine.data('chatWidget', () => {
                 const data = originalChatWidget();
-                data.isOpen = true; // Force open
+                data.isOpen = true; // Always open inside the iframe
+                data.initWidget = async function() {
+                    // Call original init logic but keep isOpen = true
+                    await originalChatWidget().initWidget.call(this);
+                    this.isOpen = true;
+                };
                 data.toggleChat = () => {
-                    // Send message to parent window to close the iframe
+                    // Notify parent window to close the iframe container
                     window.parent.postMessage('close-chat', '*');
                 };
                 return data;
@@ -21,3 +25,4 @@
         });
     </script>
 @endsection
+
