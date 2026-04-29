@@ -73,6 +73,16 @@ class OpenClawWebhookController extends Controller
                 'uses_bot_menu' => $usesBotMenu
             ]);
             $result = $this->conversationFlowService->createConversation($user);
+
+            // Handle rejected mode (e.g. closed) — send the rejection message to WhatsApp
+            if (!empty($result['rejected'])) {
+                $rejectText = $result['reject_message'] ?? '';
+                if ($rejectText !== '') {
+                    $this->openClawWhatsappService->sendText($user, $rejectText);
+                }
+                return response()->json(['status' => 'ok', 'rejected' => true]);
+            }
+
             $conversation = $result['conversation'];
             $isNewConversation = true;
 

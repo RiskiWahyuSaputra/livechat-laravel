@@ -14,8 +14,10 @@ use Illuminate\Support\Str;
 
 class ConversationFlowService
 {
-    public function __construct(protected GeminiService $geminiService)
-    {
+    public function __construct(
+        protected GeminiService $geminiService,
+        protected OpenClawWhatsappService $openClawWhatsappService,
+    ) {
     }
 
     private function getSystemMode(): string
@@ -1149,12 +1151,20 @@ class ConversationFlowService
             return;
         }
 
-        $message = $newMode === 'closed'
-            ? 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena sistem sedang ditutup. Kami akan segera kembali melayani Anda.'
-            : 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali saat jam operasional.';
+        if ($newMode === 'closed') {
+            $defaultClosed = 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena sistem sedang ditutup. Kami akan segera kembali melayani Anda.';
+            $message = Setting::get('bot_greeting_closed', $defaultClosed) ?? $defaultClosed;
+        } else {
+            $officeStart = Setting::get('office_hours_start', '09:00');
+            $officeEnd   = Setting::get('office_hours_end', '17:00');
+            $defaultOutside = 'Mohon maaf, saat ini kami sedang di luar jam kerja. Silakan tinggalkan pesan dan kami akan segera membalas saat jam kerja dimulai.';
+            $outsideMessage = Setting::get('bot_greeting_outside_office_hour', $defaultOutside) ?? $defaultOutside;
+            $message = $outsideMessage . "\n\nJam operasional kami: {$officeStart} - {$officeEnd}.";
+        }
 
         $queuedConversations = Conversation::whereIn('status', ['queued', 'pending'])
             ->whereNull('admin_id')
+            ->with('user')
             ->get();
 
         foreach ($queuedConversations as $conversation) {
@@ -1170,6 +1180,15 @@ class ConversationFlowService
                 broadcast(new MessageSent($notif));
             } catch (\Exception $e) {
                 \Log::warning('Broadcast failed for queue notification: ' . $e->getMessage());
+            }
+
+            // Also send via WhatsApp if the user came from WhatsApp
+            if ($conversation->user && $conversation->user->origin === 'WhatsApp') {
+                try {
+                    $this->openClawWhatsappService->sendText($conversation->user, $message);
+                } catch (\Exception $e) {
+                    \Log::warning('WhatsApp notify failed for conversation ' . $conversation->id . ': ' . $e->getMessage());
+                }
             }
         }
     }
