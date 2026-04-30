@@ -364,7 +364,7 @@
                           @input="sendTypingEvent(); resizeComposer()"
                           @keydown="handleComposerKeydown($event)"
                           placeholder="Ketik balasan Anda..." 
-                          class="flex-1 max-h-32 min-h-[40px] md:min-h-[44px] bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl px-3.5 py-2 md:py-2.5 text-[13px] md:text-sm transition-colors resize-none overflow-y-auto"
+                          class="flex-1 min-h-[40px] md:min-h-[44px] bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl px-3.5 py-2 md:py-2.5 text-[13px] md:text-sm transition-colors resize-none overflow-hidden"
                           rows="1"></textarea>
                           
                 <button type="submit" 
@@ -425,39 +425,24 @@
                 },
 
                 handleComposerKeydown(event) {
-                    if (event.key !== 'Enter') return;
-
-                    if (event.shiftKey) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
                         event.preventDefault();
-
-                        const textarea = this.$refs.messageInput;
-                        if (!textarea) return;
-
-                        const start = textarea.selectionStart ?? this.newMessage.length;
-                        const end = textarea.selectionEnd ?? this.newMessage.length;
-                        const before = this.newMessage.slice(0, start);
-                        const after = this.newMessage.slice(end);
-
-                        this.newMessage = `${before}\n${after}`;
-
-                        this.$nextTick(() => {
-                            textarea.focus();
-                            const cursorPosition = start + 1;
-                            textarea.setSelectionRange(cursorPosition, cursorPosition);
-                            this.resizeComposer();
-                        });
-                        return;
+                        this.sendMessage();
+                    } else if (event.key === 'Enter' && event.shiftKey) {
+                        this.$nextTick(() => this.resizeComposer());
                     }
-
-                    event.preventDefault();
-                    this.sendMessage();
                 },
 
                 resizeComposer() {
-                    if (!this.$refs.messageInput) return;
+                    const textarea = this.$refs.messageInput;
+                    if (!textarea) return;
 
-                    this.$refs.messageInput.style.height = 'auto';
-                    this.$refs.messageInput.style.height = `${Math.min(this.$refs.messageInput.scrollHeight, 128)}px`;
+                    textarea.style.height = 'auto';
+                    const newHeight = Math.min(textarea.scrollHeight, 150);
+                    textarea.style.height = `${newHeight}px`;
+                    
+                    // Toggle overflow based on height
+                    textarea.style.overflowY = textarea.scrollHeight > 150 ? 'auto' : 'hidden';
                 },
 
                 get statusText() {

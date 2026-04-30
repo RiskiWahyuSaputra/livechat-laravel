@@ -664,13 +664,22 @@
 
                 handleInput(e) {
                     this.sendTypingEvent(true);
+                    this.resizeComposer();
                 },
 
                 handleKeydown(e) {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
+                    } else if (e.key === 'Enter' && e.shiftKey) {
+                        this.$nextTick(() => this.resizeComposer());
                     }
+                },
+
+                resizeComposer() {
+                    if (!this.$refs.messageInput) return;
+                    this.$refs.messageInput.style.height = 'auto';
+                    this.$refs.messageInput.style.height = `${this.$refs.messageInput.scrollHeight}px`;
                 },
 
 
@@ -908,8 +917,10 @@
                     const isEditing = this.editingMsgId !== null;
                     const editId = this.editingMsgId;
 
-                    this.newMessage = ''; 
+                    this.newMessage = '';
+                    this.$nextTick(() => this.resizeComposer());
                     this.isSending = true;
+
                     this.editingMsgId = null;
 
                     if (!isEditing) {

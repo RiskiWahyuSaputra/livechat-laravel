@@ -211,7 +211,9 @@
                 </button>
                 <input type="file" x-ref="fileInput" style="display:none;" @change="uploadFile">
 
-                <textarea x-model="newMessage" @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
+                <textarea x-model="newMessage" x-ref="messageInput"
+                          @input="resizeComposer()"
+                          @keydown.enter="if(!event.shiftKey) { event.preventDefault(); sendMessage(); } else { $nextTick(() => resizeComposer()); }"
                           placeholder="Ketik pesan ke agen..."
                           class="msg-textarea" rows="1"></textarea>
 
@@ -280,6 +282,7 @@
 
                     const content = this.newMessage;
                     this.newMessage = '';
+                    this.$nextTick(() => this.resizeComposer());
                     this.isSending = true;
 
                     const tempId = Date.now();
@@ -319,6 +322,12 @@
                     } finally {
                         this.isSending = false;
                     }
+                },
+
+                resizeComposer() {
+                    if (!this.$refs.messageInput) return;
+                    this.$refs.messageInput.style.height = 'auto';
+                    this.$refs.messageInput.style.height = `${this.$refs.messageInput.scrollHeight}px`;
                 },
 
                 async uploadFile(e) {
