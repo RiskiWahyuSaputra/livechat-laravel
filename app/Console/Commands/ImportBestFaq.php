@@ -65,8 +65,8 @@ class ImportBestFaq extends Command
                 'content' => $sourceTag . ' PT Bandung Eco Sinergi Teknologi (PT BEST) adalah perusahaan penjualan langsung atau direct selling yang memasarkan produk-produk berkualitas yang dibutuhkan masyarakat. Perusahaan ini disebut menjalankan program pemasaran dengan sistem syariah.',
             ],
             [
-                'title' => 'siapa sia owner PT BEST',
-                'content' => $sourceTag . ' Owner PT BEST adalah Bapak H. Febrian Agung Budi Prasetyo',
+                'title' => 'Siapa owner PT BEST',
+                'content' => $sourceTag . ' Owner PT BEST yang tercantum pada knowledge ini adalah Bapak H. Febrian Agung Budi Prasetyo.',
             ],
             [
                 'title' => 'Nama lengkap PT BEST',
@@ -127,10 +127,6 @@ class ImportBestFaq extends Command
             [
                 'title' => 'Alamat PT BEST',
                 'content' => $sourceTag . ' Alamat PT BEST yang tercantum pada materi FAQ perusahaan adalah Grand Surapati Core Blok B 9-10 B 23-25, Jl. K.H.P. Hasan Mustopa No. 39, Pasirlayung, Kec. Cibeunying Kidul, Kota Bandung, Jawa Barat 40192.',
-            ],
-            [
-                'title' => 'Owner PT BEST',
-                'content' => $sourceTag . ' Pada halaman FAQ disebut owner perusahaan jelas dan mudah ditemui. Materi itu juga menyebut rumah owner masih satu kompleks dengan kantor.',
             ],
             [
                 'title' => 'Apakah bisnisraksasa.com website resmi PT BEST',
@@ -226,11 +222,15 @@ class ImportBestFaq extends Command
             ],
             [
                 'title' => 'Kategori produk PT BEST',
-                'content' => $sourceTag . ' Draft FAQ bisnisraksasa.com membagi produk ke beberapa kategori: additif kendaraan, pupuk pertanian dan perkebunan, herbal kesehatan, skincare dan kecantikan, minuman kesehatan, serta pembersih area tubuh.',
+                'content' => $sourceTag . ' Kategori produk yang ditampilkan di bisnisraksasa.com meliputi produk additif untuk kendaraan, produk pupuk untuk pertanian dan perkebunan, produk herbal untuk kesehatan, produk skincare dan kecantikan, produk minuman untuk kesehatan tubuh, serta produk pembersih untuk kesehatan area tubuh.',
             ],
             [
                 'title' => 'Produk otomotif PT BEST',
                 'content' => $sourceTag . ' Produk kendaraan yang ditampilkan pada draft FAQ bisnisraksasa.com antara lain Eco Racing, Eco Diesel, dan Eco Racing Nano Tech atau Nano Oil.',
+            ],
+            [
+                'title' => 'Produk additif untuk kendaraan',
+                'content' => $sourceTag . ' Pada kategori produk additif untuk kendaraan di bisnisraksasa.com, produk yang ditampilkan antara lain Eco Racing, Eco Diesel, dan Eco Racing Nano Tech atau Nano Oil.',
             ],
             [
                 'title' => 'Manfaat additif kendaraan BEST',
@@ -241,20 +241,36 @@ class ImportBestFaq extends Command
                 'content' => $sourceTag . ' Pada kategori pertanian, draft FAQ bisnisraksasa.com paling menonjolkan Eco Farming sebagai pupuk organik super aktif untuk membantu kesuburan tanah dan efisiensi penggunaan pupuk anorganik.',
             ],
             [
+                'title' => 'Produk pertanian dan perkebunan PT BEST',
+                'content' => $sourceTag . ' Pada kategori produk pupuk untuk pertanian dan perkebunan, bisnisraksasa.com menonjolkan Eco Farming sebagai pupuk organik super aktif.',
+            ],
+            [
+                'title' => 'Produk Agrosawit PT BEST',
+                'content' => $sourceTag . ' Menurut artikel bisnisraksasa.com berjudul "Pupuk Agrosawit, Rahasia Panen Melimpah dari Brilian Biz", Agrosawit dijelaskan sebagai Premium Water Soluble Fertilizer yang mudah larut dan cepat diserap tanaman. Produk ini diposisikan untuk membantu meningkatkan fungsi akar, batang, dan daun pada tanaman sawit.',
+            ],
+            [
                 'title' => 'Manfaat Eco Farming',
                 'content' => $sourceTag . ' Menurut materi support bisnisraksasa.com, manfaat Eco Farming yang ditampilkan antara lain membantu menekan biaya produksi, mempercepat masa panen, meningkatkan imunitas tanaman, menambah unsur hara tanah, dan membantu meningkatkan hasil serta kualitas produksi.',
             ],
             [
                 'title' => 'Produk herbal PT BEST',
-                'content' => $sourceTag . ' Beberapa produk herbal yang muncul pada draft FAQ bisnisraksasa.com antara lain HABSPRO, ECO VICO, dan B-MAXX.',
+                'content' => $sourceTag . ' Beberapa produk herbal untuk kesehatan yang muncul pada bisnisraksasa.com antara lain HABSPRO, ECO VICO, B-MAXX, dan RED ONE BOOST.',
             ],
             [
                 'title' => 'Posisi produk herbal PT BEST',
                 'content' => $sourceTag . ' Saat menjelaskan produk herbal PT BEST, gunakan bahasa aman seperti produk ini dipasarkan sebagai suplemen herbal atau menurut informasi di situs, produk ini ditujukan untuk kebutuhan tertentu. Hindari membuat klaim medis seolah sudah terbukti klinis bila detail verifikasinya belum tersedia.',
             ],
             [
+                'title' => 'Produk herbal untuk kesehatan',
+                'content' => $sourceTag . ' Di kategori produk herbal untuk kesehatan, bisnisraksasa.com menampilkan HABSPRO, ECO VICO, B-MAXX, dan RED ONE BOOST.',
+            ],
+            [
                 'title' => 'Produk skincare PT BEST',
                 'content' => $sourceTag . ' Pada draft FAQ bisnisraksasa.com, produk skincare yang ditampilkan antara lain LVN Lipcream, LVN Skin Serum, dan LVN Day and Night Cream.',
+            ],
+            [
+                'title' => 'Produk skincare dan kecantikan',
+                'content' => $sourceTag . ' Pada kategori produk skincare dan kecantikan, bisnisraksasa.com menampilkan LVN Lipcream, LVN Skin Serum, dan LVN Day and Night Cream.',
             ],
             [
                 'title' => 'Keunggulan skincare PT BEST',
@@ -262,11 +278,19 @@ class ImportBestFaq extends Command
             ],
             [
                 'title' => 'Produk minuman kesehatan PT BEST',
-                'content' => $sourceTag . ' Beberapa minuman kesehatan yang disebut pada draft FAQ bisnisraksasa.com antara lain EVITGO 100, ECOMAXX, dan ECONAXX Coffee.',
+                'content' => $sourceTag . ' Beberapa produk minuman untuk kesehatan tubuh yang disebut di bisnisraksasa.com antara lain EVITGO 100, ECOMAXX Coffee, dan ECONAXX Coffee.',
+            ],
+            [
+                'title' => 'Produk minuman untuk kesehatan tubuh',
+                'content' => $sourceTag . ' Pada kategori produk minuman untuk kesehatan tubuh, bisnisraksasa.com menampilkan EVITGO 100 serta ECOMAXX Coffee dan ECONAXX Coffee.',
             ],
             [
                 'title' => 'Produk kebersihan area tubuh PT BEST',
-                'content' => $sourceTag . ' Pada kategori pembersih area tubuh, draft FAQ bisnisraksasa.com menampilkan LVN Hygiene for Gentle Man, LVN Hygiene Spray for Man, LVN Crystal-V, dan LVN Crystal-Q.',
+                'content' => $sourceTag . ' Pada kategori produk pembersih untuk kesehatan area tubuh, bisnisraksasa.com menampilkan LVN Hygiene for Gentle Man, LVN Hygiene Spray for Man, LVN Crystal-V, LVN Crystal-Q, dan LVN Hand Moist.',
+            ],
+            [
+                'title' => 'Produk pembersih untuk kesehatan area tubuh',
+                'content' => $sourceTag . ' Pada kategori produk pembersih untuk kesehatan area tubuh, bisnisraksasa.com menampilkan LVN Hygiene for Gentle Man, LVN Hygiene Spray for Man, LVN Crystal-V, LVN Crystal-Q, dan LVN Hand Moist.',
             ],
             [
                 'title' => 'BPOM dan halal produk BEST',
@@ -282,6 +306,24 @@ class ImportBestFaq extends Command
             [
                 'title' => 'Blog PT BEST',
                 'content' => $sourceTag . ' PT BEST memiliki blog resmi yang dapat diakses melalui https://bestcorporation.co.id/blog/. Blog ini berisi artikel terkait produk, tips bisnis, dan informasi seputar perusahaan.',
+            ],
+        ];
+    }
+
+    private function getContactFaqs(string $sourceTag): array
+    {
+        return [
+            [
+                'title' => 'Kontak bisnisraksasa',
+                'content' => $sourceTag . ' Menurut halaman kontak bisnisraksasa.com, kanal kontak yang ditampilkan meliputi WhatsApp, panggilan telepon, dan email.',
+            ],
+            [
+                'title' => 'WhatsApp bisnisraksasa',
+                'content' => $sourceTag . ' Nomor WhatsApp yang ditampilkan di bisnisraksasa.com adalah +62 812-8260-7833.',
+            ],
+            [
+                'title' => 'Email bisnisraksasa',
+                'content' => $sourceTag . ' Email yang ditampilkan di bisnisraksasa.com adalah admin@bisnisraksasa.com.',
             ],
         ];
     }

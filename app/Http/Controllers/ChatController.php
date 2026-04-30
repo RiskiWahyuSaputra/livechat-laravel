@@ -14,6 +14,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -991,6 +992,10 @@ class ChatController extends Controller
             $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
         }
 
+        if ($productImage && $this->isOutOfScopeProductRefusal($aiResponse)) {
+            $aiResponse = $productImage['description'] ?? "Produk {$productImage['label']} termasuk bagian dari PT BEST CORPORATION SYARIAH. Kalau kamu mau, saya juga bisa bantu tampilkan gambarnya.";
+        }
+
         $messages[] = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => 0,
@@ -1013,7 +1018,7 @@ class ChatController extends Controller
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'image',
-                'content'         => asset('images/produk/' . $productImage['file']),
+                'content'         => asset('images/' . $productImage['path']),
             ]);
         }
 
@@ -1062,9 +1067,21 @@ class ChatController extends Controller
         return false;
     }
 
+    private function isOutOfScopeProductRefusal(string $aiResponse): bool
+    {
+        $normalized = strtolower(trim(strip_tags($aiResponse)));
+
+        return str_contains($normalized, 'maaf, saya hanya bisa membantu pertanyaan seputar pt best corporation syariah');
+    }
+
     private function detectProductImageForMessage(string $message): ?array
     {
-        $normalized = strtolower($message);
+        $normalized = $this->normalizeProductLookupText($message);
+
+        if ($specificProduct = $this->findSpecificProductImage($normalized)) {
+            return $specificProduct;
+        }
+
         $genericProductIntentKeywords = [
             'produk',
             'product',
@@ -1079,42 +1096,53 @@ class ChatController extends Controller
 
         $productMap = [
             [
-                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
-                'file' => 'produk-kecantikan.png',
-                'label' => 'kecantikan',
+                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik', 'serum', 'lipcream', 'day cream', 'night cream'],
+                'path' => 'produk/produk-kecantikan.png',
+                'label' => 'skincare dan kecantikan',
             ],
             [
-                'keywords' => ['kesehatan', 'health', 'herbal', 'vitamin', 'suplemen'],
-                'file' => 'produk-kesehatan.png',
-                'label' => 'kesehatan',
+                'keywords' => ['kesehatan', 'health', 'herbal', 'vitamin', 'suplemen', 'habspro', 'eco vico', 'b-maxx', 'red one boost'],
+                'path' => 'produk/produk-kesehatan.png',
+                'label' => 'herbal dan kesehatan',
             ],
             [
-                'keywords' => ['otomotif', 'motor', 'mobil', 'bengkel', 'oli'],
-                'file' => 'produk-otomotif.png',
+                'keywords' => ['minuman kesehatan', 'minuman', 'coffee', 'kopi', 'susu kambing', 'ecomaxx', 'econaxx', 'evitgo'],
+                'path' => 'produk/produk-kesehatan.png',
+                'label' => 'minuman kesehatan',
+            ],
+            [
+                'keywords' => ['otomotif', 'motor', 'mobil', 'bengkel', 'oli', 'additif', 'bahan bakar', 'eco racing', 'eco diesel', 'nano tech', 'nano oil'],
+                'path' => 'produk/produk-otomotif.png',
                 'label' => 'otomotif',
             ],
             [
-                'keywords' => ['pertanian', 'pupuk', 'tani', 'agrikultur', 'agro'],
-                'file' => 'produk-pertanian.png',
-                'label' => 'pertanian',
+                'keywords' => ['pertanian', 'perkebunan', 'pupuk', 'tani', 'agrikultur', 'agro', 'eco farming'],
+                'path' => 'produk/produk-pertanian.png',
+                'label' => 'pertanian dan perkebunan',
+            ],
+            [
+                'keywords' => ['pembersih area tubuh', 'area tubuh', 'kesehatan area tubuh', 'hygiene', 'crystal-v', 'crystal-q', 'hand moist', 'gentle man', 'spray for man', 'miss v', 'pembersih tubuh'],
+                'path' => 'produk/produk-kesehatan.png',
+                'label' => 'pembersih area tubuh',
             ],
         ];
 
         foreach ($productMap as $product) {
             foreach ($product['keywords'] as $keyword) {
-                if (str_contains($normalized, $keyword)) {
+                if (str_contains($normalized, $this->normalizeProductLookupText($keyword))) {
                     return [
-                        'file' => $product['file'],
+                        'path' => $product['path'],
                         'label' => $product['label'],
+                        'description' => $product['description'] ?? null,
                     ];
                 }
             }
         }
 
         foreach ($genericProductIntentKeywords as $keyword) {
-            if (str_contains($normalized, $keyword)) {
+            if (str_contains($normalized, $this->normalizeProductLookupText($keyword))) {
                 return [
-                    'file' => 'produk-best.png',
+                    'path' => 'produk/produk-best.png',
                     'label' => 'BEST',
                 ];
             }
@@ -1122,12 +1150,126 @@ class ChatController extends Controller
 
         if (str_contains($normalized, 'best') && str_contains($normalized, 'produk')) {
             return [
-                'file' => 'produk-best.png',
+                'path' => 'produk/produk-best.png',
                 'label' => 'BEST',
             ];
         }
 
         return null;
+    }
+
+    private function findSpecificProductImage(string $normalizedMessage): ?array
+    {
+        foreach ($this->productImageCatalog() as $product) {
+            foreach ($product['keywords'] as $keyword) {
+                if (str_contains($normalizedMessage, $keyword)) {
+                    return [
+                        'path' => $product['path'],
+                        'label' => $product['label'],
+                    ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function productImageCatalog(): array
+    {
+        static $catalog = null;
+
+        if (is_array($catalog)) {
+            return $catalog;
+        }
+
+        $catalog = [];
+        $directories = collect(File::directories(public_path('images')))
+            ->map(fn (string $path) => basename($path))
+            ->reject(fn (string $directory) => in_array($directory, ['produk'], true))
+            ->values()
+            ->all();
+        $aliasMap = [
+            'bmaxxx' => 'B MAXX',
+            'agro sawit' => 'Agrosawit',
+            'nano tech' => 'Eco Racing Nano Tech atau Nano Oil',
+            'nano oil' => 'Eco Racing Nano Tech atau Nano Oil',
+        ];
+        $labelOverrides = [
+            'ecoracing' => 'Eco Racing',
+            'ecodiesel' => 'Eco Diesel',
+            'ecoracingnanotechataunanooil' => 'Eco Racing Nano Tech atau Nano Oil',
+            'agrosawit' => 'Agrosawit',
+            'bmaxx' => 'B-MAXX',
+            'ecovico' => 'ECO VICO',
+            'habspro' => 'HABSPRO',
+            'redoneboost' => 'RED ONE BOOST',
+            'lvnserum' => 'LVN Serum',
+            'lvnlipcream' => 'LVN Lipcream',
+            'lvndayandnightcream' => 'LVN Day and Night Cream',
+        ];
+        $descriptionOverrides = [
+            'agrosawit' => 'Agrosawit adalah produk pupuk untuk pertanian dan perkebunan dari PT BEST yang pada artikel bisnisraksasa.com dijelaskan sebagai Premium Water Soluble Fertilizer, mudah larut, cepat diserap tanaman, dan diposisikan untuk membantu meningkatkan fungsi akar, batang, dan daun pada tanaman sawit.',
+            'ecoracing' => 'Eco Racing adalah aditif bahan bakar PT BEST untuk membantu mengoptimalkan pembakaran pada kendaraan. Menurut halaman produk bisnisraksasa.com, manfaat umumnya meliputi membantu membersihkan dan merawat mesin, menyempurnakan pembakaran, mengurangi knocking, meningkatkan akselerasi, dan membantu mengurangi emisi gas buang.',
+            'ecodiesel' => 'Eco Diesel adalah aditif bahan bakar PT BEST yang ditujukan untuk mesin diesel. Menurut halaman produk bisnisraksasa.com, produk ini diposisikan untuk membantu mengoptimalkan pembakaran dan meningkatkan kualitas bahan bakar.',
+            'ecoracingnanotechataunanooil' => 'Eco Racing Nano Tech atau Nano Oil adalah aditif oli mesin PT BEST berbasis teknologi nano yang diposisikan untuk membantu memberikan pelumasan lebih baik dan melindungi komponen mesin.',
+            'bmaxx' => 'B-MAXX adalah kapsul herbal PT BEST yang pada bisnisraksasa.com dijelaskan sebagai penyeimbang nutrisi organ dengan kandungan seperti cabe jawa, merica, gamat emas, purwaceng, dan pasak bumi.',
+            'ecovico' => 'ECO VICO adalah kapsul herbal PT BEST yang dibuat dari penyulingan minyak kelapa murni dan pada bisnisraksasa.com diposisikan untuk membantu menjaga stamina dan kesehatan tubuh.',
+            'habspro' => 'HABSPRO adalah suplemen herbal PT BEST berbentuk kapsul dengan kandungan utama habbatussauda, bee pollen, dan propolis. Di bisnisraksasa.com produk ini diposisikan untuk membantu menjaga stamina dan daya tahan tubuh.',
+            'lvnserum' => 'LVN Serum adalah produk skincare PT BEST yang pada bisnisraksasa.com dijelaskan mengandung Hyaluronic Acid, Vitamin C, Vitamin E, dan Collagen untuk membantu menutrisi kulit dan menyamarkan tanda-tanda penuaan dini.',
+            'lvnlipcream' => 'LVN Lipcream adalah produk kecantikan PT BEST yang pada bisnisraksasa.com dijelaskan memiliki banyak pilihan warna dengan tampilan natural, tekstur ringan, dan tidak mudah luntur.',
+            'lvndayandnightcream' => 'LVN Day and Night Cream adalah produk skincare PT BEST. Menurut bisnisraksasa.com, varian day cream diposisikan untuk membantu mencerahkan, melembapkan, dan melindungi kulit dari paparan sinar matahari.',
+        ];
+
+        foreach ($directories as $directory) {
+            $fullPath = public_path('images/' . $directory);
+
+            if (!File::isDirectory($fullPath)) {
+                continue;
+            }
+
+            foreach (File::files($fullPath) as $file) {
+                $filename = $file->getFilenameWithoutExtension();
+                $normalizedName = $this->normalizeProductLookupText($filename);
+                $label = $labelOverrides[$normalizedName] ?? $this->humanizeProductFilename($filename);
+                $keywords = array_values(array_unique(array_filter([
+                    $normalizedName,
+                    $this->normalizeProductLookupText($label),
+                ])));
+
+                foreach ($aliasMap as $alias => $aliasLabel) {
+                    if ($normalizedName === $this->normalizeProductLookupText($aliasLabel)) {
+                        $keywords[] = $this->normalizeProductLookupText($alias);
+                    }
+                }
+
+                $catalog[] = [
+                    'path' => $directory . '/' . $file->getFilename(),
+                    'label' => $label,
+                    'description' => $descriptionOverrides[$normalizedName] ?? null,
+                    'keywords' => array_values(array_unique($keywords)),
+                ];
+            }
+        }
+
+        return $catalog;
+    }
+
+    private function normalizeProductLookupText(string $text): string
+    {
+        $text = preg_replace('/(?<!^)([A-Z])/', ' $1', $text);
+        $text = Str::lower((string) $text);
+        $text = preg_replace('/[^a-z0-9]+/i', '', $text);
+
+        return trim((string) $text);
+    }
+
+    private function humanizeProductFilename(string $filename): string
+    {
+        $label = preg_replace('/(?<!^)([A-Z])/', ' $1', $filename);
+        $label = str_replace(['-', '_'], ' ', (string) $label);
+        $label = preg_replace('/\s+/', ' ', (string) $label);
+
+        return trim((string) $label);
     }
 
     private function formatBotReplies($messages, $conversation)

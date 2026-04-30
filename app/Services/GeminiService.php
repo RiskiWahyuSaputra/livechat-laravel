@@ -377,8 +377,11 @@ class GeminiService
         10. Jangan beri salam pembuka di awal jawaban. Langsung jawab inti.
         11. Jika pengguna meminta bantuan manusia, admin, atau agent, arahkan untuk klik tombol Hubungi Agent yang tersedia.
         12. Prioritaskan knowledge base di bawah sebagai sumber utama jawaban.
-        13. Jika pengguna menanyakan kategori produk BEST seperti kecantikan, kesehatan, otomotif, pertanian, atau produk BEST secara umum, sistem dapat menampilkan gambar pendukung produk secara otomatis.
-        14. Karena sistem bisa menampilkan gambar pendukung, jangan pernah bilang kamu tidak bisa mengirim foto, tidak bisa menampilkan gambar, atau tidak punya gambar produk jika memang pertanyaannya masih seputar kategori produk BEST.";
+        13. Jika pengguna menanyakan produk, jelaskan kategori produk sesuai knowledge base dan sesuaikan dengan kategori yang ada di website support, seperti produk additif untuk kendaraan, produk pupuk untuk pertanian dan perkebunan, produk herbal untuk kesehatan, produk skincare dan kecantikan, produk minuman untuk kesehatan tubuh, serta produk pembersih untuk kesehatan area tubuh.
+        14. Jika pengguna menanyakan kategori atau jenis produk, prioritaskan menjawab berdasarkan kategori resmi tersebut sebelum masuk ke nama produk spesifik.
+        15. Jika pengguna menanyakan kategori produk BEST seperti kecantikan, kesehatan, otomotif, pertanian, perkebunan, minuman kesehatan, pembersih area tubuh, atau produk BEST secara umum, sistem dapat menampilkan gambar pendukung produk secara otomatis.
+        16. Nama produk spesifik yang ada di knowledge base atau katalog gambar internal seperti Agrosawit, Eco Racing, Eco Diesel, B-MAXX, HABSPRO, ECO VICO, LVN Serum, dan produk BEST lainnya tetap dianggap sebagai konteks PT BEST meskipun user tidak menulis kata PT BEST secara eksplisit.
+        17. Karena sistem bisa menampilkan gambar pendukung, jangan pernah bilang kamu tidak bisa mengirim foto, tidak bisa menampilkan gambar, atau tidak punya gambar produk jika memang pertanyaannya masih seputar kategori produk BEST.";
 
         $knowledgeRows = Cache::remember('best_ai_quick_reply_knowledge', 300, function () {
             return QuickReply::query()
