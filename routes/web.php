@@ -30,11 +30,13 @@ Route::match(['get', 'post'], '/chat/logout', [ChatController::class , 'logout']
 // Routes Chat
 Route::get('/chat', [ChatController::class, 'showChat'])->name('chat.index');
 Route::get('/chat-widget', [ChatController::class, 'showWidget'])->name('chat.widget');
-Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init');
+Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.send');
 Route::patch('/chat/message/{message}', [ChatController::class, 'updateMessage'])->name('chat.message.update');
 Route::delete('/chat/message/{message}', [ChatController::class, 'deleteMessage'])->name('chat.message.destroy');
 Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
+
 
 // Routes yang butuh login user (jika ada fitur user biasa)
 Route::middleware(['auth'])->group(function () {

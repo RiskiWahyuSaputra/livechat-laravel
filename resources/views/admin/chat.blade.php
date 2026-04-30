@@ -627,7 +627,8 @@
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
             :class="{
-                 'mobile-hide d-none d-lg-flex': selectedChat,
+                 'mobile-hide d-none': selectedChat,
+                 'd-lg-flex': selectedChat && !sidebarCollapsed,
                  'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
              }">
             <!-- ═══════════ TOP PANEL (Header + Search + Content Filters) ═══════════ -->
