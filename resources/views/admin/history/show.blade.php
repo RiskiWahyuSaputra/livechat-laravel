@@ -59,7 +59,23 @@
                                     @endif
                                 </div>
                                 <div class="px-3 py-2 rounded-lg shadow-sm {{ $msg->message_type === 'whisper' ? 'bg-amber-100 text-amber-900 border-dashed border border-amber-300' : ($msg->sender_type === 'admin' ? 'bg-primary text-white' : 'bg-light border') }}" style="max-width: 80%; word-wrap: break-word;">
-                                    {!! nl2br(e($msg->content)) !!}
+                                    @if($msg->message_type === 'image')
+                                        <img src="{{ $msg->content }}"
+                                             alt="Gambar"
+                                             class="img-fluid rounded"
+                                             style="max-width:280px; max-height:220px; object-fit:cover; cursor:zoom-in; border:1px solid rgba(0,0,0,.08);"
+                                             onclick="openLightbox(@js($msg->content)); return false;"
+                                             onerror="this.onerror=null;this.replaceWith(document.createTextNode(this.src))">
+                                    @elseif($msg->message_type === 'file')
+                                        <a href="{{ $msg->content }}" target="_blank"
+                                           class="{{ $msg->sender_type === 'admin' ? 'text-white' : 'text-primary' }} d-flex align-items-center gap-1"
+                                           style="word-break:break-all;">
+                                            <i class="fe fe-file me-1"></i>
+                                            {{ basename(parse_url($msg->content, PHP_URL_PATH)) ?: $msg->content }}
+                                        </a>
+                                    @else
+                                        {!! nl2br(e($msg->content)) !!}
+                                    @endif
                                 </div>
                                 <div class="mt-1">
                                     <small class="text-muted" style="font-size: 10px;">{{ $msg->created_at->timezone('Asia/Jakarta')->translatedFormat('H:i') }}</small>
@@ -75,3 +91,7 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    @include('partials.image-lightbox')
+@endpush

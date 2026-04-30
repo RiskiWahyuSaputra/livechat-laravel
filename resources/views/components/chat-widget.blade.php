@@ -202,14 +202,14 @@
                                             <div x-html="formatMessage(msg.content)"></div>
                                         </div>
                                     </template>
-    
+
                                     <!-- Pesan Gambar -->
                                     <template x-if="msg.message_type === 'image'">
                                         <div class="max-w-full">
                                             <div class="space-y-2">
                                                 <img :src="msg.content" 
-                                                     class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
-                                                     @click="window.open(msg.content, '_blank')"
+                                                     class="rounded-lg max-w-full h-auto cursor-zoom-in hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
+                                                     @click="openLightbox(msg.content)"
                                                      x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
                                             </div>
                                         </div>
@@ -1202,3 +1202,5 @@
     });
 </script>
 @endpush
+
+@include('partials.image-lightbox')
