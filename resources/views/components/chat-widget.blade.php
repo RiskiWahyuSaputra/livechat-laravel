@@ -479,11 +479,11 @@
 
                 <textarea x-model="newMessage" 
                         x-ref="messageInput"
-                        @input="sendTypingEvent"
-                        @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
+                        @input="sendTypingEvent(); resizeComposer()"
+                        @keydown.enter="if(!event.shiftKey) { event.preventDefault(); sendMessage(); } else { $nextTick(() => resizeComposer()); }"
                         placeholder="Ketik balasan Anda..." 
                         class="form-control flex-1 resize-none"
-                        style="border-radius: 12px; background: #f8f9fa; border: none;"
+                        style="border-radius: 12px; background: #f8f9fa; border: none; padding: 8px 12px; line-height: 1.5; min-height: 40px; height: 40px;"
                         rows="1"></textarea>
                 <button type="submit" 
                         :disabled="!newMessage.trim() || isSending || isLoading"
@@ -581,7 +581,10 @@
                     this.unreadCount = 0;
                     this.$nextTick(() => {
                         this.scrollToBottom();
-                        if (this.$refs.messageInput) this.$refs.messageInput.focus();
+                        if (this.$refs.messageInput) {
+                            this.$refs.messageInput.focus();
+                            this.resizeComposer();
+                        }
                     });
                 }
             },
@@ -911,8 +914,10 @@
             async sendMessage() {
                 if (!this.newMessage.trim() || this.isSending) return;
                 const content = this.newMessage;
-                this.newMessage = ''; 
+                this.newMessage = '';
+                this.$nextTick(() => this.resizeComposer());
                 if (!this.conversationId) {
+
                     this.messages.push({
                         id: 'local-msg-' + Date.now(),
                         sender_type: 'user',
@@ -1018,6 +1023,18 @@
                 this.$nextTick(() => {
                     if (this.$refs.messageInput) this.$refs.messageInput.focus();
                 });
+            },
+
+            resizeComposer() {
+                const textarea = this.$refs.messageInput;
+                if (!textarea) return;
+                
+                textarea.style.height = 'auto';
+                const newHeight = Math.min(textarea.scrollHeight, 150);
+                textarea.style.height = newHeight + 'px';
+                
+                // Toggle overflow based on height
+                textarea.style.overflowY = textarea.scrollHeight > 150 ? 'auto' : 'hidden';
             },
 
             openMenu(msgId, event) {

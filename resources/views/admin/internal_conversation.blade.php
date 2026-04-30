@@ -148,7 +148,9 @@
     <div class="chat-footer">
         <form class="input-form" @submit.prevent="sendMessage">
             <div class="input-row">
-                <textarea x-model="newMessage" @keydown.enter.prevent="sendMessage"
+                <textarea x-model="newMessage" x-ref="messageInput"
+                          @input="resizeComposer()"
+                          @keydown.enter="if(!event.shiftKey) { event.preventDefault(); sendMessage(); } else { $nextTick(() => resizeComposer()); }"
                           placeholder="Ketik pesan internal..."
                           class="msg-textarea" rows="1"></textarea>
                 <button type="submit" :disabled="!newMessage.trim() || isSending" class="send-btn">
@@ -199,6 +201,7 @@
 
                     const content = this.newMessage;
                     this.newMessage = '';
+                    this.$nextTick(() => this.resizeComposer());
                     this.isSending = true;
 
                     const tempId = Date.now();
@@ -232,6 +235,12 @@
                     } finally {
                         this.isSending = false;
                     }
+                },
+
+                resizeComposer() {
+                    if (!this.$refs.messageInput) return;
+                    this.$refs.messageInput.style.height = 'auto';
+                    this.$refs.messageInput.style.height = `${this.$refs.messageInput.scrollHeight}px`;
                 },
 
                 formatMessage(text) {
