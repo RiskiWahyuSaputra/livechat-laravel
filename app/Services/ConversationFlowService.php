@@ -763,8 +763,8 @@ class ConversationFlowService
                 'label' => 'herbal dan kesehatan',
             ],
             [
-                'keywords' => ['minuman kesehatan', 'minuman', 'coffee', 'kopi', 'susu kambing', 'ecomaxx', 'econaxx', 'evitgo'],
-                'path' => 'produk/produk-kesehatan.png',
+                'keywords' => ['minuman kesehatan', 'minuman', 'coffee', 'kopi', 'susu kambing', 'ecomaxx', 'econaxx', 'evitgo', 'evitgo 100', 'ecomaxx coffee', 'econaxx coffee'],
+                'path' => 'produk minuman untuk kesehatan tubuh/Evitgo 100.jpg',
                 'label' => 'minuman kesehatan',
             ],
             [
@@ -778,8 +778,8 @@ class ConversationFlowService
                 'label' => 'pertanian dan perkebunan',
             ],
             [
-                'keywords' => ['pembersih area tubuh', 'area tubuh', 'kesehatan area tubuh', 'hygiene', 'crystal-v', 'crystal-q', 'hand moist', 'gentle man', 'spray for man', 'miss v', 'pembersih tubuh'],
-                'path' => 'produk/produk-kesehatan.png',
+                'keywords' => ['pembersih area tubuh', 'area tubuh', 'kesehatan area tubuh', 'hygiene', 'crystal-v', 'crystal-q', 'hand moist', 'gentle man', 'spray for man', 'miss v', 'pembersih tubuh', 'lvn hygiene', 'lvn crystal', 'lvn hand moist'],
+                'path' => 'produk pembersih untuk kesehatan tubuh/LVN CRYSTAL V LVN CRYSTAL Q.jpg',
                 'label' => 'pembersih area tubuh',
             ],
         ];
