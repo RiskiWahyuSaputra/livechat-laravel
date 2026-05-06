@@ -81,7 +81,6 @@ class GeminiService
         TUGAS ANDA: 
         1. Analisis apakah ada informasi Penting/Pertanyaan Baru yang berhasil dijawab oleh Admin dengan BAIK.
         2. KHUSUS: Jika Admin mengoreksi jawaban AI yang salah atau kurang lengkap sebelumnya, tandai ini sebagai KOREKSI.
-        3. Buatlah ringkasan pengetahuan dalam format JSON array.
         4. Setiap elemen array harus punya:
            - 'title': (singkat, max 5 kata).
            - 'content': (jawaban lengkap dan profesional).
