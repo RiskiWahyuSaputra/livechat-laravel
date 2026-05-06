@@ -77,15 +77,12 @@ class OpenClawWhatsappService
         $primaryText = trim((string) $introText);
 
         if ($primaryText === '') {
-            $primaryText = "Boleh bantu beri rating untuk layanan agen kami?\nPilih tombol 1-5 di bawah ini, atau balas angka 1-5.\nContoh: 5 atau 5 pelayanan bagus.";
+            $primaryText = "Boleh bantu beri rating untuk layanan agen kami?";
         }
 
-        $secondaryText = "Kalau tidak ingin memberi rating, pilih LEWATI.";
+        $fullText = $primaryText . "\n\n[1] 1\n[2] 2\n[3] 3\n[4] 4\n[5] 5\n[6] LEWATI\n\nBalas dengan angka 1-5, atau pilih LEWATI jika tidak ingin memberi rating.";
 
-        $first = $this->sendText($user, $primaryText, $this->feedbackButtonsPrimary());
-        $second = $this->sendText($user, $secondaryText, $this->feedbackButtonsSecondary());
-
-        return $first || $second;
+        return $this->sendText($user, $fullText, $this->feedbackButtons());
     }
 
     public function markAsRead(User $user, string $messageId): bool
@@ -207,16 +204,7 @@ class OpenClawWhatsappService
         return $normalized;
     }
 
-    private function feedbackButtonsPrimary(): array
-    {
-        return [
-            ['type' => 'reply', 'reply' => ['id' => 'feedback_1', 'title' => '1']],
-            ['type' => 'reply', 'reply' => ['id' => 'feedback_2', 'title' => '2']],
-            ['type' => 'reply', 'reply' => ['id' => 'feedback_3', 'title' => '3']],
-        ];
-    }
-
-    private function feedbackButtonsSecondary(): array
+    private function feedbackButtons(): array
     {
         return [
             ['type' => 'reply', 'reply' => ['id' => 'feedback_4', 'title' => '4']],
