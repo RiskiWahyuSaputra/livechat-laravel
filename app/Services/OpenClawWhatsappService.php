@@ -77,10 +77,10 @@ class OpenClawWhatsappService
         $primaryText = trim((string) $introText);
 
         if ($primaryText === '') {
-            $primaryText = "Boleh bantu beri rating untuk layanan agen kami?\nPilih tombol 1-3 di bawah ini, atau balas angka 1-5.\nContoh: 5 atau 5 pelayanan bagus.";
+            $primaryText = "Boleh bantu beri rating untuk layanan agen kami?\nPilih tombol 1-5 di bawah ini, atau balas angka 1-5.\nContoh: 5 atau 5 pelayanan bagus.";
         }
 
-        $secondaryText = "Pilih tombol 4 atau 5 jika sesuai.\nKalau tidak ingin memberi rating, pilih LEWATI.";
+        $secondaryText = "Kalau tidak ingin memberi rating, pilih LEWATI.";
 
         $first = $this->sendText($user, $primaryText, $this->feedbackButtonsPrimary());
         $second = $this->sendText($user, $secondaryText, $this->feedbackButtonsSecondary());
