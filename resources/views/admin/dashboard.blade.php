@@ -594,6 +594,7 @@
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Obrolan ditutup</th>
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Rata-rata respon</th>
+                    <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Rating</th>
                     <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Skor</th>
                 </tr>
             </thead>
@@ -629,8 +630,22 @@
                     <td style="padding: 16px; vertical-align: middle; text-align: center;">
                         @if($agent['avg_response_time'] > 0)
                             <span style="font-weight: 500; font-size: 13px; @if($agent['avg_response_time'] < 60) color: #10b981; @elseif($agent['avg_response_time'] < 300) color: #f59e0b; @else color: #ef4444; @endif">
-                                {{ floor($agent['avg_response_time'] / 60) }}m {{ $agent['avg_response_time'] % 60 }}s
+                                @if($agent['avg_response_time'] < 60)
+                                    < 1 menit
+                                @else
+                                    {{ number_format($agent['avg_response_time'] / 60, 1) }} menit
+                                @endif
                             </span>
+                        @else
+                            <span style="color: #cbd5e1;">-</span>
+                        @endif
+                    </td>
+                    <td style="padding: 16px; vertical-align: middle; text-align: center;">
+                        @if($agent['total_ratings'] > 0)
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <span style="font-weight: 700; font-size: 14px; color: #f59e0b;">{{ number_format($agent['avg_rating'], 1) }} ★</span>
+                                <span style="font-size: 11px; color: #94a3b8;">{{ $agent['total_ratings'] }} ulasan</span>
+                            </div>
                         @else
                             <span style="color: #cbd5e1;">-</span>
                         @endif
@@ -641,7 +656,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" style="padding: 40px; text-align: center; color: #94a3b8;">No agent data available</td>
+                    <td colspan="8" style="padding: 40px; text-align: center; color: #94a3b8;">No agent data available</td>
                 </tr>
                 @endforelse
             </tbody>

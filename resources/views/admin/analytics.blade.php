@@ -505,6 +505,7 @@
                         <th class="text-center">Status</th>
                         <th class="text-center">Chats</th>
                         <th class="text-center">Response Time</th>
+                        <th class="text-center">Rating</th>
                         <th class="text-center">Score</th>
                     </tr>
                 </thead>
@@ -535,8 +536,22 @@
                         <td class="text-center">
                             @if($agent['avg_response_time'] > 0)
                                 <span style="color: {{ $agent['avg_response_time'] < 60 ? '#10b981' : ($agent['avg_response_time'] < 300 ? '#f59e0b' : '#ef4444') }}; font-weight: 600;">
-                                    {{ floor($agent['avg_response_time'] / 60) }}m {{ $agent['avg_response_time'] % 60 }}s
+                                    @if($agent['avg_response_time'] < 60)
+                                        < 1 menit
+                                    @else
+                                        {{ number_format($agent['avg_response_time'] / 60, 1) }} menit
+                                    @endif
                                 </span>
+                            @else
+                                <span style="color: var(--gray-500);">N/A</span>
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            @if($agent['total_ratings'] > 0)
+                                <div style="font-weight: 600; color: #f59e0b;">
+                                    {{ number_format($agent['avg_rating'], 1) }} ★
+                                </div>
+                                <small style="color: var(--gray-500);">{{ $agent['total_ratings'] }} review</small>
                             @else
                                 <span style="color: var(--gray-500);">N/A</span>
                             @endif
@@ -549,7 +564,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="text-center" style="color: var(--gray-500); padding: 40px;">No agent data available</td>
+                        <td colspan="7" class="text-center" style="color: var(--gray-500); padding: 40px;">No agent data available</td>
                     </tr>
                     @endforelse
                 </tbody>

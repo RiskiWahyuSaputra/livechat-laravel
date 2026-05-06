@@ -452,8 +452,51 @@
                 </div>
             </div>
 
-            <div x-show="status === 'closed'" x-cloak class="bg-slate-100 text-slate-500 text-xs text-center p-2.5 border-t border-slate-200 font-medium">
+            <div x-show="status === 'closed' && !feedbackPending" x-cloak class="bg-slate-100 text-slate-500 text-xs text-center p-2.5 border-t border-slate-200 font-medium">
                 Sesi pertanyaan ini telah ditutup oleh agen.
+            </div>
+
+            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-amber-200 bg-amber-50 p-3">
+                <div class="text-center mb-3">
+                    <div class="text-sm font-bold text-slate-800">Beri rating untuk agen</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Pilih bintang 1 sampai 5.</div>
+                </div>
+
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
+                        <button type="button"
+                                @click="selectedRating = star"
+                                @mouseenter="hoverRating = star"
+                                @mouseleave="hoverRating = 0"
+                                class="bg-transparent border-0 p-0">
+                            <i class="fas fa-star text-2xl"
+                               :class="(hoverRating || selectedRating) >= star ? 'text-warning' : 'text-secondary opacity-50'"></i>
+                        </button>
+                    </template>
+                </div>
+
+                <textarea x-model="feedbackComment"
+                          rows="2"
+                          maxlength="1000"
+                          class="form-control mb-3"
+                          placeholder="Opsional: tulis kesan singkat..."
+                          style="border-radius: 12px;"></textarea>
+
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <button type="button"
+                            @click="skipFeedback()"
+                            :disabled="isSubmittingFeedback"
+                            class="btn btn-link text-secondary text-decoration-none p-0">
+                        Lewati
+                    </button>
+                    <button type="button"
+                            @click="submitFeedback()"
+                            :disabled="!selectedRating || isSubmittingFeedback"
+                            class="btn btn-warning text-white fw-bold"
+                            style="border-radius: 12px;">
+                        <span x-text="isSubmittingFeedback ? 'Mengirim...' : 'Kirim Feedback'"></span>
+                    </button>
+                </div>
             </div>
 
             <!-- Editing Indicator -->
@@ -553,6 +596,11 @@
             botPhase: 'off',
             botCategories: ['Pertanyaan Umum', 'Masalah Teknis', 'Layanan Produk', 'Lainnya'],
             botSubmenus: [],
+            feedbackPending: false,
+            selectedRating: 0,
+            hoverRating: 0,
+            feedbackComment: '',
+            isSubmittingFeedback: false,
 
             editingMsgId: null,
             menu: {
@@ -841,6 +889,7 @@
                         this.userId = data.user_id;
                         this.status = data.status;
                         this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+                        this.feedbackPending = !!data.feedback_pending;
                         if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                         this.isAuthenticated = true;
                         if (data.user) {
@@ -855,10 +904,11 @@
                             content: m.content,
                             created_at: m.created_at
                         }));
-                        this.isChatting = (this.messages.length > 0 && this.user.name !== 'Guest') || ['active','pending','queued'].includes(data.status);
+                        this.isChatting = (this.messages.length > 0 && this.user.name !== 'Guest') || ['active','pending','queued'].includes(data.status) || !!data.feedback_pending;
                         this.listenForEvents();
                     } else {
                         this.isAuthenticated = false;
+                        this.feedbackPending = false;
                     }
                     this.isInitialized = true;
                     this.$nextTick(() => { this.scrollToBottom(); });
@@ -872,7 +922,10 @@
                 if (typeof window.Echo === 'undefined' || !this.conversationId) return;
                 try {
                     if (this.userId) {
-                        window.Echo.private(`user.${this.userId}`).listen('.user.logged.out', (e) => { location.reload(); });
+                        window.Echo.private(`user.${this.userId}`).listen('.user.logged.out', (e) => {
+                            if (this.feedbackPending) return;
+                            location.reload();
+                        });
                     }
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
@@ -892,6 +945,12 @@
                         .listen('.conversation.status.changed', (e) => {
                             this.status = e.status;
                             if (e.bot_phase) this.botPhase = e.bot_phase;
+                            this.feedbackPending = !!e.feedback_requested;
+                            if (e.status === 'closed' && this.feedbackPending) {
+                                this.isChatting = true;
+                                this.isOpen = true;
+                                this.$nextTick(() => this.scrollToBottom());
+                            }
                         })
                         .listen('.typing', (e) => {
                             if (e.sender_type === 'admin') {
@@ -1181,6 +1240,79 @@
                 if (this.isSending || this.botPhase !== 'awaiting_category') return;
                 this.newMessage = category;
                 await this.sendMessage();
+            },
+
+            async submitFeedback() {
+                if (!this.selectedRating || this.isSubmittingFeedback) return;
+
+                this.isSubmittingFeedback = true;
+
+                try {
+                    const submitUrl = "{{ route('chat.feedback.submit', ['conversation' => '__ID__']) }}".replace('__ID__', this.conversationId);
+                    const response = await fetch(submitUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            rating: this.selectedRating,
+                            comment: this.feedbackComment
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Gagal mengirim feedback.');
+
+                    this.feedbackPending = false;
+                    await fetch('{{ route('chat.logout') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    location.reload();
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    this.isSubmittingFeedback = false;
+                }
+            },
+
+            async skipFeedback() {
+                if (this.isSubmittingFeedback) return;
+
+                this.isSubmittingFeedback = true;
+
+                try {
+                    const skipUrl = "{{ route('chat.feedback.skip', ['conversation' => '__ID__']) }}".replace('__ID__', this.conversationId);
+                    const response = await fetch(skipUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Gagal melewati feedback.');
+
+                    this.feedbackPending = false;
+                    await fetch('{{ route('chat.logout') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    location.reload();
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    this.isSubmittingFeedback = false;
+                }
             },
 
             sendTypingEvent(isTyping = true) {

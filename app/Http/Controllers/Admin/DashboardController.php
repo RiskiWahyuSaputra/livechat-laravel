@@ -349,6 +349,14 @@ class DashboardController extends Controller
                 'admin_id' => $admin->id,
                 'deleted_at' => null, // Restore the conversation if soft-deleted
             ]);
+
+            if ($conversation->feedback_status === 'pending') {
+                $conversation->update([
+                    'feedback_status' => 'not_requested',
+                    'feedback_requested_at' => null,
+                ]);
+            }
+
             // Broadcast status change
             broadcast(new ConversationStatusChanged($conversation, $admin->username));
         }
@@ -626,6 +634,8 @@ class DashboardController extends Controller
         $conversation->update([
             'status'           => 'closed',
             'problem_category' => $category,
+            'feedback_status'  => $conversation->admin_id ? 'pending' : 'not_requested',
+            'feedback_requested_at' => $conversation->admin_id ? now() : null,
         ]);
 
         // Soft delete the conversation to move it to history
@@ -639,7 +649,9 @@ class DashboardController extends Controller
             'sender_id'       => 0,
             'sender_type'     => 'system',
             'message_type'    => 'text',
-            'content'         => 'Chat telah ditutup. Terima kasih telah menghubungi kami!',
+            'content'         => $conversation->admin_id
+                ? 'Chat telah ditutup. Terima kasih telah menghubungi kami. Mohon berikan rating untuk layanan agen kami.'
+                : 'Chat telah ditutup. Terima kasih telah menghubungi kami!',
         ]);
 
         try {
@@ -665,10 +677,6 @@ class DashboardController extends Controller
                     'admin_id' => $admin->id,
                 ]);
             }
-        }
-
-        if ($conversation->customer) {
-            event(new UserShouldBeLoggedOut($conversation->customer));
         }
 
         return response()->json(['success' => true]);

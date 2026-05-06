@@ -36,6 +36,8 @@ Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.s
 Route::patch('/chat/message/{message}', [ChatController::class, 'updateMessage'])->name('chat.message.update');
 Route::delete('/chat/message/{message}', [ChatController::class, 'deleteMessage'])->name('chat.message.destroy');
 Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
+Route::post('/chat/conversation/{conversation}/feedback', [ChatController::class, 'submitFeedback'])->name('chat.feedback.submit');
+Route::post('/chat/conversation/{conversation}/feedback/skip', [ChatController::class, 'skipFeedback'])->name('chat.feedback.skip');
 
 
 // Routes yang butuh login user (jika ada fitur user biasa)

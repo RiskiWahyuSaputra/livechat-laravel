@@ -9,6 +9,7 @@ use App\Events\MessageDeleted;
 use App\Events\TypingIndicator;
 use App\Models\Admin;
 use App\Models\Conversation;
+use App\Models\ConversationRating;
 use App\Models\Message;
 use App\Models\Customer;
 use Illuminate\Http\Request;
@@ -70,11 +71,19 @@ class ChatController extends Controller
             return redirect()->route('user.home');
         }
 
+        Auth::guard('web')->login($user, true);
+
         $activeConversation = $user->conversations()
             ->whereIn('status', ['pending', 'active', 'queued'])
             ->first();
 
-        if (!$activeConversation) {
+        $pendingFeedbackConversation = $this->findPendingFeedbackConversation($user);
+
+        if (!$activeConversation && $pendingFeedbackConversation) {
+            $activeConversation = $pendingFeedbackConversation;
+        }
+
+        if (!$activeConversation && !$pendingFeedbackConversation) {
             $result = $this->conversationFlowService->createConversation($user);
             if ($result['rejected'] ?? false) {
                 return view('chat.index', [
@@ -109,6 +118,7 @@ class ChatController extends Controller
             'conversation' => $activeConversation,
             'messages' => $messages,
             'botCategories' => config('chat.complaint_categories'),
+            'feedbackPending' => $this->conversationRequiresFeedback($activeConversation),
         ]);
     }
 
@@ -512,6 +522,12 @@ class ChatController extends Controller
                 ->whereIn('status', ['pending', 'active', 'queued'])
                 ->first();
 
+            $pendingFeedbackConversation = $this->findPendingFeedbackConversation($user);
+
+            if (!$activeConversation && $pendingFeedbackConversation) {
+                $activeConversation = $pendingFeedbackConversation;
+            }
+
             // Jika mode closed, tolak kecuali conversation sudah active dengan agent
             $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
             if ($systemMode === 'closed') {
@@ -525,7 +541,7 @@ class ChatController extends Controller
                 }
             }
 
-            if (!$activeConversation) {
+            if (!$activeConversation && !$pendingFeedbackConversation) {
                 $result = $this->conversationFlowService->createConversation($user);
                 if ($result['rejected'] ?? false) {
                     return response()->json(array_merge($publicData, [
@@ -562,6 +578,8 @@ class ChatController extends Controller
                 'user_id'      => $user->id,
                 'status'       => $activeConversation->status,
                 'bot_phase'    => $activeConversation->bot_phase,
+                'feedback_pending' => $this->conversationRequiresFeedback($activeConversation),
+                'feedback_status' => $activeConversation->feedback_status,
                 'botCategories' => config('chat.complaint_categories'),
                 'bot_submenus' => ($activeConversation->bot_phase === 'awaiting_submenu') 
                     ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id])
@@ -726,6 +744,89 @@ class ChatController extends Controller
         } catch (\Exception $e) {}
 
         return response()->json(['success' => true]);
+    }
+
+    public function submitFeedback(Request $request, $conversationId)
+    {
+        $request->validate([
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Sesi tidak valid.'], 401);
+        }
+
+        $conversation = Conversation::withTrashed()->findOrFail($conversationId);
+
+        if ($conversation->user_id !== $user->id) {
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        if (!$this->conversationRequiresFeedback($conversation)) {
+            return response()->json(['error' => 'Feedback untuk chat ini sudah tidak tersedia.'], 422);
+        }
+
+        ConversationRating::updateOrCreate(
+            ['conversation_id' => $conversation->id],
+            [
+                'user_id' => $user->id,
+                'admin_id' => $conversation->admin_id,
+                'rating' => (int) $request->rating,
+                'comment' => trim((string) $request->comment) ?: null,
+            ]
+        );
+
+        $conversation->update([
+            'feedback_status' => 'submitted',
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function skipFeedback(Request $request, $conversationId)
+    {
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Sesi tidak valid.'], 401);
+        }
+
+        $conversation = Conversation::withTrashed()->findOrFail($conversationId);
+
+        if ($conversation->user_id !== $user->id) {
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        if ($conversation->feedback_status === 'pending') {
+            $conversation->update([
+                'feedback_status' => 'skipped',
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    private function findPendingFeedbackConversation(User $user): ?Conversation
+    {
+        return $user->conversations()
+            ->withTrashed()
+            ->where('status', 'closed')
+            ->where('feedback_status', 'pending')
+            ->whereNotNull('admin_id')
+            ->latest('feedback_requested_at')
+            ->latest('updated_at')
+            ->first();
+    }
+
+    private function conversationRequiresFeedback(?Conversation $conversation): bool
+    {
+        return $conversation instanceof Conversation
+            && $conversation->hasPendingFeedback();
     }
 
     private function handleBotResponse(Conversation $conversation, string $userMessage): array

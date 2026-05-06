@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Admin;
 use App\Models\Conversation;
+use App\Models\ConversationRating;
 use App\Models\User;
 use App\Models\Message;
 use Illuminate\Support\Facades\DB;
@@ -101,6 +102,7 @@ class AnalyticsService
 
         foreach ($agents as $agent) {
             $closedChats = $agent->conversations->count();
+            $ratingSummary = $this->getAgentRatingSummary($agent->id);
 
             $performance[] = [
                 'id' => $agent->id,
@@ -111,6 +113,8 @@ class AnalyticsService
                 'level' => $agent->level,
                 'avg_response_time' => $closedChats > 0 ? $this->calculateAvgResponseTime($agent->id) : 0,
                 'avg_duration' => $closedChats > 0 ? $this->calculateAvgChatDuration($agent->id) : 0,
+                'avg_rating' => $ratingSummary['avg_rating'],
+                'total_ratings' => $ratingSummary['total_ratings'],
                 'is_superadmin' => $agent->is_superadmin,
             ];
         }
@@ -136,11 +140,13 @@ class AnalyticsService
             $closedChats = $agent->conversations->count();
             $avgResponseTime = $closedChats > 0 ? $this->calculateAvgResponseTime($agent->id) : 0;
             $avgDuration = $closedChats > 0 ? $this->calculateAvgChatDuration($agent->id) : 0;
+            $ratingSummary = $this->getAgentRatingSummary($agent->id);
 
             // Calculate performance score (higher is better)
             // Score = (chats * 10) + (faster response = higher score)
             $responseScore = $avgResponseTime > 0 ? max(0, 100 - ($avgResponseTime / 6)) : 0;
-            $score = round(($closedChats * 10) + $responseScore);
+            $ratingScore = $ratingSummary['avg_rating'] > 0 ? ($ratingSummary['avg_rating'] * 20) : 0;
+            $score = round(($closedChats * 10) + $responseScore + $ratingScore);
 
             $performance[] = [
                 'id' => $agent->id,
@@ -148,6 +154,8 @@ class AnalyticsService
                 'closed_chats' => $closedChats,
                 'avg_response_time' => $avgResponseTime,
                 'avg_duration' => $avgDuration,
+                'avg_rating' => $ratingSummary['avg_rating'],
+                'total_ratings' => $ratingSummary['total_ratings'],
                 'score' => $score,
                 'status' => $agent->status,
                 'level' => $agent->level,
@@ -220,23 +228,21 @@ class AnalyticsService
      */
     public function getCustomerSatisfaction()
     {
-        // Check if ConversationRating model exists and has data
-        if (class_exists('App\Models\ConversationRating')) {
-            $ratings = \App\Models\ConversationRating::all();
-            
-            if ($ratings->count() > 0) {
-                $avgRating = $ratings->avg('rating');
-                $ratingDistribution = $ratings->select('rating', DB::raw('count(*) as count'))
-                    ->groupBy('rating')
-                    ->pluck('count', 'rating')
-                    ->toArray();
+        $ratings = ConversationRating::query();
 
-                return [
-                    'average_rating' => round($avgRating, 2),
-                    'total_ratings' => $ratings->count(),
-                    'distribution' => $ratingDistribution,
-                ];
-            }
+        if ($ratings->count() > 0) {
+            $avgRating = $ratings->avg('rating');
+            $ratingDistribution = ConversationRating::select('rating', DB::raw('count(*) as count'))
+                ->groupBy('rating')
+                ->pluck('count', 'rating')
+                ->toArray();
+
+            return [
+                'average_rating' => round($avgRating, 2),
+                'total_ratings' => ConversationRating::count(),
+                'distribution' => $ratingDistribution,
+                'has_data' => true,
+            ];
         }
 
         // Return empty/no data state
@@ -284,21 +290,46 @@ class AnalyticsService
      */
     private function calculateAvgResponseTime($adminId)
     {
-        $responseTimes = Conversation::withTrashed()->where('admin_id', $adminId)
+        $conversations = Conversation::withTrashed()
+            ->where('admin_id', $adminId)
             ->where('status', 'closed')
-            ->join('messages', 'conversations.id', '=', 'messages.conversation_id')
-            ->select('conversations.id', 'conversations.created_at')
-            ->selectRaw('MIN(messages.created_at) as first_reply')
-            ->where('messages.sender_type', 'admin')
-            ->groupBy('conversations.id', 'conversations.created_at')
+            ->with(['messages' => function ($query) {
+                $query->orderBy('created_at');
+            }])
             ->get();
 
         $totalResponseTime = 0;
         $count = 0;
 
-        foreach ($responseTimes as $rt) {
-            $firstReply = Carbon::parse($rt->first_reply);
-            $totalResponseTime += $firstReply->diffInSeconds($rt->created_at);
+        foreach ($conversations as $conversation) {
+            $firstAgentReply = $conversation->messages->first(function ($message) use ($adminId) {
+                return $message->sender_type === 'admin'
+                    && (int) $message->sender_id === (int) $adminId
+                    && $message->message_type !== 'whisper';
+            });
+
+            if (!$firstAgentReply) {
+                continue;
+            }
+
+            $firstUserMessage = $conversation->messages
+                ->filter(function ($message) use ($firstAgentReply) {
+                    return $message->sender_type === 'user'
+                        && $message->created_at <= $firstAgentReply->created_at;
+                })
+                ->first();
+
+            if (!$firstUserMessage) {
+                continue;
+            }
+
+            $responseSeconds = $firstAgentReply->created_at->diffInSeconds($firstUserMessage->created_at);
+
+            if ($responseSeconds <= 0) {
+                $responseSeconds = 1;
+            }
+
+            $totalResponseTime += $responseSeconds;
             $count++;
         }
 
@@ -316,6 +347,17 @@ class AnalyticsService
             ->value('avg_duration');
 
         return round($avgDuration ?? 0);
+    }
+
+    private function getAgentRatingSummary(int $adminId): array
+    {
+        $query = ConversationRating::where('admin_id', $adminId);
+        $totalRatings = (clone $query)->count();
+
+        return [
+            'avg_rating' => $totalRatings > 0 ? round((float) (clone $query)->avg('rating'), 2) : 0,
+            'total_ratings' => $totalRatings,
+        ];
     }
 
     /**

@@ -16,6 +16,8 @@ class Conversation extends Model
         'bot_phase',
         'queue_position',
         'problem_category',
+        'feedback_status',
+        'feedback_requested_at',
         'last_message_at',
     ];
 
@@ -23,6 +25,7 @@ class Conversation extends Model
     {
         return [
             'last_message_at' => 'datetime',
+            'feedback_requested_at' => 'datetime',
         ];
     }
 
@@ -44,6 +47,11 @@ class Conversation extends Model
         return $this->hasMany(Message::class)->orderBy('created_at');
     }
 
+    public function rating()
+    {
+        return $this->hasOne(ConversationRating::class);
+    }
+
     // Ambil hanya pesan yang bisa dilihat user (bukan whisper)
     public function publicMessages()
     {
@@ -56,5 +64,12 @@ class Conversation extends Model
     public function isOpen(): bool
     {
         return in_array($this->status, ['pending', 'active', 'queued']);
+    }
+
+    public function hasPendingFeedback(): bool
+    {
+        return $this->status === 'closed'
+            && $this->feedback_status === 'pending'
+            && !is_null($this->admin_id);
     }
 }
