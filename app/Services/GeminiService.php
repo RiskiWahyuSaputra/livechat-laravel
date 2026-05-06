@@ -89,6 +89,7 @@ class GeminiService
         5. HANYA ambil informasi yang BERGUNA. Abaikan basa-basi.
         6. Jika tidak ada informasi berguna, kembalikan [].
         7. Jawab HANYA dalam format JSON array asli, tanpa markdown block.
+        8. hanya menjawab soal best
 
         RIWAYAT CHAT:
         $history";
