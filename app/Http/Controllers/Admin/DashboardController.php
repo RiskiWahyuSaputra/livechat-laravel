@@ -665,9 +665,9 @@ class DashboardController extends Controller
             && !empty($customer->contact)
             && mb_strtolower((string) $customer->origin) === 'whatsapp'
         ) {
-            $sent = $this->openClawWhatsappService->sendText(
+            $sent = $this->openClawWhatsappService->sendFeedbackPrompt(
                 $customer,
-                "Chat kamu sudah diselesaikan oleh {$admin->username}. Terima kasih sudah menghubungi kami."
+                "Chat kamu sudah diselesaikan oleh {$admin->username}. Terima kasih sudah menghubungi kami.\n\nBoleh bantu beri rating untuk layanan agen kami?"
             );
 
             if (!$sent) {

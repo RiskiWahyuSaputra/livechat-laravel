@@ -72,6 +72,22 @@ class OpenClawWhatsappService
         return $this->runMessageCommand($user, $this->normalizeTextForWhatsapp($caption), $mediaUrl, $buttons);
     }
 
+    public function sendFeedbackPrompt(User $user, ?string $introText = null): bool
+    {
+        $primaryText = trim((string) $introText);
+
+        if ($primaryText === '') {
+            $primaryText = "Boleh bantu beri rating untuk layanan agen kami?\nPilih tombol 1-3 di bawah ini, atau balas angka 1-5.\nContoh: 5 atau 5 pelayanan bagus.";
+        }
+
+        $secondaryText = "Pilih tombol 4 atau 5 jika sesuai.\nKalau tidak ingin memberi rating, pilih LEWATI.";
+
+        $first = $this->sendText($user, $primaryText, $this->feedbackButtonsPrimary());
+        $second = $this->sendText($user, $secondaryText, $this->feedbackButtonsSecondary());
+
+        return $first || $second;
+    }
+
     public function markAsRead(User $user, string $messageId): bool
     {
         if ($this->usesPollingTransport()) {
@@ -189,6 +205,24 @@ class OpenClawWhatsappService
         }
 
         return $normalized;
+    }
+
+    private function feedbackButtonsPrimary(): array
+    {
+        return [
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_1', 'title' => '1']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_2', 'title' => '2']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_3', 'title' => '3']],
+        ];
+    }
+
+    private function feedbackButtonsSecondary(): array
+    {
+        return [
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_4', 'title' => '4']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_5', 'title' => '5']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_skip', 'title' => 'LEWATI']],
+        ];
     }
 
     private function buildBaseCommand(string $target): array
