@@ -1,6 +1,6 @@
 @extends('layouts.admin_template')
 
-@section('title', 'Hak Akses')
+@section('title', 'User Management')
 
 @section('content')
 @push('scripts')
@@ -85,7 +85,7 @@ const adminRolesData = {
             e.preventDefault();
             Swal.fire({
                 title: 'PERINGATAN!',
-                text: 'Anda akan mengubah peran Anda sendiri menjadi Agent. Anda akan kehilangan akses ke menu manajemen hak akses setelah ini. Lanjutkan?',
+                text: 'Anda akan mengubah peran Anda sendiri menjadi Agent. Anda akan kehilangan akses ke menu User Management setelah ini. Lanjutkan?',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
@@ -134,7 +134,7 @@ function confirmDelete(e, isSuperadmin) {
                 <div class="card-header">
                     <div class="row align-items-center">
                         <div class="col">
-                            <h4 class="card-title">Manajemen Admin & Hak Akses</h4>
+                            <h4 class="card-title">User Management</h4>
                         </div>
                         <div class="col-auto">
                             <button @click="openCreate()" class="btn btn-primary btn-sm"><i class="fe fe-plus"></i> Tambah Admin</button>
@@ -274,7 +274,7 @@ function confirmDelete(e, isSuperadmin) {
                                     <small class="text-muted" x-show="form.role === 'super_admin'">Superadmin otomatis Level 1.</small>
                                 </div>
                                 <div>
-                                    <label class="form-label d-block text-primary mb-3"><i class="fe fe-shield"></i> Penetapan Hak Akses</label>
+                                    <label class="form-label d-block text-primary mb-3"><i class="fe fe-shield"></i> Set User Permissions</label>
                                     
                                     <template x-for="(keys, groupName) in permissionGroups" :key="groupName">
                                         <div class="card bg-light bg-opacity-50 mb-3 border-0 shadow-none">
