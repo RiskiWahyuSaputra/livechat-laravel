@@ -734,7 +734,11 @@ class ConversationFlowService
     {
         $normalized = $this->normalizeProductLookupText($message);
 
-        return $this->findSpecificProductImage($normalized);
+        if ($specificProduct = $this->findSpecificProductImage($normalized)) {
+            return $specificProduct;
+        }
+
+        return $this->findCategoryProductImage($normalized);
     }
 
     private function findSpecificProductImage(string $normalizedMessage): ?array
@@ -748,6 +752,85 @@ class ConversationFlowService
                     ];
                 }
             }
+        }
+
+        return null;
+    }
+
+    private function findCategoryProductImage(string $normalizedMessage): ?array
+    {
+        $productIntentKeywords = [
+            'produk',
+            'product',
+            'daftar produk',
+            'kategori produk',
+            'jenis produk',
+            'katalog',
+            'catalog',
+            'gambar produk',
+            'foto produk',
+            'lihat produk',
+            'tampilkan produk',
+        ];
+
+        $hasProductIntent = false;
+        foreach ($productIntentKeywords as $keyword) {
+            if (str_contains($normalizedMessage, $this->normalizeProductLookupText($keyword))) {
+                $hasProductIntent = true;
+                break;
+            }
+        }
+
+        if (!$hasProductIntent) {
+            return null;
+        }
+
+        $categoryMap = [
+            [
+                'keywords' => ['otomotif', 'kendaraan', 'motor', 'mobil'],
+                'path' => 'produk/produk-otomotif.png',
+                'label' => 'otomotif',
+            ],
+            [
+                'keywords' => ['kesehatan', 'herbal', 'suplemen', 'vitamin'],
+                'path' => 'produk/produk-kesehatan.png',
+                'label' => 'herbal dan kesehatan',
+            ],
+            [
+                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
+                'path' => 'produk/produk-kecantikan.png',
+                'label' => 'skincare dan kecantikan',
+            ],
+            [
+                'keywords' => ['pertanian', 'perkebunan', 'pupuk', 'tani', 'agrikultur'],
+                'path' => 'produk/produk-pertanian.png',
+                'label' => 'pertanian dan perkebunan',
+            ],
+            [
+                'keywords' => ['minuman kesehatan', 'minuman', 'kopi', 'coffee'],
+                'path' => 'produk minuman untuk kesehatan tubuh/Evitgo 100.jpg',
+                'label' => 'minuman kesehatan',
+            ],
+            [
+                'keywords' => ['pembersih tubuh', 'pembersih area tubuh', 'hygiene', 'kesehatan area tubuh'],
+                'path' => 'produk pembersih untuk kesehatan tubuh/LVN CRYSTAL V LVN CRYSTAL Q.jpg',
+                'label' => 'pembersih area tubuh',
+            ],
+        ];
+
+        foreach ($categoryMap as $category) {
+            foreach ($category['keywords'] as $keyword) {
+                if (str_contains($normalizedMessage, $this->normalizeProductLookupText($keyword))) {
+                    return $category;
+                }
+            }
+        }
+
+        if (str_contains($normalizedMessage, 'best')) {
+            return [
+                'path' => 'produk/produk-best.png',
+                'label' => 'BEST',
+            ];
         }
 
         return null;
