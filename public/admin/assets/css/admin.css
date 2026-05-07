@@ -497,7 +497,7 @@ table.table td h2 span {
 }
 
 .dataTables_info {
-    float: right;
+    float: left;
     padding-right: 15px;
     padding-top: 18px !important;
     font-size: 12px;
@@ -1176,8 +1176,9 @@ button.bg-danger:hover {
 }
 
 .page-item .page-link {
-    width: 25px;
-    height: 25px;
+    min-width: 35px;
+    height: 35px;
+    padding: 0 10px;
     font-size: 14px;
     font-weight: 500;
     display: flex;

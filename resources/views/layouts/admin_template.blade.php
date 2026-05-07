@@ -583,12 +583,8 @@
                             <h6>Management</h6>
                         </li>
                         @if(auth('admin')->user()->hasPermission('manage_customers'))
-                            <li class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.customers.index') }}"><i class="fe fe-users"></i> <span>Data
-                                        Pelanggan</span></a>
-                            </li>
                             <li class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.reports.index') }}"><i class="fe fe-file-text"></i> <span>Laporan</span></a>
+                                <a href="{{ route('admin.reports.index') }}"><i class="fe fe-users"></i> <span>Data Pelanggan</span></a>
                             </li>
                         @endif
 
