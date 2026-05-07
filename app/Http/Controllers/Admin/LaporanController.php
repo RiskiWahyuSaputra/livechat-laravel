@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Conversation;
 use App\Models\ConversationRating;
+use App\Models\InternalConversation;
 use App\Models\User;
 use App\Models\Message;
 use App\Services\AnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class LaporanController extends Controller
@@ -36,11 +38,20 @@ class LaporanController extends Controller
         $metrics              = $this->analyticsService->getConversationMetrics();
         $customerSatisfaction = $this->analyticsService->getCustomerSatisfaction();
 
-        // Breakdown by type: customer chat vs internal chat
-        $typeBreakdown = [
-            'Customer Chat' => Conversation::withTrashed()->where('is_internal', false)->count(),
-            'Internal Chat' => Conversation::withTrashed()->where('is_internal', true)->count(),
-        ];
+        // Breakdown by type: support legacy schemas without `is_internal`
+        if (Schema::hasColumn('conversations', 'is_internal')) {
+            $typeBreakdown = [
+                'Customer Chat' => Conversation::withTrashed()->where('is_internal', false)->count(),
+                'Internal Chat' => Conversation::withTrashed()->where('is_internal', true)->count(),
+            ];
+        } else {
+            $typeBreakdown = [
+                'Customer Chat' => Conversation::withTrashed()->count(),
+                'Internal Chat' => Schema::hasTable('internal_conversations')
+                    ? InternalConversation::count()
+                    : 0,
+            ];
+        }
 
         // Breakdown by problem_category (top 5)
         $categoryBreakdown = Conversation::withTrashed()
