@@ -511,13 +511,17 @@
                 </button>
                 <input type="file" x-ref="fileInput" style="display:none;" @change="uploadFile">
 
-                <!-- Textarea -->
-                <textarea x-model="newMessage" x-ref="messageInput"
-                          :placeholder="(!canReply) ? 'Menunggu chat diklaim...' : (messageType === 'whisper' ? '🔒 Tulis catatan internal...' : 'Type \"shift + enter\" to add a new line. Type \"/\" to use quick reply')"
-                          @input="handleInput" @keydown="handleKeydown"
-                          :disabled="!canReply"
-                          class="msg-textarea" :class="messageType === 'whisper' ? 'whisper-mode' : ''"
-                          rows="1"></textarea>
+                <div class="flex-1 flex flex-col">
+                    <textarea x-model="newMessage" x-ref="messageInput"
+                              :placeholder="(!canReply) ? 'Menunggu chat diklaim...' : (messageType === 'whisper' ? '🔒 Tulis catatan internal...' : 'Ketik pesan...')"
+                              @input="handleInput" @keydown="handleKeydown"
+                              :disabled="!canReply"
+                              class="msg-textarea" :class="messageType === 'whisper' ? 'whisper-mode' : ''"
+                              rows="1"></textarea>
+                    <div x-show="canReply && messageType === 'text'" class="text-[10px] text-slate-400 mt-0.5 mb-1 px-1" x-cloak>
+                        Type <span class="font-bold">"shift + enter"</span> to add a new line. Type <span class="font-bold">"/"</span> to use quick reply
+                    </div>
+                </div>
 
                 <!-- Send Button -->
                 <button type="submit"
