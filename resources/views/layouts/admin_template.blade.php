@@ -590,6 +590,9 @@
                             <li class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                                 <a href="{{ route('admin.reports.index') }}"><i class="fe fe-file-text"></i> <span>Laporan</span></a>
                             </li>
+                            <li class="{{ request()->routeIs('admin.tags.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.tags.index') }}"><i class="fe fe-tag"></i> <span>Manajemen Tag</span></a>
+                            </li>
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('manage_roles'))

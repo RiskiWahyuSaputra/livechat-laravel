@@ -155,21 +155,88 @@
                     </div>
 
                     {{-- Office Hours --}}
-                    <div class="row mb-0">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Jam Buka (Senin–Jumat)</label>
-                            <input type="time" name="office_hours_start" class="form-control form-control-lg bg-light @error('office_hours_start') is-invalid @enderror" value="{{ $settings['office_hours_start'] ?? '09:00' }}">
-                            @error('office_hours_start') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="fe fe-clock me-2 text-primary"></i> Detail Jam Operasional Per Hari</h6>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Jam Tutup (Senin–Jumat)</label>
-                            <input type="time" name="office_hours_end" class="form-control form-control-lg bg-light @error('office_hours_end') is-invalid @enderror" value="{{ $settings['office_hours_end'] ?? '17:00' }}">
-                            @error('office_hours_end') <div class="invalid-feedback">{{ $message }}</div> @enderror
+
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold small text-uppercase opacity-75">Zona Waktu Sistem</label>
+                            <select name="office_hours_timezone" class="form-select form-select-lg bg-light border-0">
+                                <option value="Asia/Jakarta" {{ ($settings['office_hours_timezone'] ?? 'Asia/Jakarta') == 'Asia/Jakarta' ? 'selected' : '' }}>WIB (Asia/Jakarta)</option>
+                                <option value="Asia/Makassar" {{ ($settings['office_hours_timezone'] ?? '') == 'Asia/Makassar' ? 'selected' : '' }}>WITA (Asia/Makassar)</option>
+                                <option value="Asia/Jayapura" {{ ($settings['office_hours_timezone'] ?? '') == 'Asia/Jayapura' ? 'selected' : '' }}>WIT (Asia/Jayapura)</option>
+                                <option value="UTC" {{ ($settings['office_hours_timezone'] ?? '') == 'UTC' ? 'selected' : '' }}>UTC</option>
+                            </select>
+                            <small class="text-muted mt-1 d-block">Pilih zona waktu yang akan digunakan sebagai acuan jam operasional.</small>
+                        </div>
+
+                        <div class="row g-3">
+                            @foreach(['monday' => 'Senin', 'tuesday' => 'Selasa', 'wednesday' => 'Rabu', 'thursday' => 'Kamis', 'friday' => 'Jumat', 'saturday' => 'Sabtu', 'sunday' => 'Minggu'] as $day => $label)
+                            @php 
+                                $isWeekend = in_array($day, ['saturday', 'sunday']);
+                                $isActive = ($settings["office_hours_{$day}_active"] ?? ($isWeekend ? '0' : '1')) == '1';
+                            @endphp
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 border {{ $isActive ? 'bg-white border-primary border-opacity-25' : 'bg-light border-dashed' }}" id="container_{{ $day }}">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <div class="form-check form-switch mb-0">
+                                                <input type="checkbox" name="office_hours_{{ $day }}_active" value="1" class="form-check-input" id="check_{{ $day }}" {{ $isActive ? 'checked' : '' }} onchange="toggleDayInputs('{{ $day }}')">
+                                                <label class="form-check-label fw-bold ms-1" for="check_{{ $day }}">{{ $label }}</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <div id="inputs_{{ $day }}" class="row g-2 {{ $isActive ? '' : 'd-none' }}">
+                                                <div class="col-6">
+                                                    <div class="input-group input-group-sm border rounded-2 bg-light overflow-hidden">
+                                                        <span class="input-group-text bg-white border-0 small text-muted px-2">Mulai</span>
+                                                        <input type="time" name="office_hours_{{ $day }}_start" class="form-control border-0 bg-transparent" value="{{ $settings["office_hours_{$day}_start"] ?? '08:00' }}">
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="input-group input-group-sm border rounded-2 bg-light overflow-hidden">
+                                                        <span class="input-group-text bg-white border-0 small text-muted px-2">Selesai</span>
+                                                        <input type="time" name="office_hours_{{ $day }}_end" class="form-control border-0 bg-transparent" value="{{ $settings["office_hours_{$day}_end"] ?? '17:00' }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div id="closed_text_{{ $day }}" class="text-muted small {{ $isActive ? 'd-none' : '' }}">
+                                                <i class="fe fe-slash me-1"></i> Tutup (Libur)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
                         </div>
                     </div>
-                    <small class="text-muted d-block mt-2">Pesan otomatis untuk setiap mode diatur di menu <a href="{{ route('admin.bot-menus.index') }}" class="text-primary fw-bold">Alur Chat</a> → Edit Sapaan.</small>
+                    <small class="text-muted d-block mt-3">Pesan otomatis untuk setiap mode diatur di menu <a href="{{ route('admin.bot-menus.index') }}" class="text-primary fw-bold">Alur Chat</a> → Edit Sapaan.</small>
                 </div>
             </div>
+
+            @push('scripts')
+            <script>
+                function toggleDayInputs(day) {
+                    const checkbox = document.getElementById('check_' + day);
+                    const inputs = document.getElementById('inputs_' + day);
+                    const closedText = document.getElementById('closed_text_' + day);
+                    const container = document.getElementById('container_' + day);
+                    
+                    if (checkbox.checked) {
+                        inputs.classList.remove('d-none');
+                        closedText.classList.add('d-none');
+                        container.classList.remove('bg-light', 'border-dashed');
+                        container.classList.add('bg-white', 'border-primary', 'border-opacity-25');
+                    } else {
+                        inputs.classList.add('d-none');
+                        closedText.classList.remove('d-none');
+                        container.classList.add('bg-light', 'border-dashed');
+                        container.classList.remove('bg-white', 'border-primary', 'border-opacity-25');
+                    }
+                }
+            </script>
+            @endpush
 
             <!-- General Settings Card -->
             <div class="card shadow-sm border-0 rounded-4 mb-4">

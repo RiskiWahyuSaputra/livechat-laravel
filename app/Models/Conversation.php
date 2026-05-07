@@ -60,6 +60,14 @@ class Conversation extends Model
             ->orderBy('created_at');
     }
 
+    /**
+     * Relasi ke Tags (Many-to-Many)
+     */
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'conversation_tag');
+    }
+
     // Cek apakah conversation masih bisa dibalas
     public function isOpen(): bool
     {
