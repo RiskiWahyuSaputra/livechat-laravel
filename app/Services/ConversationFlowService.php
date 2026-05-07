@@ -584,6 +584,7 @@ class ConversationFlowService
         $messages = [];
         $productImage = $this->detectProductImageForMessage($userMessage);
         $isFallbackResponse = $this->isAiFallbackResponse($aiResponse);
+        $aiResponse = $this->sanitizeAiResponse($aiResponse);
 
         if ($productImage && !$isFallbackResponse) {
             $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
@@ -733,84 +734,7 @@ class ConversationFlowService
     {
         $normalized = $this->normalizeProductLookupText($message);
 
-        if ($specificProduct = $this->findSpecificProductImage($normalized)) {
-            return $specificProduct;
-        }
-
-        $genericProductIntentKeywords = [
-            'produk',
-            'product',
-            'kategori produk',
-            'jenis produk',
-            'katalog',
-            'catalog',
-            'gambar produk',
-            'foto produk',
-            'barang',
-        ];
-
-        $productMap = [
-            [
-                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik', 'serum', 'lipcream', 'day cream', 'night cream'],
-                'path' => 'produk/produk-kecantikan.png',
-                'label' => 'skincare dan kecantikan',
-            ],
-            [
-                'keywords' => ['kesehatan', 'health', 'herbal', 'vitamin', 'suplemen', 'habspro', 'eco vico', 'b-maxx', 'red one boost'],
-                'path' => 'produk/produk-kesehatan.png',
-                'label' => 'herbal dan kesehatan',
-            ],
-            [
-                'keywords' => ['minuman kesehatan', 'minuman', 'coffee', 'kopi', 'susu kambing', 'ecomaxx', 'econaxx', 'evitgo', 'evitgo 100', 'ecomaxx coffee', 'econaxx coffee'],
-                'path' => 'produk minuman untuk kesehatan tubuh/Evitgo 100.jpg',
-                'label' => 'minuman kesehatan',
-            ],
-            [
-                'keywords' => ['otomotif','kendaraan', 'motor', 'mobil', 'bengkel', 'oli', 'additif', 'bahan bakar', 'eco racing', 'eco diesel', 'nano tech', 'nano oil'],
-                'path' => 'produk/produk-otomotif.png',
-                'label' => 'otomotif',
-            ],
-            [
-                'keywords' => ['pertanian', 'perkebunan', 'pupuk', 'tani', 'agrikultur', 'agro', 'eco farming'],
-                'path' => 'produk/produk-pertanian.png',
-                'label' => 'pertanian dan perkebunan',
-            ],
-            [
-                'keywords' => ['pembersih area tubuh', 'area tubuh', 'kesehatan area tubuh', 'hygiene', 'crystal-v', 'crystal-q', 'hand moist', 'gentle man', 'spray for man', 'miss v', 'pembersih tubuh', 'lvn hygiene', 'lvn crystal', 'lvn hand moist'],
-                'path' => 'produk pembersih untuk kesehatan tubuh/LVN CRYSTAL V LVN CRYSTAL Q.jpg',
-                'label' => 'pembersih area tubuh',
-            ],
-        ];
-
-        foreach ($productMap as $product) {
-            foreach ($product['keywords'] as $keyword) {
-                if (str_contains($normalized, $this->normalizeProductLookupText($keyword))) {
-                    return [
-                        'path' => $product['path'],
-                        'label' => $product['label'],
-                        'description' => $product['description'] ?? null,
-                    ];
-                }
-            }
-        }
-
-        foreach ($genericProductIntentKeywords as $keyword) {
-            if (str_contains($normalized, $this->normalizeProductLookupText($keyword))) {
-                return [
-                    'path' => 'produk/produk-best.png',
-                    'label' => 'BEST',
-                ];
-            }
-        }
-
-        if (str_contains($normalized, 'best') && str_contains($normalized, 'produk')) {
-            return [
-                'path' => 'produk/produk-best.png',
-                'label' => 'BEST',
-            ];
-        }
-
-        return null;
+        return $this->findSpecificProductImage($normalized);
     }
 
     private function findSpecificProductImage(string $normalizedMessage): ?array
@@ -827,6 +751,15 @@ class ConversationFlowService
         }
 
         return null;
+    }
+
+    private function sanitizeAiResponse(string $aiResponse): string
+    {
+        $cleaned = preg_replace('/<img\b[^>]*>/i', '', $aiResponse);
+        $cleaned = preg_replace('/<figure\b[^>]*>.*?<\/figure>/is', '', (string) $cleaned);
+        $cleaned = preg_replace('/\n{3,}/', "\n\n", (string) $cleaned);
+
+        return trim((string) $cleaned);
     }
 
     private function productImageCatalog(): array

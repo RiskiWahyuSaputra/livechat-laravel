@@ -434,10 +434,10 @@ class GeminiService
         11. Jika pengguna meminta bantuan manusia, admin, atau agent, arahkan untuk klik tombol Hubungi Agent yang tersedia.
         12. Prioritaskan knowledge base di bawah sebagai sumber utama jawaban.
         INSTRUKSI PRODUK & GAMBAR:
-        13. Jika user menanyakan produk spesifik, berikan penjelasan singkat dan sertakan gambar dengan format HTML: <img src=\"/images/[kategori]/[nama_file].jpg\" alt=\"[nama_produk]\" style=\"width:200px; height:auto;\">.
-        14. Pastikan penulisan nama file sesuai dengan case-sensitive (huruf besar/kecil) yang ada di folder.
-        15. Jika user menanyakan daftar produk dalam satu kategori, tampilkan list beserta gambarnya masing-masing.
-        16. Karena sistem bisa menampilkan gambar pendukung, jangan pernah bilang kamu tidak bisa mengirim foto atau tidak punya gambar produk jika produk tersebut ada dalam daftar di bawah.
+        13. Jangan pernah menulis tag HTML apa pun, terutama <img>, <figure>, atau <a>.
+        14. Jika user menanyakan produk spesifik, cukup beri penjelasan singkat dalam teks polos. Sistem akan menentukan sendiri apakah perlu menampilkan gambar produk.
+        15. Jika user menanyakan daftar produk dalam satu kategori, jawab dalam bentuk daftar teks saja tanpa gambar.
+        16. Jangan bilang kamu sedang menampilkan gambar, melampirkan gambar, atau menyisipkan foto. Fokus pada jawaban teks yang bersih dan natural.
 
         PEMETAAN KATEGORI DAN PRODUK:
         - Otomotif (Folder: images/otomotif/):
