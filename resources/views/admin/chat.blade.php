@@ -399,6 +399,14 @@
         background: #ef4444;
         color: #fff;
     }
+    .status-tab-strip .nav-link.tab-closed.active {
+        color: #4b5563;
+        background: #f3f4f6;
+    }
+    .status-tab-strip .nav-link.tab-closed.active .tab-count {
+        background: #6b7280;
+        color: #fff;
+    }
 
     /* ── Chat List Container ── */
     .chat-list-panel {
@@ -716,6 +724,14 @@
                                     </span>
                                 </li>
                                 <li class="nav-item">
+                                    <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
+                                        @click="statusFilter = 'mine'" style="cursor:pointer;"
+                                        title="Chat yang sedang Anda tangani">
+                                        Milik Saya
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
                                     <span class="nav-link tab-queue" :class="statusFilter === 'queue' ? 'active' : ''"
                                         @click="statusFilter = 'queue'" style="cursor:pointer;">
                                         Antrean
@@ -730,19 +746,11 @@
                                     </span>
                                 </li>
                                 <li class="nav-item">
-                                    <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
-                                        @click="statusFilter = 'mine'" style="cursor:pointer;"
-                                        title="Chat yang sedang Anda tangani">
-                                        Milik Saya
-                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
-                                    </span>
-                                </li>
-                                <li class="nav-item">
-                                    <span class="nav-link tab-offline" :class="statusFilter === 'offline' ? 'active' : ''"
-                                        @click="statusFilter = 'offline'" style="cursor:pointer;"
-                                        title="User yang sedang offline">
-                                        Offline
-                                        <span class="tab-count" x-text="filteredChats.filter(c => !c.customer.is_online).length"></span>
+                                    <span class="nav-link tab-closed" :class="statusFilter === 'closed' ? 'active' : ''"
+                                        @click="statusFilter = 'closed'" style="cursor:pointer;"
+                                        title="Percakapan yang sudah selesai">
+                                        Selesai
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'closed').length"></span>
                                     </span>
                                 </li>
                             </ul>
@@ -750,7 +758,7 @@
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true)))))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'closed' ? c.status === 'closed' : true)))))" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
@@ -790,10 +798,10 @@
                             </template>
 
                             <!-- Empty state -->
-                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true))))).length === 0"
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'closed' ? c.status === 'closed' : true))))).length === 0"
                                 class="chat-empty-state">
                                 <i class="fe fe-message-circle"></i>
-                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.')))"></p>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'closed' ? 'Tidak ada percakapan yang selesai.' : 'Belum ada percakapan.')))"></p>
                             </div>
                         </div>
 
