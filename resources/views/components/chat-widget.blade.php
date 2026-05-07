@@ -525,7 +525,10 @@
                 Sesi pertanyaan ini telah ditutup oleh agen.
             </div>
 
-            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-blue-200 bg-blue-50 p-3 max-h-[45vh] overflow-y-auto overscroll-contain">
+            <div x-show="status === 'closed' && feedbackPending"
+                 x-cloak
+                 class="border-t border-blue-200 bg-blue-50 p-3 overflow-y-auto overscroll-contain"
+                 style="max-height: min(45vh, 360px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: stable;">
                 <section x-show="shouldRenderFeedbackConversationSummary()" x-cloak class="mb-3 overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm">
                     <div class="flex items-start gap-3 bg-blue-50/70 px-4 py-4">
                         <button type="button"
