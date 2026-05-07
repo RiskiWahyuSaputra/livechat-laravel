@@ -255,8 +255,9 @@ class DashboardController extends Controller
         $conversation = Conversation::withTrashed()->findOrFail($id);
         $admin    = Auth::guard('admin')->user();
         $messages = $conversation->messages()->get();
+        $quickReplies = \App\Models\QuickReply::orderBy('command')->get(['id', 'title', 'command', 'content']);
 
-        return view('admin.conversation', compact('conversation', 'messages', 'admin'));
+        return view('admin.conversation', compact('conversation', 'messages', 'admin', 'quickReplies'));
     }
 
     /**

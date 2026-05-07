@@ -452,6 +452,7 @@
         }
         .sidebar-menu .lap-submenu.open {
             max-height: 300px;
+            display: block !important;
             padding-top: 2px !important;
             padding-bottom: 4px !important;
         }
@@ -644,12 +645,13 @@
                                 <a href="{{ route('admin.reports.index') }}"><i class="fe fe-users"></i> <span>Data Pelanggan</span></a>
                             </li>
                             <li class="{{ request()->routeIs('admin.laporan.*') || request()->routeIs('admin.contact-report.*') ? 'active' : '' }}">
-                                <a href="javascript:void(0);" class="lap-parent-link" onclick="toggleLaporanMenu()">
+                                <a href="javascript:void(0);" class="lap-parent-link"
+                                   onclick="(function(el){var ul=el.closest('li').querySelector('.lap-submenu');var ch=el.querySelector('.lap-chevron');var isOpen=ul.classList.toggle('open');ch.classList.toggle('open',isOpen);ul.style.display=isOpen?'block':'none';})(this); return false;">
                                     <i class="fe fe-bar-chart-2"></i>
                                     <span>Laporan</span>
-                                    <i id="laporan-chevron" class="fe fe-chevron-right lap-chevron {{ request()->routeIs('admin.laporan.*') || request()->routeIs('admin.contact-report.*') ? 'open' : '' }}"></i>
+                                    <i class="fe fe-chevron-right lap-chevron {{ request()->routeIs('admin.laporan.*') || request()->routeIs('admin.contact-report.*') ? 'open' : '' }}"></i>
                                 </a>
-                                <ul id="laporan-submenu" class="lap-submenu {{ request()->routeIs('admin.laporan.*') || request()->routeIs('admin.contact-report.*') ? 'open' : '' }}">
+                                <ul class="lap-submenu {{ request()->routeIs('admin.laporan.*') || request()->routeIs('admin.contact-report.*') ? 'open' : '' }}">
                                     <li class="{{ request()->routeIs('admin.laporan.general') ? 'active' : '' }}">
                                         <a href="{{ route('admin.laporan.general') }}">
                                             <i class="fe fe-bar-chart-2"></i>
@@ -754,16 +756,15 @@
 
     <script>
         // Toggle Laporan submenu
-        function toggleLaporanMenu() {
-            const submenu = document.getElementById('laporan-submenu');
-            const chevron = document.getElementById('laporan-chevron');
-            if (!submenu) return;
-            submenu.classList.toggle('open');
-            if (chevron) chevron.classList.toggle('open', submenu.classList.contains('open'));
-        }
-
         // GLOBAL FIX UNTUK SIDEBAR DI MOBILE
         document.addEventListener('DOMContentLoaded', function () {
+
+            // Fix: jika lap-submenu punya class 'open' tapi Alpine inject display:none, paksa display:block
+            var lapSubmenu = document.querySelector('.lap-submenu.open');
+            if (lapSubmenu) {
+                lapSubmenu.style.display = 'block';
+            }
+
             const mobileBtn = document.getElementById('mobile_btn');
             const mainWrapper = document.querySelector('.main-wrapper');
 

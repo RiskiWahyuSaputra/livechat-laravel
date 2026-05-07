@@ -194,6 +194,7 @@
             flex: 1; border: none; background: transparent; resize: none;
             font-size: 14px; line-height: 1.5; color: #1e293b;
             padding: 4px 2px; min-height: 32px; max-height: 128px;
+            height: 32px;
             overflow-y: auto; outline: none;
         }
         .msg-textarea::placeholder { color: #94a3b8; }
@@ -221,25 +222,74 @@
 
         /* ── Slash dropdown ── */
         .slash-dropdown {
-            position: absolute; bottom: calc(100% + 8px); left: 0; right: 0;
-            background: #fff; border: 1px solid #e2e8f0;
-            border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-            z-index: 50; overflow: hidden; max-height: 200px; overflow-y: auto;
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+            z-index: 100;
+            overflow: hidden;
+            max-height: 260px;
+            overflow-y: auto;
         }
         .slash-dropdown-header {
-            padding: 8px 14px; font-size: 10px; font-weight: 700; color: #94a3b8;
-            text-transform: uppercase; letter-spacing: 0.06em;
+            padding: 8px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
             border-bottom: 1px solid #f1f5f9;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+        }
+        .slash-dropdown-header span:last-child {
+            font-weight: 500;
+            color: #6366f1;
+            text-transform: none;
+            letter-spacing: 0;
         }
         .slash-dropdown-item {
-            width: 100%; text-align: left; padding: 9px 14px; font-size: 13px;
-            border: none; background: transparent; cursor: pointer; display: block;
-            color: #374151; transition: background 0.1s;
+            width: 100%;
+            text-align: left;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: grid;
+            grid-template-columns: 130px 1fr;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #f8fafc;
+            transition: background 0.1s;
         }
-        .slash-dropdown-item:hover, .slash-dropdown-item.selected {
-            background: #eef2ff; color: #4338ca; font-weight: 500;
+        .slash-dropdown-item:last-child { border-bottom: none; }
+        .slash-dropdown-item:hover,
+        .slash-dropdown-item.selected {
+            background: #eef2ff;
         }
+        .slash-cmd {
+            font-size: 13px;
+            font-weight: 700;
+            color: #4338ca;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .slash-preview {
+            font-size: 12px;
+            color: #6b7280;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .slash-dropdown-item.selected .slash-cmd { color: #3730a3; }
+        .slash-dropdown-item.selected .slash-preview { color: #4b5563; }
 
         /* ── Message Options (WhatsApp Style) ── */
         .bubble-wrapper {
@@ -496,6 +546,27 @@
             <!-- Input Row -->
             <div class="input-row" :class="messageType === 'whisper' ? 'whisper-mode' : ''" style="position:relative;">
 
+                {{-- Slash Quick Reply Dropdown — full width, anchored to input-row --}}
+                <div x-show="showSlash && filteredReplies.length > 0"
+                     x-cloak
+                     class="slash-dropdown"
+                     @click.outside="showSlash = false">
+                    <div class="slash-dropdown-header">
+                        <span>Balasan Cepat</span>
+                        <span x-text="'/' + slashQuery"></span>
+                    </div>
+                    <template x-for="(reply, idx) in filteredReplies" :key="reply.id">
+                        <button type="button"
+                                class="slash-dropdown-item"
+                                :class="idx === slashIndex ? 'selected' : ''"
+                                @mouseenter="slashIndex = idx"
+                                @click="applySlashReply(reply)">
+                            <span class="slash-cmd" x-text="'/' + reply.command"></span>
+                            <span class="slash-preview" x-text="reply.content.substring(0, 80) + (reply.content.length > 80 ? '…' : '')"></span>
+                        </button>
+                    </template>
+                </div>
+
 
                 <!-- Internal Note Toggle -->
                 <button type="button" @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
@@ -512,6 +583,7 @@
                 <input type="file" x-ref="fileInput" style="display:none;" @change="uploadFile">
 
                 <div class="flex-1 relative flex items-center">
+
                     <textarea x-model="newMessage" x-ref="messageInput"
                               placeholder=""
                               @input="handleInput" @keydown="handleKeydown"
@@ -564,7 +636,20 @@
                 isSending: false,
                 isTyping: false,
                 typingTimeout: null,
-                prevDate: null, // To track date for separators
+                prevDate: null,
+
+                // Slash quick reply state
+                showSlash: false,
+                slashQuery: '',
+                slashIndex: 0,
+                get filteredReplies() {
+                    if (!this.showSlash) return [];
+                    const q = this.slashQuery.toLowerCase();
+                    return this.quickReplies.filter(r =>
+                        r.command.toLowerCase().includes(q) ||
+                        r.title.toLowerCase().includes(q)
+                    ).slice(0, 8);
+                },
                 
                 // Inactivity Tracking (30 Minutes)
                 lastActivity: Date.now(),
@@ -682,9 +767,53 @@
                 handleInput(e) {
                     this.sendTypingEvent(true);
                     this.resizeComposer();
+
+                    // Slash quick reply detection
+                    const val = this.newMessage;
+                    const slashMatch = val.match(/^\/(\S*)$/);
+                    if (slashMatch) {
+                        this.slashQuery = slashMatch[1];
+                        this.slashIndex = 0;
+                        this.showSlash = true;
+                    } else {
+                        this.showSlash = false;
+                    }
+                },
+
+                applySlashReply(reply) {
+                    this.newMessage = reply.content;
+                    this.showSlash = false;
+                    this.$nextTick(() => {
+                        this.sendMessage();
+                    });
                 },
 
                 handleKeydown(e) {
+                    // Navigate slash dropdown
+                    if (this.showSlash && this.filteredReplies.length > 0) {
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            this.slashIndex = (this.slashIndex + 1) % this.filteredReplies.length;
+                            this.$nextTick(() => this.scrollSlashItem());
+                            return;
+                        }
+                        if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            this.slashIndex = (this.slashIndex - 1 + this.filteredReplies.length) % this.filteredReplies.length;
+                            this.$nextTick(() => this.scrollSlashItem());
+                            return;
+                        }
+                        if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                            e.preventDefault();
+                            this.applySlashReply(this.filteredReplies[this.slashIndex]);
+                            return;
+                        }
+                        if (e.key === 'Escape') {
+                            this.showSlash = false;
+                            return;
+                        }
+                    }
+
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
@@ -693,10 +822,21 @@
                     }
                 },
 
+                scrollSlashItem() {
+                    const dropdown = document.querySelector('.slash-dropdown');
+                    if (!dropdown) return;
+                    const items = dropdown.querySelectorAll('.slash-dropdown-item');
+                    const active = items[this.slashIndex];
+                    if (active) {
+                        active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                },
+
                 resizeComposer() {
                     if (!this.$refs.messageInput) return;
-                    this.$refs.messageInput.style.height = 'auto';
-                    this.$refs.messageInput.style.height = `${this.$refs.messageInput.scrollHeight}px`;
+                    const el = this.$refs.messageInput;
+                    el.style.height = 'auto';
+                    el.style.height = Math.min(el.scrollHeight, 128) + 'px';
                 },
 
 
@@ -935,7 +1075,9 @@
                     const editId = this.editingMsgId;
 
                     this.newMessage = '';
-                    this.$nextTick(() => this.resizeComposer());
+                    if (this.$refs.messageInput) {
+                        this.$refs.messageInput.style.height = '32px';
+                    }
                     this.isSending = true;
 
                     this.editingMsgId = null;

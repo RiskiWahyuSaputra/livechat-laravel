@@ -1,291 +1,529 @@
 @extends('layouts.admin_template')
 
-@section('title', 'Pengaturan Integrasi')
+@section('title', 'Pengaturan Sistem')
+
+@push('styles')
+<style>
+    .settings-page { padding: 24px; max-width: 100%; }
+    .settings-header { margin-bottom: 28px; }
+    .settings-header h3 { font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
+    .settings-header p { color: #64748b; font-size: 14px; margin: 0; }
+
+    .settings-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .settings-card-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #f8fafc;
+    }
+    .settings-card-header h5 {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .settings-card-header i { font-size: 16px; }
+    .settings-card-body { padding: 20px 24px; }
+
+    .field-group { margin-bottom: 18px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+    }
+    .field-input {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #1e293b;
+        background: #f8fafc;
+        transition: border-color 0.15s;
+    }
+    .field-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+    }
+    .field-hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+    .field-divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+
+    /* Two-column grid for fields */
+    .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .fields-grid { grid-template-columns: 1fr; } }
+
+    /* Mode selector */
+    .mode-options { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .mode-option {
+        flex: 1; min-width: 140px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #f8fafc;
+    }
+    .mode-option input[type=radio] { display: none; }
+    .mode-option.active-green { border-color: #10b981; background: #f0fdf4; }
+    .mode-option.active-yellow { border-color: #f59e0b; background: #fffbeb; }
+    .mode-option.active-red { border-color: #ef4444; background: #fef2f2; }
+    .mode-label { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .mode-desc { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    /* Day rows */
+    .day-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .day-row:last-child { border-bottom: none; }
+    .day-toggle { display: flex; align-items: center; gap: 8px; }
+    .day-toggle label { font-size: 13px; font-weight: 600; color: #374151; cursor: pointer; }
+    .time-inputs { display: flex; gap: 8px; align-items: center; }
+    .time-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 6px 10px;
+    }
+    .time-input-wrap span { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+    .time-input-wrap input[type=time] {
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        color: #1e293b;
+        outline: none;
+        width: 90px;
+    }
+    .day-closed { font-size: 12px; color: #94a3b8; }
+
+    /* Webhook URL */
+    .webhook-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .webhook-row input {
+        flex: 1;
+        padding: 9px 12px;
+        border: 1px solid #c7d2fe;
+        border-radius: 8px;
+        font-size: 13px;
+        background: #eef2ff;
+        color: #3730a3;
+    }
+    .btn-copy {
+        padding: 9px 16px;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
+    }
+    .btn-copy:hover { background: #4f46e5; }
+
+    /* Danger zone */
+    .danger-box {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 10px;
+        padding: 16px;
+    }
+    .danger-box h6 { font-size: 13px; font-weight: 700; color: #92400e; margin: 0 0 6px; }
+    .danger-box p { font-size: 12px; color: #78350f; margin: 0 0 12px; }
+    .btn-danger-clean {
+        width: 100%;
+        padding: 9px;
+        background: #f59e0b;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .btn-danger-clean:hover { background: #d97706; }
+
+    /* Save button */
+    .btn-save {
+        width: 100%;
+        padding: 14px;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s;
+        letter-spacing: 0.02em;
+    }
+    .btn-save:hover { background: #4f46e5; }
+
+    body.dark-mode .settings-card { background: #1e1e1e; border-color: #333; }
+    body.dark-mode .settings-card-header { background: #252525; border-color: #333; }
+    body.dark-mode .settings-card-header h5 { color: #e0e0e0; }
+    body.dark-mode .field-label { color: #94a3b8; }
+    body.dark-mode .field-input { background: #252525; border-color: #444; color: #e0e0e0; }
+    body.dark-mode .field-input:focus { background: #2a2a2a; }
+    body.dark-mode .mode-option { background: #252525; border-color: #444; }
+    body.dark-mode .mode-label { color: #e0e0e0; }
+    body.dark-mode .day-row { border-color: #333; }
+    body.dark-mode .day-toggle label { color: #e0e0e0; }
+    body.dark-mode .time-input-wrap { background: #252525; border-color: #444; }
+    body.dark-mode .time-input-wrap input[type=time] { color: #e0e0e0; }
+</style>
+@endpush
 
 @section('content')
-<div class="row justify-content-center mb-5">
-    <div class="col-md-10 col-lg-8 pe-lg-4 ps-lg-4">
-        <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-            <div>
-                <h3 class="fw-bolder mb-0 text-dark">Pengaturan Sistem</h3>
-                <p class="text-muted">Konfigurasi token layanan eksternal dan kontrol lingkungan aplikasi Anda.</p>
+<div class="settings-page">
+
+    <div class="settings-header">
+        <h3><i class="fe fe-settings" style="color:#6366f1;margin-right:8px;"></i>Pengaturan Sistem</h3>
+        <p>Konfigurasi integrasi, mode operasional, dan pengaturan umum aplikasi.</p>
+    </div>
+
+    <form action="{{ route('admin.settings.update') }}" method="POST">
+        @csrf
+        @method('PUT')
+        <input type="hidden" name="ai_provider" value="openclaw">
+        <input type="hidden" name="messaging_provider" value="openclaw">
+
+        {{-- ── AI & OpenClaw ── --}}
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <i class="fe fe-cpu" style="color:#6366f1;"></i>
+                <h5>Kecerdasan Buatan & OpenClaw</h5>
+            </div>
+            <div class="settings-card-body">
+
+                {{-- Gemini --}}
+                <div class="fields-grid">
+                    <div class="field-group">
+                        <label class="field-label">Gemini API Key</label>
+                        <input type="password" name="gemini_api_key" class="field-input"
+                               value="{{ $settings['gemini_api_key'] ?? env('GEMINI_API_KEY') }}">
+                        <div class="field-hint">Fallback jika ingin kembali ke Gemini.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Model Gemini</label>
+                        <select name="gemini_model" class="field-input">
+                            @foreach(['gemini-pro' => 'Gemini Pro (Stabil)', 'gemini-1.5-flash' => 'Gemini 1.5 Flash (Cepat)', 'gemini-1.5-pro' => 'Gemini 1.5 Pro (Akurat)', 'gemini-2.0-flash' => 'Gemini 2.0 Flash'] as $val => $label)
+                                <option value="{{ $val }}" {{ ($settings['gemini_model'] ?? '') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <div class="field-hint">Dipakai saat provider AI masih Gemini.</div>
+                    </div>
+                </div>
+
+                <hr class="field-divider">
+
+                {{-- OpenClaw Core --}}
+                <div class="fields-grid">
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Base URL</label>
+                        <input type="text" name="openclaw_base_url" class="field-input"
+                               value="{{ $settings['openclaw_base_url'] ?? env('OPENCLAW_BASE_URL', 'http://127.0.0.1:18789') }}"
+                               placeholder="http://127.0.0.1:18789">
+                        <div class="field-hint">Alamat gateway OpenClaw.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Hook Path</label>
+                        <input type="text" name="openclaw_hook_path" class="field-input"
+                               value="{{ $settings['openclaw_hook_path'] ?? env('OPENCLAW_HOOK_PATH', '/hooks/agent') }}"
+                               placeholder="/hooks/agent">
+                        <div class="field-hint">Endpoint hook agent OpenClaw.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Hook Token</label>
+                        <input type="password" name="openclaw_hook_token" class="field-input"
+                               value="{{ $settings['openclaw_hook_token'] ?? env('OPENCLAW_HOOK_TOKEN') }}">
+                        <div class="field-hint">Token Bearer untuk hook OpenClaw.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Agent Name</label>
+                        <input type="text" name="openclaw_agent_name" class="field-input"
+                               value="{{ $settings['openclaw_agent_name'] ?? env('OPENCLAW_AGENT_NAME', 'Website AI') }}"
+                               placeholder="Website AI">
+                        <div class="field-hint">Nama agent penerima request.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Model</label>
+                        <input type="text" name="openclaw_model" class="field-input"
+                               value="{{ $settings['openclaw_model'] ?? env('OPENCLAW_MODEL', 'codex') }}"
+                               placeholder="codex">
+                        <div class="field-hint">Model default: <code>codex</code>.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Timeout (detik)</label>
+                        <input type="number" min="5" name="openclaw_timeout_seconds" class="field-input"
+                               value="{{ $settings['openclaw_timeout_seconds'] ?? env('OPENCLAW_TIMEOUT_SECONDS', 30) }}">
+                        <div class="field-hint">Batas tunggu jawaban OpenClaw.</div>
+                    </div>
+                </div>
+
+                <hr class="field-divider">
+
+                {{-- WhatsApp --}}
+                <div class="fields-grid">
+                    <div class="field-group">
+                        <label class="field-label">WhatsApp Enabled</label>
+                        <select name="openclaw_whatsapp_enabled" class="field-input">
+                            <option value="1" {{ (string)($settings['openclaw_whatsapp_enabled'] ?? env('OPENCLAW_WHATSAPP_ENABLED', '1')) === '1' ? 'selected' : '' }}>Aktif</option>
+                            <option value="0" {{ (string)($settings['openclaw_whatsapp_enabled'] ?? env('OPENCLAW_WHATSAPP_ENABLED')) === '0' ? 'selected' : '' }}>Nonaktif</option>
+                        </select>
+                        <div class="field-hint">Aktifkan jalur WhatsApp via OpenClaw.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw CLI Path</label>
+                        <input type="text" name="openclaw_cli_path" class="field-input"
+                               value="{{ $settings['openclaw_cli_path'] ?? env('OPENCLAW_CLI_PATH', 'openclaw') }}"
+                               placeholder="openclaw">
+                        <div class="field-hint">Path binary OpenClaw di server.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">WhatsApp Channel</label>
+                        <input type="text" name="openclaw_whatsapp_channel" class="field-input"
+                               value="{{ $settings['openclaw_whatsapp_channel'] ?? env('OPENCLAW_WHATSAPP_CHANNEL', 'whatsapp') }}"
+                               placeholder="whatsapp">
+                        <div class="field-hint">Nama channel untuk <code>openclaw message send</code>.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">WhatsApp Account</label>
+                        <input type="text" name="openclaw_whatsapp_account" class="field-input"
+                               value="{{ $settings['openclaw_whatsapp_account'] ?? env('OPENCLAW_WHATSAPP_ACCOUNT') }}"
+                               placeholder="Opsional">
+                        <div class="field-hint">Session/account tertentu (opsional).</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Public Base URL</label>
+                        <input type="text" name="openclaw_public_base_url" class="field-input"
+                               value="{{ $settings['openclaw_public_base_url'] ?? env('OPENCLAW_PUBLIC_BASE_URL') }}"
+                               placeholder="https://xxxx.ngrok-free.app">
+                        <div class="field-hint">URL publik Laravel agar file bisa diambil gateway WA.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">OpenClaw Bridge Token</label>
+                        <input type="password" name="openclaw_bridge_token" class="field-input"
+                               value="{{ $settings['openclaw_bridge_token'] ?? env('OPENCLAW_BRIDGE_TOKEN') }}">
+                        <div class="field-hint">Token keamanan webhook masuk dari OpenClaw.</div>
+                    </div>
+                </div>
+
+                <div class="field-group" style="margin-top:4px;">
+                    <label class="field-label" style="color:#6366f1;"><i class="fe fe-link me-1"></i>Webhook URL OpenClaw WhatsApp</label>
+                    <div class="webhook-row">
+                        <input type="text" id="openclawWebhookUrl" value="{{ url('/api/webhook/openclaw/whatsapp') }}" readonly>
+                        <button type="button" class="btn-copy"
+                                onclick="navigator.clipboard.writeText(document.getElementById('openclawWebhookUrl').value);this.textContent='Tersalin!';setTimeout(()=>this.textContent='Salin',2000);">
+                            <i class="fe fe-copy me-1"></i>Salin
+                        </button>
+                    </div>
+                    <div class="field-hint">Pasang URL ini di hook OpenClaw agar pesan WA masuk ke flow chat.</div>
+                </div>
+
             </div>
         </div>
-        
-        <form action="{{ route('admin.settings.update') }}" method="POST">
-            @csrf
-            @method('PUT')
-            
-            <!-- AI Settings Card -->
-            <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                    <h5 class="fw-bold mb-0 text-primary"><i class="fe fe-command me-2"></i> Kecerdasan Buatan Pra-Claim</h5>
-                </div>
-                <div class="card-body pt-3 pb-4">
-                    <input type="hidden" name="ai_provider" value="openclaw">
-                    <input type="hidden" name="messaging_provider" value="openclaw">
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">Gemini API Key</label>
-                        <input type="password" name="gemini_api_key" class="form-control form-control-lg bg-light" value="{{ $settings['gemini_api_key'] ?? env('GEMINI_API_KEY') }}">
-                        <small class="text-muted mt-1 d-block">Tetap boleh diisi sebagai fallback jika sewaktu-waktu ingin kembali ke Gemini.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">Model Gemini</label>
-                        <div class="position-relative">
-                            <select name="gemini_model" class="form-select form-select-lg bg-light border-0 py-3 cursor-pointer">
-                                <option value="gemini-pro" {{ ($settings['gemini_model'] ?? '') == 'gemini-pro' ? 'selected' : '' }}>Gemini Pro (Versi Lama & Paling Stabil)</option>
-                                <option value="gemini-1.5-flash" {{ ($settings['gemini_model'] ?? '') == 'gemini-1.5-flash' ? 'selected' : '' }}>Gemini 1.5 Flash (Sangat Cepat & Responsif)</option>
-                                <option value="gemini-1.5-pro" {{ ($settings['gemini_model'] ?? '') == 'gemini-1.5-pro' ? 'selected' : '' }}>Gemini 1.5 Pro (Akurasi Kalimat Maksimal)</option>
-                                <option value="gemini-2.0-flash" {{ ($settings['gemini_model'] ?? '') == 'gemini-2.0-flash' ? 'selected' : '' }}>Gemini 2.0 Flash</option>
-                            </select>
-                        </div>
-                        <small class="text-muted mt-2 d-block">Dipakai saat provider AI masih Gemini.</small>
-                    </div>
-                    <hr class="my-4">
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Base URL</label>
-                        <input type="text" name="openclaw_base_url" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_base_url'] ?? env('OPENCLAW_BASE_URL', 'http://127.0.0.1:18789') }}" placeholder="http://127.0.0.1:18789">
-                        <small class="text-muted mt-1 d-block">Alamat gateway OpenClaw Anda.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Hook Path</label>
-                        <input type="text" name="openclaw_hook_path" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_hook_path'] ?? env('OPENCLAW_HOOK_PATH', '/hooks/agent') }}" placeholder="/hooks/agent">
-                        <small class="text-muted mt-1 d-block">Mengacu ke endpoint hook agent OpenClaw. Default dokumentasi adalah `/hooks/agent`.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Hook Token</label>
-                        <input type="password" name="openclaw_hook_token" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_hook_token'] ?? env('OPENCLAW_HOOK_TOKEN') }}">
-                        <small class="text-muted mt-1 d-block">Token Bearer untuk memanggil hook OpenClaw.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Agent Name</label>
-                        <input type="text" name="openclaw_agent_name" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_agent_name'] ?? env('OPENCLAW_AGENT_NAME', 'Website AI') }}" placeholder="Website AI">
-                        <small class="text-muted mt-1 d-block">Nama agent yang menerima request dari website ini.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Model</label>
-                        <input type="text" name="openclaw_model" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_model'] ?? env('OPENCLAW_MODEL', 'codex') }}" placeholder="codex">
-                        <small class="text-muted mt-1 d-block">Model default Anda saat ini adalah `codex`.</small>
-                    </div>
-                    <div class="form-group mb-1">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Timeout (detik)</label>
-                        <input type="number" min="5" name="openclaw_timeout_seconds" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_timeout_seconds'] ?? env('OPENCLAW_TIMEOUT_SECONDS', 30) }}">
-                        <small class="text-muted mt-1 d-block">Batas tunggu website saat menunggu jawaban OpenClaw.</small>
-                    </div>
-                    <hr class="my-4">
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw WhatsApp Enabled</label>
-                        <select name="openclaw_whatsapp_enabled" class="form-select form-select-lg bg-light border-0 py-3 cursor-pointer">
-                            <option value="1" {{ (string) ($settings['openclaw_whatsapp_enabled'] ?? env('OPENCLAW_WHATSAPP_ENABLED', '1')) === '1' ? 'selected' : '' }}>Aktif</option>
-                            <option value="0" {{ (string) ($settings['openclaw_whatsapp_enabled'] ?? env('OPENCLAW_WHATSAPP_ENABLED')) === '0' ? 'selected' : '' }}>Nonaktif</option>
-                        </select>
-                        <small class="text-muted mt-1 d-block">Aktifkan jika OpenClaw juga akan menangani jalur WhatsApp.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw CLI Path</label>
-                        <input type="text" name="openclaw_cli_path" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_cli_path'] ?? env('OPENCLAW_CLI_PATH', 'openclaw') }}" placeholder="openclaw">
-                        <small class="text-muted mt-1 d-block">Path binary OpenClaw pada server Laravel untuk kirim pesan outbound WhatsApp.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw WhatsApp Channel</label>
-                        <input type="text" name="openclaw_whatsapp_channel" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_whatsapp_channel'] ?? env('OPENCLAW_WHATSAPP_CHANNEL', 'whatsapp') }}" placeholder="whatsapp">
-                        <small class="text-muted mt-1 d-block">Nama channel yang dipakai command `openclaw message send`.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw WhatsApp Account</label>
-                        <input type="text" name="openclaw_whatsapp_account" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_whatsapp_account'] ?? env('OPENCLAW_WHATSAPP_ACCOUNT') }}" placeholder="Opsional">
-                        <small class="text-muted mt-1 d-block">Isi jika instance WhatsApp OpenClaw Anda memakai account atau session tertentu.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Public Base URL</label>
-                        <input type="text" name="openclaw_public_base_url" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_public_base_url'] ?? env('OPENCLAW_PUBLIC_BASE_URL') }}" placeholder="https://xxxx.ngrok-free.app">
-                        <small class="text-muted mt-1 d-block">Harus mengarah ke URL publik aplikasi Laravel Anda agar file di `public/images/...` bisa diambil gateway WhatsApp. Jangan isi dengan URL gateway OpenClaw bila port tunnel-nya berbeda.</small>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold opacity-75">OpenClaw Bridge Token</label>
-                        <input type="password" name="openclaw_bridge_token" class="form-control form-control-lg bg-light" value="{{ $settings['openclaw_bridge_token'] ?? env('OPENCLAW_BRIDGE_TOKEN') }}">
-                        <small class="text-muted mt-1 d-block">Token untuk mengamankan webhook masuk dari OpenClaw ke Laravel.</small>
-                    </div>
-                    <div class="form-group mb-1">
-                        <label class="form-label fw-bold text-info"><i class="fe fe-link"></i> OpenClaw WhatsApp Webhook URL</label>
-                        <div class="input-group input-group-lg">
-                            <input type="text" id="openclawWebhookUrl" class="form-control bg-white border-info text-dark" value="{{ url('/api/webhook/openclaw/whatsapp') }}" readonly>
-                            <button class="btn btn-info text-white fw-bold px-4" type="button" onclick="navigator.clipboard.writeText(document.getElementById('openclawWebhookUrl').value); alert('Tautan Webhook OpenClaw tersalin!');"><i class="fe fe-copy me-1"></i> Copy</button>
-                        </div>
-                        <small class="text-muted mt-2 d-block">Pakai URL ini pada hook OpenClaw agar pesan WhatsApp masuk mengikuti flow chat website yang sama.</small>
-                    </div>
-                </div>
+
+        {{-- ── Mode Operasional ── --}}
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <i class="fe fe-activity" style="color:#10b981;"></i>
+                <h5>Mode Operasional Chat</h5>
             </div>
+            <div class="settings-card-body">
 
-            <!-- Operational Mode Card -->
-            <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                    <h5 class="fw-bold mb-0 text-success"><i class="fe fe-activity me-2"></i> Mode Operasional Chat</h5>
-                    <p class="text-muted small mt-1 mb-0">Kendalikan alur percakapan customer berdasarkan kondisi operasional.</p>
-                </div>
-                <div class="card-body pt-3 pb-4">
-                    {{-- System Mode --}}
-                    <div class="form-group mb-4">
-                        <label class="form-label fw-bold">Mode Aktif Saat Ini</label>
-                        @php $currentMode = $settings['system_mode'] ?? 'office_hour'; @endphp
-                        <div class="d-flex gap-3 flex-wrap mt-1">
-                            <label class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'office_hour' ? 'border-success bg-success bg-opacity-10' : 'border-light bg-light' }}" style="cursor:pointer">
-                                <input type="radio" name="system_mode" value="office_hour" {{ $currentMode === 'office_hour' ? 'checked' : '' }} class="form-check-input mt-0">
-                                <div>
-                                    <div class="fw-bold text-success">🟢 Jam Kerja</div>
-                                    <div class="text-muted small">Customer bisa chat & antri ke Agent</div>
-                                </div>
-                            </label>
-                            <label class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'outside_office_hour' ? 'border-warning bg-warning bg-opacity-10' : 'border-light bg-light' }}" style="cursor:pointer">
-                                <input type="radio" name="system_mode" value="outside_office_hour" {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }} class="form-check-input mt-0">
-                                <div>
-                                    <div class="fw-bold text-warning">🟡 Di Luar Jam Kerja</div>
-                                    <div class="text-muted small">Hanya dilayani AI, tidak ada Agent</div>
-                                </div>
-                            </label>
-                            <label class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'closed' ? 'border-danger bg-danger bg-opacity-10' : 'border-light bg-light' }}" style="cursor:pointer">
-                                <input type="radio" name="system_mode" value="closed" {{ $currentMode === 'closed' ? 'checked' : '' }} class="form-check-input mt-0">
-                                <div>
-                                    <div class="fw-bold text-danger">🔴 Tutup</div>
-                                    <div class="text-muted small">Chat ditolak sepenuhnya</div>
-                                </div>
-                            </label>
-                        </div>
-                        @error('system_mode') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                    </div>
-
-                    {{-- Office Hours --}}
-                    <div class="mt-4 pt-3 border-top">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-dark"><i class="fe fe-clock me-2 text-primary"></i> Detail Jam Operasional Per Hari</h6>
-                        </div>
-
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold small text-uppercase opacity-75">Zona Waktu Sistem</label>
-                            <select name="office_hours_timezone" class="form-select form-select-lg bg-light border-0">
-                                <option value="Asia/Jakarta" {{ ($settings['office_hours_timezone'] ?? 'Asia/Jakarta') == 'Asia/Jakarta' ? 'selected' : '' }}>WIB (Asia/Jakarta)</option>
-                                <option value="Asia/Makassar" {{ ($settings['office_hours_timezone'] ?? '') == 'Asia/Makassar' ? 'selected' : '' }}>WITA (Asia/Makassar)</option>
-                                <option value="Asia/Jayapura" {{ ($settings['office_hours_timezone'] ?? '') == 'Asia/Jayapura' ? 'selected' : '' }}>WIT (Asia/Jayapura)</option>
-                                <option value="UTC" {{ ($settings['office_hours_timezone'] ?? '') == 'UTC' ? 'selected' : '' }}>UTC</option>
-                            </select>
-                            <small class="text-muted mt-1 d-block">Pilih zona waktu yang akan digunakan sebagai acuan jam operasional.</small>
-                        </div>
-
-                        <div class="row g-3">
-                            @foreach(['monday' => 'Senin', 'tuesday' => 'Selasa', 'wednesday' => 'Rabu', 'thursday' => 'Kamis', 'friday' => 'Jumat', 'saturday' => 'Sabtu', 'sunday' => 'Minggu'] as $day => $label)
-                            @php 
-                                $isWeekend = in_array($day, ['saturday', 'sunday']);
-                                $isActive = ($settings["office_hours_{$day}_active"] ?? ($isWeekend ? '0' : '1')) == '1';
-                            @endphp
-                            <div class="col-12">
-                                <div class="p-3 rounded-3 border {{ $isActive ? 'bg-white border-primary border-opacity-25' : 'bg-light border-dashed' }}" id="container_{{ $day }}">
-                                    <div class="row align-items-center">
-                                        <div class="col-md-3">
-                                            <div class="form-check form-switch mb-0">
-                                                <input type="checkbox" name="office_hours_{{ $day }}_active" value="1" class="form-check-input" id="check_{{ $day }}" {{ $isActive ? 'checked' : '' }} onchange="toggleDayInputs('{{ $day }}')">
-                                                <label class="form-check-label fw-bold ms-1" for="check_{{ $day }}">{{ $label }}</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <div id="inputs_{{ $day }}" class="row g-2 {{ $isActive ? '' : 'd-none' }}">
-                                                <div class="col-6">
-                                                    <div class="input-group input-group-sm border rounded-2 bg-light overflow-hidden">
-                                                        <span class="input-group-text bg-white border-0 small text-muted px-2">Mulai</span>
-                                                        <input type="time" name="office_hours_{{ $day }}_start" class="form-control border-0 bg-transparent" value="{{ $settings["office_hours_{$day}_start"] ?? '08:00' }}">
-                                                    </div>
-                                                </div>
-                                                <div class="col-6">
-                                                    <div class="input-group input-group-sm border rounded-2 bg-light overflow-hidden">
-                                                        <span class="input-group-text bg-white border-0 small text-muted px-2">Selesai</span>
-                                                        <input type="time" name="office_hours_{{ $day }}_end" class="form-control border-0 bg-transparent" value="{{ $settings["office_hours_{$day}_end"] ?? '17:00' }}">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div id="closed_text_{{ $day }}" class="text-muted small {{ $isActive ? 'd-none' : '' }}">
-                                                <i class="fe fe-slash me-1"></i> Tutup (Libur)
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                @php $currentMode = $settings['system_mode'] ?? 'office_hour'; @endphp
+                <div class="field-group">
+                    <label class="field-label">Mode Aktif Saat Ini</label>
+                    <div class="mode-options">
+                        <label class="mode-option {{ $currentMode === 'office_hour' ? 'active-green' : '' }}">
+                            <input type="radio" name="system_mode" value="office_hour" {{ $currentMode === 'office_hour' ? 'checked' : '' }}>
+                            <div>
+                                <div class="mode-label">🟢 Jam Kerja</div>
+                                <div class="mode-desc">Customer bisa chat & antri ke Agent</div>
                             </div>
-                            @endforeach
-                        </div>
+                        </label>
+                        <label class="mode-option {{ $currentMode === 'outside_office_hour' ? 'active-yellow' : '' }}">
+                            <input type="radio" name="system_mode" value="outside_office_hour" {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }}>
+                            <div>
+                                <div class="mode-label">🟡 Di Luar Jam Kerja</div>
+                                <div class="mode-desc">Hanya dilayani AI</div>
+                            </div>
+                        </label>
+                        <label class="mode-option {{ $currentMode === 'closed' ? 'active-red' : '' }}">
+                            <input type="radio" name="system_mode" value="closed" {{ $currentMode === 'closed' ? 'checked' : '' }}>
+                            <div>
+                                <div class="mode-label">🔴 Tutup</div>
+                                <div class="mode-desc">Chat ditolak sepenuhnya</div>
+                            </div>
+                        </label>
                     </div>
-                    <small class="text-muted d-block mt-3">Pesan otomatis untuk setiap mode diatur di menu <a href="{{ route('admin.bot-menus.index') }}" class="text-primary fw-bold">Alur Chat</a> → Edit Sapaan.</small>
                 </div>
-            </div>
 
-            @push('scripts')
-            <script>
-                function toggleDayInputs(day) {
-                    const checkbox = document.getElementById('check_' + day);
-                    const inputs = document.getElementById('inputs_' + day);
-                    const closedText = document.getElementById('closed_text_' + day);
-                    const container = document.getElementById('container_' + day);
-                    
-                    if (checkbox.checked) {
-                        inputs.classList.remove('d-none');
-                        closedText.classList.add('d-none');
-                        container.classList.remove('bg-light', 'border-dashed');
-                        container.classList.add('bg-white', 'border-primary', 'border-opacity-25');
-                    } else {
-                        inputs.classList.add('d-none');
-                        closedText.classList.remove('d-none');
-                        container.classList.add('bg-light', 'border-dashed');
-                        container.classList.remove('bg-white', 'border-primary', 'border-opacity-25');
-                    }
-                }
-            </script>
-            @endpush
+                <hr class="field-divider">
 
-            <!-- General Settings Card -->
-            <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                    <h5 class="fw-bold mb-0 text-dark"><i class="fe fe-settings me-2 opacity-50"></i> Umum & Sistem Database</h5>
+                <div class="field-group">
+                    <label class="field-label">Zona Waktu</label>
+                    <select name="office_hours_timezone" class="field-input" style="max-width:280px;">
+                        @foreach(['Asia/Jakarta' => 'WIB (Asia/Jakarta)', 'Asia/Makassar' => 'WITA (Asia/Makassar)', 'Asia/Jayapura' => 'WIT (Asia/Jayapura)', 'UTC' => 'UTC'] as $tz => $tzLabel)
+                            <option value="{{ $tz }}" {{ ($settings['office_hours_timezone'] ?? 'Asia/Jakarta') == $tz ? 'selected' : '' }}>{{ $tzLabel }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="card-body pt-3 pb-4">
-                    <div class="form-group mb-4 pb-3 border-bottom">
-                        <label class="form-label fw-bold opacity-75">Nama Aplikasi / Bisnis</label>
-                        <input type="text" name="app_name" class="form-control form-control-lg border-0 bg-light" value="{{ $settings['app_name'] ?? config('app.name') }}">
-                    </div>
-                    
-                    <div class="row pt-2 align-items-stretch">
-                        <!-- Auto Cleanup -->
-                        <div class="col-lg-7 d-flex align-items-center mb-4 mb-lg-0">
-                            <div class="w-100">
-                                <label class="form-label fw-bold text-dark"><i class="fe fe-clock me-1 text-primary"></i> Waktu Pembersihan Otomatis</label>
-                                <input type="time" name="cleanup_time" class="form-control form-control-lg border-1 bg-white mb-2" style="max-width: 200px" value="{{ $settings['cleanup_time'] ?? '03:00' }}">
-                                <p class="text-muted small mb-0 lh-sm">Tentukan jam persis (zona waktu server) kapankah setiap harinya antrean percakapan dari pengunjung mati akan dihapus mesin.</p>
+
+                <div class="field-group">
+                    <label class="field-label">Jam Operasional Per Hari</label>
+                    @foreach(['monday' => 'Senin', 'tuesday' => 'Selasa', 'wednesday' => 'Rabu', 'thursday' => 'Kamis', 'friday' => 'Jumat', 'saturday' => 'Sabtu', 'sunday' => 'Minggu'] as $day => $dayLabel)
+                    @php
+                        $isWeekend = in_array($day, ['saturday', 'sunday']);
+                        $isActive = ($settings["office_hours_{$day}_active"] ?? ($isWeekend ? '0' : '1')) == '1';
+                    @endphp
+                    <div class="day-row" id="container_{{ $day }}">
+                        <div class="day-toggle">
+                            <div class="form-check form-switch mb-0">
+                                <input type="checkbox" name="office_hours_{{ $day }}_active" value="1"
+                                       class="form-check-input" id="check_{{ $day }}"
+                                       {{ $isActive ? 'checked' : '' }}
+                                       onchange="toggleDayInputs('{{ $day }}')">
+                                <label class="form-check-label" for="check_{{ $day }}">{{ $dayLabel }}</label>
                             </div>
                         </div>
-                        
-                        <!-- Manual Force Cleanup (Danger Zone) -->
-                        <div class="col-lg-5">
-                            <div class="h-100 p-3 rounded-4 bg-warning bg-opacity-10 border border-warning">
-                                <label class="form-label text-warning-emphasis fw-bold"><i class="fe fe-alert-triangle me-1"></i> Aksi Darurat Instan</label>
-                                <p class="small text-dark opacity-75 mb-3 lh-sm">Bersihkan ratusan jejak pengunjung *anonim* tak terpakai secara instan tanpa menunggu waktu.</p>
-                                <button type="submit" form="cleanup-form" class="btn btn-warning w-100 fw-bold shadow-sm" style="color: #664d03; border-color: #ffc107;" onclick="return confirm('Peringatan Krusial! Anda yakin ingin menghapus / mengosongkan seluruh pengunjung anonim yang tidak aktif ke keranjang sampah Server detik ini juga?')">
-                                    <i class="fe fe-trash-2 me-1"></i> Bersihkan Sampah
-                                </button>
+                        <div>
+                            <div id="inputs_{{ $day }}" class="time-inputs {{ $isActive ? '' : 'd-none' }}">
+                                <div class="time-input-wrap">
+                                    <span>Mulai</span>
+                                    <input type="time" name="office_hours_{{ $day }}_start"
+                                           value="{{ $settings["office_hours_{$day}_start"] ?? '08:00' }}">
+                                </div>
+                                <span style="color:#94a3b8;font-size:12px;">–</span>
+                                <div class="time-input-wrap">
+                                    <span>Selesai</span>
+                                    <input type="time" name="office_hours_{{ $day }}_end"
+                                           value="{{ $settings["office_hours_{$day}_end"] ?? '17:00' }}">
+                                </div>
+                            </div>
+                            <div id="closed_text_{{ $day }}" class="day-closed {{ $isActive ? 'd-none' : '' }}">
+                                Libur / Tutup
                             </div>
                         </div>
                     </div>
+                    @endforeach
+                </div>
+
+                <div class="field-hint mt-2">
+                    Pesan otomatis tiap mode diatur di <a href="{{ route('admin.bot-menus.index') }}" style="color:#6366f1;font-weight:600;">Alur Chat → Edit Sapaan</a>.
+                </div>
+
+            </div>
+        </div>
+
+        {{-- ── Umum ── --}}
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <i class="fe fe-sliders" style="color:#64748b;"></i>
+                <h5>Umum & Sistem</h5>
+            </div>
+            <div class="settings-card-body">
+                <div class="fields-grid">
+                    <div class="field-group">
+                        <label class="field-label">Nama Aplikasi / Bisnis</label>
+                        <input type="text" name="app_name" class="field-input"
+                               value="{{ $settings['app_name'] ?? config('app.name') }}">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Waktu Pembersihan Otomatis</label>
+                        <input type="time" name="cleanup_time" class="field-input" style="max-width:160px;"
+                               value="{{ $settings['cleanup_time'] ?? '03:00' }}">
+                        <div class="field-hint">Jam pembersihan antrean pengunjung mati (zona waktu server).</div>
+                    </div>
+                </div>
+
+                <div class="danger-box" style="margin-top:4px;">
+                    <h6><i class="fe fe-alert-triangle me-1"></i>Aksi Darurat — Bersihkan Sekarang</h6>
+                    <p>Hapus seluruh jejak pengunjung anonim tak terpakai secara instan tanpa menunggu jadwal.</p>
+                    <button type="submit" form="cleanup-form" class="btn-danger-clean"
+                            onclick="return confirm('Yakin ingin membersihkan semua pengunjung anonim tidak aktif sekarang?')">
+                        <i class="fe fe-trash-2 me-1"></i> Bersihkan Sampah Sekarang
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Big Save Button Area -->
-            <div class="text-center mt-5 mb-3 px-2">
-                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fs-5 py-3 shadow-sm fw-bolder" style="letter-spacing: 0.5px;">
-                    <i class="fe fe-save me-2"></i> TERAPKAN & SIMPAN PENGATURAN
-                </button>
-                <p class="text-muted small mt-3 opacity-75"><i class="fe fe-shield text-success"></i> Proses ini menyimpan ke form server Anda dengan aman, tanpa mengacaukan pembersihan sistem.</p>
-            </div>
-        </form>
-    </div>
+        {{-- ── Save ── --}}
+        <div style="margin-top:8px; margin-bottom:32px;">
+            <button type="submit" class="btn-save">
+                <i class="fe fe-save me-2"></i>Simpan Pengaturan
+            </button>
+        </div>
+
+    </form>
 </div>
 
-<!-- Standalone Background HTML Form untuk pembersihan paksa tanpa konflik form Setting -->
 <form id="cleanup-form" action="{{ route('admin.settings.cleanup') }}" method="POST" class="d-none">
     @csrf
 </form>
+
+@push('scripts')
+<script>
+    function toggleDayInputs(day) {
+        const cb = document.getElementById('check_' + day);
+        const inputs = document.getElementById('inputs_' + day);
+        const closed = document.getElementById('closed_text_' + day);
+        if (cb.checked) {
+            inputs.classList.remove('d-none');
+            closed.classList.add('d-none');
+        } else {
+            inputs.classList.add('d-none');
+            closed.classList.remove('d-none');
+        }
+    }
+
+    // Mode option visual toggle
+    document.querySelectorAll('.mode-option input[type=radio]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            document.querySelectorAll('.mode-option').forEach(opt => {
+                opt.classList.remove('active-green', 'active-yellow', 'active-red');
+            });
+            const label = radio.closest('.mode-option');
+            if (radio.value === 'office_hour') label.classList.add('active-green');
+            else if (radio.value === 'outside_office_hour') label.classList.add('active-yellow');
+            else label.classList.add('active-red');
+        });
+    });
+</script>
+@endpush
+
 @endsection

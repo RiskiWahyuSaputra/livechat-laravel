@@ -156,22 +156,6 @@
 @section('content')
 <div class="laporan-page">
 
-    {{-- Tab Navigation --}}
-    <nav class="lap-tab-nav">
-        <a href="{{ route('admin.laporan.general') }}" class="lap-tab-item active">
-            <i class="fe fe-bar-chart-2"></i> General
-        </a>
-        <a href="{{ route('admin.laporan.performa-agen') }}" class="lap-tab-item">
-            <i class="fe fe-users"></i> Performa Agen
-        </a>
-        <a href="{{ route('admin.laporan.performa-bot') }}" class="lap-tab-item">
-            <i class="fe fe-cpu"></i> Performa Bot
-        </a>
-        <a href="{{ route('admin.laporan.contact') }}" class="lap-tab-item">
-            <i class="fe fe-user"></i> Contact
-        </a>
-    </nav>
-
     {{-- Header --}}
     <div class="lp-header d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
@@ -354,8 +338,6 @@
                     $catPalette = ['#4f46e5','#10b981','#f59e0b','#ef4444','#06b6d4'];
                 @endphp
                 <div style="display:flex;flex-direction:column;gap:12px;">
-                    @foreach($categoryBreakdown as $i => [$catName, $catCount])
-                    @endforeach
                     @php $catIdx = 0; @endphp
                     @foreach($categoryBreakdown as $catName => $catCount)
                     @php
