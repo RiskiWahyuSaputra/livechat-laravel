@@ -12,7 +12,7 @@ class ChatHistoryController extends Controller
     public function index(Request $request)
     {
         $archivesQuery = Conversation::onlyTrashed()
-            ->with(['customer', 'admin'])
+            ->with(['customer', 'admin', 'tags'])
             ->latest('deleted_at');
 
         if ($request->filled('search')) {
@@ -22,6 +22,13 @@ class ChatHistoryController extends Controller
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('contact', 'like', "%{$search}%")
                     ->orWhere('origin', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('tag_ids')) {
+            $tagIds = is_array($request->tag_ids) ? $request->tag_ids : explode(',', $request->tag_ids);
+            $archivesQuery->whereHas('tags', function ($q) use ($tagIds) {
+                $q->whereIn('tags.id', $tagIds);
             });
         }
 
@@ -56,7 +63,9 @@ class ChatHistoryController extends Controller
             ->orderBy('problem_category')
             ->pluck('problem_category');
 
-        return view('admin.history.index', compact('archives', 'problemCategories'));
+        $tags = \App\Models\Tag::all();
+
+        return view('admin.history.index', compact('archives', 'problemCategories', 'tags'));
     }
 
     public function show($id)

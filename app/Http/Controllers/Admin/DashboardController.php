@@ -172,9 +172,10 @@ class DashboardController extends Controller
         $sortOrder = $request->get('sort', 'recent') === 'oldest' ? 'asc' : 'desc';
         $search = trim((string) $request->get('search', ''));
         $quickFilters = array_values(array_filter(explode(',', (string) $request->get('quick_filters', ''))));
+        $tagIds = array_values(array_filter(explode(',', (string) $request->get('tag_ids', ''))));
         $unreadOnly = $request->boolean('unread_only');
 
-        $mainQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
+        $mainQuery = Conversation::with(['customer', 'admin', 'tags', 'messages' => function ($query) {
                 $query->latest()->limit(1);
             }])
             ->whereIn('status', ['pending', 'queued', 'active', 'closed'])
@@ -185,6 +186,12 @@ class DashboardController extends Controller
                         ->where('name', 'Guest');
                 });
             });
+
+        if (!empty($tagIds)) {
+            $mainQuery->whereHas('tags', function ($q) use ($tagIds) {
+                $q->whereIn('tags.id', $tagIds);
+            });
+        }
 
         if ($search !== '') {
             $needle = '%' . mb_strtolower($search) . '%';

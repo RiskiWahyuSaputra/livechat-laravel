@@ -674,6 +674,9 @@
                                     </li>
                                 </ul>
                             </li>
+                            <li class="{{ request()->routeIs('admin.tags.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.tags.index') }}"><i class="fe fe-tag"></i> <span>Manajemen Tag</span></a>
+                            </li>
                         @endif
 
                         @if(auth('admin')->user()->hasPermission('manage_roles'))
