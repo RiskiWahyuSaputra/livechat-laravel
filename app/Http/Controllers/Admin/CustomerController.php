@@ -32,6 +32,19 @@ class CustomerController extends Controller
             }
         }
 
+        if ($request->filled('date_range')) {
+            $dates = explode(' - ', $request->string('date_range')->toString());
+            if (count($dates) === 2) {
+                try {
+                    $startDate = \Carbon\Carbon::createFromFormat('d/m/Y', trim($dates[0]))->startOfDay();
+                    $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', trim($dates[1]))->endOfDay();
+                    $query->whereBetween('updated_at', [$startDate, $endDate]);
+                } catch (\Throwable $e) {
+                    // Ignore invalid date format
+                }
+            }
+        }
+
         $customers = $query->with(['conversations' => function($q) {
             $q->latest(); // Default: hanya yang non-trashed
         }])->latest()->paginate(15)->withQueryString();
