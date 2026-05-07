@@ -601,6 +601,9 @@
                                 <a href="{{ route('admin.roles.index') }}"><i class="fe fe-list"></i> <span>Daftar
                                         Role</span></a>
                             </li>
+                            <li class="{{ request()->routeIs('admin.agents.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.agents.index') }}"><i class="fe fe-user-check"></i> <span>Manajemen Agent</span></a>
+                            </li>
                         @endif
 
                         @if(auth('admin')->user()->is_superadmin)

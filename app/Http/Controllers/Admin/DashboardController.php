@@ -260,19 +260,19 @@ class DashboardController extends Controller
             return response()->json(['error' => 'Anda sudah mencapai batas maksimum chat aktif.'], 422);
         }
 
-        // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)  
-        $updated = Conversation::where('id', $conversation->id)
-            ->whereIn('status', ['pending', 'queued'])
-            ->where(function($q) use ($admin) {
-                $q->whereNull('admin_id')
-                  ->orWhere('admin_id', $admin->id);
-            })
-            ->update([
-                'admin_id'       => $admin->id,
-                'status'         => 'active',
-                'bot_phase'      => 'off', // Matikan bot saat admin mengambil alih
-                'queue_position' => null,
-            ]);
+         // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)  
+         $updated = Conversation::where('id', $conversation->id)
+             ->whereIn('status', ['pending', 'queued'])
+             ->where(function($q) use ($admin) {
+                 $q->whereNull('admin_id')
+                   ->orWhere('admin_id', $admin->id);
+             })
+             ->update([
+                 'admin_id'       => $admin->id,
+                 'status'         => 'active',
+                 'bot_phase'      => 'off', // Matikan bot saat admin mengambil alih
+                 'queue_position' => null,
+             ]);
 
         if (!$updated) {
             return response()->json([

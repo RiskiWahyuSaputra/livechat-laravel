@@ -279,7 +279,7 @@ class AnalyticsService
         return $workload;
     }
 
-    /**
+/**
      * Calculate average response time for an agent (in seconds)
      */
     private function calculateAvgResponseTime($adminId)

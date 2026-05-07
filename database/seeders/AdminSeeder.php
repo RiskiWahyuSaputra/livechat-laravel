@@ -21,7 +21,7 @@ class AdminSeeder extends Seeder
             Admin::create([
                 'username' => 'admin',
                 'email' => 'admin@example.com',
-                'password' => Hash::make('password'),
+                'password' => 'password',
                 'role' => 'super_admin',
                 'is_superadmin' => true,
                 'permissions' => null,
@@ -40,7 +40,7 @@ class AdminSeeder extends Seeder
             Admin::create([
                 'username' => 'agent',
                 'email' => 'agent@example.com',
-                'password' => Hash::make('password'),
+                'password' => 'password',
                 'role' => 'agent',
                 'is_superadmin' => false,
                 'permissions' => null,
@@ -60,7 +60,7 @@ class AdminSeeder extends Seeder
             Admin::create([
                 'username' => 'agent1',
                 'email' => 'agent1@example.com',
-                'password' => Hash::make('password'),
+                'password' => 'password',
                 'role' => 'agent1',
                 'role_id' => $role ? $role->id : null,
                 'is_superadmin' => false,
@@ -77,7 +77,7 @@ class AdminSeeder extends Seeder
             Admin::create([
                 'username' => 'agent2',
                 'email' => 'agent2@example.com',
-                'password' => Hash::make('password'),
+                'password' => 'password',
                 'role' => 'agent2',
                 'role_id' => $role ? $role->id : null,
                 'is_superadmin' => false,

@@ -14,6 +14,7 @@ class Conversation extends Model
         'admin_id',
         'status',
         'bot_phase',
+        'selected_menu_id',
         'queue_position',
         'problem_category',
         'last_message_at',

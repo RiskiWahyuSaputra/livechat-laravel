@@ -139,6 +139,13 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
             // --- Menu 10: Bot Menus Management ---
             Route::post('/bot-menus/greeting', [App\Http\Controllers\Admin\BotMenuController::class, 'updateGreeting'])->name('bot-menus.greeting');
             Route::resource('/bot-menus', App\Http\Controllers\Admin\BotMenuController::class)->except(['show', 'create', 'edit']);
+
+            // --- Menu 11: Agent Management ---
+            Route::get('/agents', [App\Http\Controllers\Admin\AgentManagementController::class, 'index'])->name('agents.index');
+            Route::patch('/agents/{admin}/division', [App\Http\Controllers\Admin\AgentManagementController::class, 'updateAgentDivision'])->name('agents.update-division');
+            Route::post('/divisions', [App\Http\Controllers\Admin\AgentManagementController::class, 'storeDivision'])->name('divisions.store');
+            Route::put('/divisions/{division}', [App\Http\Controllers\Admin\AgentManagementController::class, 'updateDivision'])->name('divisions.update');
+            Route::delete('/divisions/{division}', [App\Http\Controllers\Admin\AgentManagementController::class, 'destroyDivision'])->name('divisions.destroy');
         }
         );
     });

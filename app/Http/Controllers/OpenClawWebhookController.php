@@ -53,7 +53,7 @@ class OpenClawWebhookController extends Controller
         }
 
         if ($message['external_id']) {
-            Cache::put('openclaw_whatsapp_inbound_' . $message['external_id'], true, now()->addMinutes(30));
+            Cache::put('openclaw_whatsapp_inbound_' . $message['external_id'], true, now()->addMinutes(5));
         }
 
         $user = $this->findOrCreateWhatsappUser($message);
@@ -173,8 +173,12 @@ class OpenClawWebhookController extends Controller
     {
         $contact = $this->normalizeContact($message['from']);
         $email = ltrim($contact ?? ('wa_' . uniqid()), '+') . '@livechat.best';
+        $name = $message['sender_name'] ?: 'Pelanggan WhatsApp';
 
-        $user = User::where('contact', $contact)->orWhere('email', $email)->first();
+        /** @var User $user */
+        $user = User::where('contact', $contact)->first()
+            ?? User::where('email', $email)->first();
+
         if ($user) {
             $user->update([
                 'name' => $message['sender_name'] ?: $user->name,
@@ -185,14 +189,17 @@ class OpenClawWebhookController extends Controller
             return $user;
         }
 
-        return User::create([
-            'name' => $message['sender_name'] ?: 'Pelanggan WhatsApp',
-            'email' => $email,
-            'contact' => $contact,
-            'origin' => 'WhatsApp',
-            'password' => bcrypt('guest123'),
-            'is_online' => true,
-        ]);
+        // firstOrCreate is atomic at DB level because contact has a unique index
+        return User::firstOrCreate(
+            ['contact' => $contact],
+            [
+                'name' => $name,
+                'email' => $email,
+                'origin' => 'WhatsApp',
+                'password' => bcrypt('guest123'),
+                'is_online' => true,
+            ]
+        );
     }
 
     private function normalizePayload(array $payload): ?array

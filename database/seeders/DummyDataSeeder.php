@@ -125,7 +125,7 @@ class DummyDataSeeder extends Seeder
                     ['email' => $agent['email']],
                     [
                         'username' => $agent['username'],
-                        'password' => Hash::make('password'),
+                        'password' => 'password',
                         'role' => 'agent',
                         'is_superadmin' => false,
                         'status' => $agent['status'],
@@ -167,7 +167,7 @@ class DummyDataSeeder extends Seeder
                 'name' => $names[$i],
                 'email' => strtolower(str_replace(' ', '.', $names[$i])) . '@gmail.com',
                 'email_verified_at' => Carbon::now()->subDays(rand(1, 7)), // 7 days backwards
-                'password' => Hash::make('password'),
+                'password' => 'password',
                 'is_online' => $i < 15, // 15 online users
                 'is_blocked' => rand(1, 100) > 95, // 5% blocked
                 'contact' => '+6281' . rand(10000000, 99999999),

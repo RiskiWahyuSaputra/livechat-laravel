@@ -30,6 +30,7 @@ Thumbs.db
 branches.txt
 apache_*.conf
 apache_files.txt
+CLAUDE.md
 
 undefined/temp/
 node-compile-cache/

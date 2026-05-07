@@ -20,6 +20,7 @@ class Admin extends Authenticatable
         'status',
         'max_active_chats',
         'level',
+        'division',
     ];
 
     protected $hidden = [

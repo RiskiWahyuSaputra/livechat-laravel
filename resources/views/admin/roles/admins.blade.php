@@ -8,7 +8,7 @@
 const adminRolesData = {
     showModal: false,
     isEdit: false,
-    form: { id: '', username: '', email: '', password: '', role: '', is_superadmin: false, permissions: [], level: 1 },
+    form: { id: '', username: '', email: '', password: '', role: '', is_superadmin: false, permissions: [], level: 1, division: '' },
     availablePermissions: {{ Js::from($permissions) }},
     rolesList: {{ Js::from($rolesList) }},
     permissionGroups: {
@@ -61,7 +61,7 @@ const adminRolesData = {
     openCreate() {
         this.isEdit = false;
         const defaultRole = this.getDefaultRole();
-        this.form = { id: '', username: '', email: '', password: '', role: defaultRole, is_superadmin: false, permissions: [], level: this.getRoleLevel(defaultRole) };
+        this.form = { id: '', username: '', email: '', password: '', role: defaultRole, is_superadmin: false, permissions: [], level: this.getRoleLevel(defaultRole), division: '' };
         this.showModal = true;
     },
     openEdit(admin) {
@@ -74,7 +74,8 @@ const adminRolesData = {
             role: admin.role,
             is_superadmin: Boolean(admin.is_superadmin), 
             permissions: Array.isArray(admin.permissions) ? admin.permissions : (admin.permissions ? Object.values(admin.permissions) : []),
-            level: admin.level || 1
+            level: admin.level || 1,
+            division: admin.division || ''
         };
         this.showModal = true;
     },
@@ -148,6 +149,7 @@ function confirmDelete(e, isSuperadmin) {
                             <thead class="thead-light">
                                 <tr>
                                     <th>Administrator</th>
+                                    <th>Divisi</th>
                                     <th>Level Agent</th>
                                     <th>Akses Modul</th>
                                     <th class="text-end">Aksi</th>
@@ -168,6 +170,21 @@ function confirmDelete(e, isSuperadmin) {
                                                 <br><small class="text-muted">{{ $adm->email }}</small>
                                             </span>
                                         </div>
+                                    </td>
+                                    <td>
+                                        @php
+                                            $divisionLabels = [
+                                                'cyber'            => ['label' => 'Cyber',            'class' => 'bg-primary'],
+                                                'topup'            => ['label' => 'Topup',            'class' => 'bg-success'],
+                                                'customer_service' => ['label' => 'Customer Service', 'class' => 'bg-info'],
+                                            ];
+                                            $div = $divisionLabels[$adm->division] ?? null;
+                                        @endphp
+                                        @if($div)
+                                            <span class="badge {{ $div['class'] }}">{{ $div['label'] }}</span>
+                                        @else
+                                            <span class="text-muted small">—</span>
+                                        @endif
                                     </td>
                                     <td>
                                         <span class="badge {{ $adm->level == 1 ? 'bg-danger' : 'bg-primary' }}">
@@ -191,7 +208,7 @@ function confirmDelete(e, isSuperadmin) {
                                         @endif
                                     </td>
                                     <td class="text-end">
-                                        <button @click="openEdit({{ collect($adm)->merge(['permissions' => $adm->permissions])->toJson() }})" class="btn btn-sm btn-white text-primary me-2"><i class="fe fe-edit"></i></button>
+                                        <button @click="openEdit({{ collect($adm)->merge(['permissions' => $adm->permissions, 'division' => $adm->division])->toJson() }})" class="btn btn-sm btn-white text-primary me-2"><i class="fe fe-edit"></i></button>
                                         @if(auth('admin')->id() !== $adm->id)
                                         <form action="{{ route('admin.admins.destroy', $adm->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete(event, {{ $adm->is_superadmin ? 'true' : 'false' }});">
                                             @csrf
@@ -272,6 +289,16 @@ function confirmDelete(e, isSuperadmin) {
                                     <label class="form-label font-weight-bold">Level Agent (1 = Tertinggi)</label>
                                     <input type="number" name="level" x-model="form.level" class="form-control" min="1" required :disabled="form.role === 'super_admin'">
                                     <small class="text-muted" x-show="form.role === 'super_admin'">Superadmin otomatis Level 1.</small>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="form-label font-weight-bold">Divisi</label>
+                                    <select name="division" x-model="form.division" class="form-select">
+                                        <option value="">— Tidak ada divisi —</option>
+                                        <option value="cyber">Cyber</option>
+                                        <option value="topup">Topup</option>
+                                        <option value="customer_service">Customer Service</option>
+                                    </select>
+                                    <small class="text-muted">Satu agent hanya bisa masuk satu divisi.</small>
                                 </div>
                                 <div>
                                     <label class="form-label d-block text-primary mb-3"><i class="fe fe-shield"></i> Penetapan Hak Akses</label>
