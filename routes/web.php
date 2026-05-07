@@ -87,6 +87,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
 
             // --- Menu 4: Quick Replies Management ---
+            Route::get('/quick-replies/list', [App\Http\Controllers\Admin\QuickReplyController::class, 'list'])
+                ->name('quick-replies.list');
             Route::middleware('admin.permission:manage_quick_replies')->group(function () {
                 Route::resource('/quick-replies', App\Http\Controllers\Admin\QuickReplyController::class)->except(['show', 'create', 'edit']);
             });
@@ -131,6 +133,14 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
                 Route::get('/export/excel', [App\Http\Controllers\Admin\ReportController::class, 'exportExcel'])->name('export.excel');
                 Route::get('/export/pdf', [App\Http\Controllers\Admin\ReportController::class, 'exportPdf'])->name('export.pdf');
                 Route::get('/api-data', [App\Http\Controllers\Admin\ReportController::class, 'apiData'])->name('api-data');
+            });
+
+            // --- Contact Report ---
+            Route::middleware('admin.permission:view_contact_report')->group(function () {
+                Route::get('/contact-report', [\App\Http\Controllers\Admin\ContactReportController::class, 'index'])
+                    ->name('contact-report.index');
+                Route::get('/contact-report/data', [\App\Http\Controllers\Admin\ContactReportController::class, 'data'])
+                    ->name('contact-report.data');
             });
 
             // --- Menu 9: Settings ---

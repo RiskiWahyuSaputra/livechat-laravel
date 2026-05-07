@@ -592,6 +592,15 @@
                             </li>
                         @endif
 
+                        @if(auth('admin')->user()->hasPermission('view_contact_report'))
+                            <li class="{{ request()->routeIs('admin.contact-report.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.contact-report.index') }}">
+                                    <i class="fe fe-bar-chart-2"></i>
+                                    <span>Contact Report</span>
+                                </a>
+                            </li>
+                        @endif
+
                         @if(auth('admin')->user()->hasPermission('manage_roles'))
                             <li class="{{ request()->routeIs('admin.admins.*') ? 'active' : '' }}">
                                 <a href="{{ route('admin.admins.index') }}"><i class="fe fe-shield"></i> <span>Hak

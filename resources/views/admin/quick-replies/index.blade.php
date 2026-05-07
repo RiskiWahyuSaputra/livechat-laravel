@@ -6,16 +6,32 @@
 <div x-data="{
     showModal: false,
     isEdit: false,
-    form: { id: '', title: '', content: '' },
+    form: { id: '', command: '', content: '' },
+    commandError: '',
     openCreate() {
         this.isEdit = false;
-        this.form = { id: '', title: '', content: '' };
+        this.form = { id: '', command: '', content: '' };
+        this.commandError = '';
         this.showModal = true;
     },
     openEdit(reply) {
         this.isEdit = true;
-        this.form = { id: reply.id, title: reply.title, content: reply.content };
+        this.form = { id: reply.id, command: reply.command, content: reply.content };
+        this.commandError = '';
         this.showModal = true;
+    },
+    submitForm(event) {
+        this.commandError = '';
+        if (!this.form.command) {
+            this.commandError = 'Field command wajib diisi.';
+            event.preventDefault();
+            return;
+        }
+        if (!/^[a-z0-9_]+$/.test(this.form.command)) {
+            this.commandError = 'Command hanya boleh mengandung huruf kecil, angka, dan underscore.';
+            event.preventDefault();
+            return;
+        }
     }
 }">
     <div class="row">
@@ -37,7 +53,7 @@
                         <table class="table table-center table-hover">
                             <thead class="thead-light">
                                 <tr>
-                                    <th>Judul / Singkatan</th>
+                                    <th>Command</th>
                                     <th>Isi Pesan</th>
                                     <th class="text-end">Aksi</th>
                                 </tr>
@@ -45,7 +61,7 @@
                             <tbody>
                                 @forelse($replies as $reply)
                                 <tr>
-                                    <td><strong>{{ $reply->title }}</strong></td>
+                                    <td><strong>/{{ $reply->command }}</strong></td>
                                     <td><div class="text-wrap" style="max-width: 400px;">{{ $reply->content }}</div></td>
                                     <td class="text-end">
                                         <button @click="openEdit({{ $reply->toJson() }})" class="btn btn-sm btn-white text-primary me-2"><i class="fe fe-edit"></i></button>
@@ -77,7 +93,7 @@
     <div class="modal fade" :class="showModal ? 'show d-block' : ''" tabindex="-1" x-show="showModal" x-cloak>
         <div class="modal-dialog">
             <div class="modal-content">
-                <form :action="isEdit ? '/admin/quick-replies/' + form.id : '/admin/quick-replies'" method="POST">
+                <form :action="isEdit ? '/admin/quick-replies/' + form.id : '/admin/quick-replies'" method="POST" @submit="submitForm($event)">
                     @csrf
                     <template x-if="isEdit">
                         <input type="hidden" name="_method" value="PUT">
@@ -88,8 +104,15 @@
                     </div>
                     <div class="modal-body">
                         <div class="form-group mb-3">
-                            <label class="form-label">Judul / Singkatan</label>
-                            <input type="text" name="title" x-model="form.title" class="form-control" required>
+                            <label class="form-label">Command</label>
+                            <div class="input-group">
+                                <span class="input-group-text">/</span>
+                                <input type="text" name="command" x-model="form.command"
+                                       @input="commandError = ''"
+                                       class="form-control" :class="commandError ? 'is-invalid' : ''"
+                                       placeholder="contoh: cso_compress">
+                            </div>
+                            <div class="invalid-feedback" x-show="commandError" x-text="commandError"></div>
                         </div>
                         <div class="form-group mb-3">
                             <label class="form-label">Isi Pesan</label>

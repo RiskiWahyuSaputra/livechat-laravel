@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class QuickReply extends Model
 {
-    protected $fillable = ['title', 'content'];
+    protected $fillable = ['title', 'command', 'content'];
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
+use App\Models\QuickReply;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Services\MessageSearchService;
@@ -239,8 +240,9 @@ class DashboardController extends Controller
         $conversation = Conversation::withTrashed()->findOrFail($id);
         $admin    = Auth::guard('admin')->user();
         $messages = $conversation->messages()->get();
+        $quickReplies = QuickReply::select('id', 'command', 'content')->orderBy('command')->get();
 
-        return view('admin.conversation', compact('conversation', 'messages', 'admin'));
+        return view('admin.conversation', compact('conversation', 'messages', 'admin', 'quickReplies'));
     }
 
     /**

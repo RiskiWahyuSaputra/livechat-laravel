@@ -224,7 +224,8 @@
             position: absolute; bottom: calc(100% + 8px); left: 0; right: 0;
             background: #fff; border: 1px solid #e2e8f0;
             border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-            z-index: 50; overflow: hidden; max-height: 200px; overflow-y: auto;
+            z-index: 50; overflow: hidden; max-height: 300px; overflow-y: auto;
+            min-width: 320px;
         }
         .slash-dropdown-header {
             padding: 8px 14px; font-size: 10px; font-weight: 700; color: #94a3b8;
@@ -371,6 +372,52 @@
             <!-- Input Row -->
             <div class="input-row" :class="messageType === 'whisper' ? 'whisper-mode' : ''" style="position:relative;">
 
+                <!-- Command Popup -->
+                <div class="slash-dropdown" x-show="showCommandPopup" x-cloak @click.outside="showCommandPopup = false">
+                    <!-- Recently Used Section -->
+                    <template x-if="filteredCommands.recent.length > 0">
+                        <div>
+                            <div class="slash-dropdown-header">
+                                <span>Terakhir Digunakan</span>
+                            </div>
+                            <template x-for="(reply, idx) in filteredCommands.recent" :key="'r-' + reply.id">
+                                <button type="button" class="slash-dropdown-item"
+                                    :class="selectedCommandIndex === idx ? 'selected' : ''"
+                                    @click="selectCommand(reply)">
+                                    <span class="fw-bold text-primary" x-text="'/' + reply.command"></span>
+                                    <span class="text-muted ms-2" x-text="reply.content.length > 80 ? reply.content.slice(0, 80) + '…' : reply.content"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- All / Filtered Commands -->
+                    <template x-if="filteredCommands.rest.length > 0">
+                        <div>
+                            <div class="slash-dropdown-header" x-show="filteredCommands.recent.length > 0">
+                                <span>Semua Command</span>
+                            </div>
+                            <template x-for="(reply, idx) in filteredCommands.rest" :key="'a-' + reply.id">
+                                <button type="button" class="slash-dropdown-item"
+                                    :class="selectedCommandIndex === (filteredCommands.recent.length + idx) ? 'selected' : ''"
+                                    @click="selectCommand(reply)">
+                                    <span class="fw-bold text-primary" x-text="'/' + reply.command"></span>
+                                    <span class="text-muted ms-2" x-text="reply.content.length > 80 ? reply.content.slice(0, 80) + '…' : reply.content"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Empty States -->
+                    <div x-show="filteredCommands.recent.length === 0 && filteredCommands.rest.length === 0 && quickReplies.length === 0"
+                         class="slash-dropdown-item text-muted" style="cursor:default;">
+                        Belum ada balasan cepat tersedia.
+                    </div>
+                    <div x-show="filteredCommands.recent.length === 0 && filteredCommands.rest.length === 0 && quickReplies.length > 0"
+                         class="slash-dropdown-item text-muted" style="cursor:default;"
+                         x-text="'Tidak ada command yang cocok dengan \'' + commandFilter + '\''">
+                    </div>
+                </div>
 
                 <!-- Internal Note Toggle -->
                 <button type="button" @click="messageType = messageType === 'text' ? 'whisper' : 'text'"
@@ -419,6 +466,10 @@
                 newMessage: '',
                 messageType: 'text', 
                 quickReplies: {!! json_encode($quickReplies ?? []) !!},
+                showCommandPopup: false,
+                commandFilter: '',
+                selectedCommandIndex: -1,
+                recentlyUsed: [],
                 isSending: false,
                 isTyping: false,
                 typingTimeout: null,
@@ -431,10 +482,46 @@
 
                 handleInput(e) {
                     this.sendTypingEvent(true);
+                    this.checkCommandTrigger();
+                },
+
+                checkCommandTrigger() {
+                    const val = this.newMessage;
+                    const slashPos = val.lastIndexOf('/');
+                    // Trigger jika "/" adalah karakter pertama atau didahului spasi
+                    if (slashPos !== -1 && (slashPos === 0 || val[slashPos - 1] === ' ')) {
+                        this.commandFilter = val.slice(slashPos + 1);
+                        this.showCommandPopup = true;
+                        this.selectedCommandIndex = -1;
+                    } else {
+                        this.showCommandPopup = false;
+                        this.commandFilter = '';
+                    }
                 },
 
                 handleKeydown(e) {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (this.showCommandPopup) {
+                        const items = [...this.filteredCommands.recent, ...this.filteredCommands.rest];
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            this.selectedCommandIndex = Math.min(
+                                this.selectedCommandIndex + 1, items.length - 1
+                            );
+                            return;
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            this.selectedCommandIndex = Math.max(this.selectedCommandIndex - 1, -1);
+                            return;
+                        } else if (e.key === 'Enter' && this.selectedCommandIndex >= 0) {
+                            e.preventDefault();
+                            this.selectCommand(items[this.selectedCommandIndex]);
+                            return;
+                        } else if (e.key === 'Escape') {
+                            this.showCommandPopup = false;
+                            return;
+                        }
+                    }
+                    if (e.key === 'Enter' && !e.shiftKey && !this.showCommandPopup) {
                         e.preventDefault();
                         this.sendMessage();
                     }
@@ -444,6 +531,14 @@
                 init() {
                     this.scrollToBottom();
                     this.listenForEvents();
+
+                    // Load recently used from localStorage
+                    try {
+                        const stored = localStorage.getItem('qr_recently_used');
+                        if (stored) {
+                            this.recentlyUsed = JSON.parse(stored);
+                        }
+                    } catch(e) {}
 
                     // Inactivity Timer
                     setInterval(() => {
@@ -490,6 +585,22 @@
                 get canReply() {
                     if (this.status === 'closed') return true;
                     return this.status === 'active' && this.adminId == this.sessionAdminId;
+                },
+
+                get filteredCommands() {
+                    const filter = this.commandFilter.toLowerCase();
+                    const all = this.quickReplies.filter(r =>
+                        !filter || r.command.toLowerCase().includes(filter)
+                    );
+                    if (!filter) {
+                        const recentIds = this.recentlyUsed;
+                        const recent = recentIds
+                            .map(id => this.quickReplies.find(r => r.id === id))
+                            .filter(Boolean);
+                        const rest = all.filter(r => !recentIds.includes(r.id));
+                        return { recent, rest };
+                    }
+                    return { recent: [], rest: all };
                 },
 
                 formatMessage(text) {
@@ -760,9 +871,31 @@
                         if (anchor) anchor.scrollIntoView({behavior: 'smooth', block: 'end'});
                         else if (container) container.scrollTop = container.scrollHeight;
                     }, 50);
+                },
+
+                selectCommand(reply) {
+                    const val = this.newMessage;
+                    const slashPos = val.lastIndexOf('/');
+                    this.newMessage = val.slice(0, slashPos) + reply.content;
+                    this.showCommandPopup = false;
+                    this.commandFilter = '';
+                    this.selectedCommandIndex = -1;
+                    this.addToRecentlyUsed(reply.id);
+                    this.$nextTick(() => this.$refs.messageInput.focus());
+                },
+
+                addToRecentlyUsed(id) {
+                    let recent = this.recentlyUsed.filter(i => i !== id);
+                    recent.unshift(id);
+                    if (recent.length > 5) recent = recent.slice(0, 5);
+                    this.recentlyUsed = recent;
+                    try {
+                        localStorage.setItem('qr_recently_used', JSON.stringify(recent));
+                    } catch(e) {}
                 }
             }));
         });
     </script>
 </body>
 </html>
+
