@@ -14,6 +14,7 @@ use App\Models\Message;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\ConversationSummaryService;
 use App\Services\MessageSearchService;
 use App\Services\OpenClawWhatsappService;
 use Illuminate\Http\Request;
@@ -24,11 +25,17 @@ class DashboardController extends Controller
 {
     protected $analyticsService;
     protected $openClawWhatsappService;
+    protected $conversationSummaryService;
 
-    public function __construct(AnalyticsService $analyticsService, OpenClawWhatsappService $openClawWhatsappService)
+    public function __construct(
+        AnalyticsService $analyticsService,
+        OpenClawWhatsappService $openClawWhatsappService,
+        ConversationSummaryService $conversationSummaryService
+    )
     {
         $this->analyticsService = $analyticsService;
         $this->openClawWhatsappService = $openClawWhatsappService;
+        $this->conversationSummaryService = $conversationSummaryService;
     }
 
     /**
@@ -665,9 +672,19 @@ class DashboardController extends Controller
             && !empty($customer->contact)
             && mb_strtolower((string) $customer->origin) === 'whatsapp'
         ) {
+            $introText = "Chat kamu sudah diselesaikan oleh {$admin->username}. Terima kasih sudah menghubungi kami.";
+            $summaryPayload = $this->conversationSummaryService->summarizeConversation($conversation);
+
+            if (is_array($summaryPayload)) {
+                $this->openClawWhatsappService->sendText(
+                    $customer,
+                    $this->conversationSummaryService->formatWhatsappSummary($summaryPayload)
+                );
+            }
+
             $sent = $this->openClawWhatsappService->sendFeedbackPrompt(
                 $customer,
-                "Chat kamu sudah diselesaikan oleh {$admin->username}. Terima kasih sudah menghubungi kami.\n\nBoleh bantu beri rating untuk layanan agen kami?"
+                $introText . "\n\nBoleh bantu beri rating untuk layanan agen kami?"
             );
 
             if (!$sent) {
