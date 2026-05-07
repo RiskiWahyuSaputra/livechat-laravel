@@ -134,6 +134,58 @@ class GeminiService
         return null;
     }
 
+    public function summarizeConversationForCustomer(string $history): ?array
+    {
+        $prompt = "Berikut adalah riwayat percakapan pelanggan dengan tim support PT BEST CORPORATION SYARIAH.
+        TUGAS ANDA:
+        1. Buat ringkasan singkat dan mudah dipahami pelanggan.
+        2. Fokus pada tujuan pelanggan, jawaban yang sudah diberikan, dan status percakapan terakhir.
+        3. Abaikan basa-basi, salam, menu otomatis, dan pengulangan yang tidak penting.
+        4. Tentukan sentimen percakapan dengan salah satu nilai: Positive, Neutral, atau Negative.
+        5. Jika konteks belum cukup, tetap buat ringkasan singkat berdasarkan informasi yang ada.
+        6. Jawab HANYA dalam format JSON object asli tanpa markdown dengan struktur:
+           {
+             \"summary\": \"...\",
+             \"sentiment\": \"Positive|Neutral|Negative\"
+           }
+
+        RIWAYAT CHAT:
+        $history";
+
+        $instruction = 'Kamu adalah AI Conversation Summarizer untuk layanan pelanggan.';
+
+        if ($this->shouldUseOpenClaw()) {
+            $response = $this->openClawService->ask($prompt, $instruction);
+            $data = $this->decodeSummaryPayload($response);
+
+            if (is_array($data)) {
+                return $data;
+            }
+
+            Cache::put($this->openClawBackoffCacheKey(), true, $this->openClawBackoffSeconds);
+            Log::warning('OpenClaw tidak mengembalikan conversation summary. Fallback ke Groq/Gemini API.');
+        }
+
+        if ($this->shouldUseGroq()) {
+            $response = $this->askGroqApi($prompt, $instruction);
+            $data = $this->decodeSummaryPayload($response);
+
+            if (is_array($data)) {
+                return $data;
+            }
+
+            Log::warning('Groq tidak mengembalikan conversation summary. Fallback ke Gemini API.');
+        }
+
+        $response = $this->askGeminiApi($prompt, $instruction, [
+            $this->preferredModel,
+            'gemma-4-26b-a4b-it',
+            'gemini-2.0-flash-lite',
+        ]);
+
+        return $this->decodeSummaryPayload($response);
+    }
+
     public function isFallbackResponse(?string $response): bool
     {
         $normalized = strtolower(trim(strip_tags((string) $response)));
@@ -438,5 +490,35 @@ class GeminiService
         $data = json_decode(trim((string) $cleaned), true);
 
         return is_array($data) ? $data : null;
+    }
+
+    private function decodeSummaryPayload(?string $response): ?array
+    {
+        if (!$response) {
+            return null;
+        }
+
+        $cleaned = preg_replace('/```json|```/', '', $response);
+        $data = json_decode(trim((string) $cleaned), true);
+
+        if (!is_array($data)) {
+            return null;
+        }
+
+        $summary = trim((string) ($data['summary'] ?? ''));
+        $sentiment = ucfirst(strtolower(trim((string) ($data['sentiment'] ?? 'Neutral'))));
+
+        if ($summary === '') {
+            return null;
+        }
+
+        if (!in_array($sentiment, ['Positive', 'Neutral', 'Negative'], true)) {
+            $sentiment = 'Neutral';
+        }
+
+        return [
+            'summary' => $summary,
+            'sentiment' => $sentiment,
+        ];
     }
 }

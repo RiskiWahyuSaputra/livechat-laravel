@@ -14,9 +14,11 @@ use App\Models\Message;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 use App\Models\User;
@@ -811,6 +813,77 @@ class ChatController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function conversationSummary(Request $request)
+    {
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Sesi tidak valid.'], 401);
+        }
+
+        $latestConversation = $user->conversations()
+            ->withTrashed()
+            ->latest('updated_at')
+            ->first();
+
+        if ($latestConversation && $latestConversation->status !== 'closed') {
+            return response()->json([
+                'available' => false,
+                'message' => 'Ringkasan AI baru tersedia setelah percakapan selesai.',
+            ]);
+        }
+
+        $summarySource = $this->buildConversationSummarySource(
+            $this->getVisibleMessagesForSummary($user)
+        );
+
+        if (!$summarySource['available']) {
+            return response()->json([
+                'available' => false,
+                'message' => $summarySource['message'],
+                'message_count' => $summarySource['message_count'],
+            ]);
+        }
+
+        $cacheKey = 'chat_user_conversation_summary_' . $user->id . '_' . $summarySource['history_hash'];
+        $summary = Cache::get($cacheKey);
+
+        if (!is_array($summary)) {
+            $summary = $this->geminiService->summarizeConversationForCustomer($summarySource['history']);
+
+            if (is_array($summary)) {
+                Cache::put($cacheKey, $summary, now()->addMinutes(30));
+            }
+        }
+
+        if (!is_array($summary)) {
+            $summary = $this->buildDeterministicConversationSummary($summarySource['lines']);
+
+            if (is_array($summary)) {
+                Cache::put($cacheKey, $summary, now()->addMinutes(10));
+            }
+        }
+
+        if (!is_array($summary)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Ringkasan AI belum tersedia saat ini. Silakan coba lagi sebentar lagi.',
+                'message_count' => $summarySource['message_count'],
+                'history_hash' => $summarySource['history_hash'],
+            ]);
+        }
+
+        return response()->json([
+            'available' => true,
+            'summary' => $summary['summary'],
+            'sentiment' => $summary['sentiment'],
+            'message_count' => $summarySource['message_count'],
+            'history_hash' => $summarySource['history_hash'],
+            'updated_at' => now()->format('H:i'),
+        ]);
+    }
+
     private function findPendingFeedbackConversation(User $user): ?Conversation
     {
         return $user->conversations()
@@ -827,6 +900,252 @@ class ChatController extends Controller
     {
         return $conversation instanceof Conversation
             && $conversation->hasPendingFeedback();
+    }
+
+    private function getVisibleMessagesForSummary(User $user): Collection
+    {
+        $conversationIds = $user->conversations()->withTrashed()->pluck('id');
+
+        return Message::query()
+            ->whereIn('conversation_id', $conversationIds)
+            ->where('message_type', '!=', 'whisper')
+            ->latest('created_at')
+            ->limit(80)
+            ->get();
+    }
+
+    private function buildConversationSummarySource(Collection $messages): array
+    {
+        $lines = $messages
+            ->sortBy('created_at')
+            ->map(fn (Message $message) => $this->normalizeMessageForConversationSummary($message))
+            ->filter(fn ($line) => is_string($line) && trim($line) !== '')
+            ->values();
+
+        $messageCount = $lines->count();
+        $userLines = $lines->filter(fn (string $line) => str_starts_with($line, 'Customer:'))->count();
+        $supportLines = $lines->filter(fn (string $line) => str_starts_with($line, 'BEST AI:') || str_starts_with($line, 'Agent:'))->count();
+
+        if ($messageCount < 4 || $userLines === 0 || $supportLines === 0) {
+            return [
+                'available' => false,
+                'message' => 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.',
+                'message_count' => $messageCount,
+                'history' => '',
+                'history_hash' => null,
+                'lines' => [],
+            ];
+        }
+
+        $historyLines = $lines->slice(-40)->values();
+        $history = $historyLines->implode("\n");
+
+        return [
+            'available' => true,
+            'message' => null,
+            'message_count' => $messageCount,
+            'history' => $history,
+            'history_hash' => sha1($history),
+            'lines' => $historyLines->all(),
+        ];
+    }
+
+    private function normalizeMessageForConversationSummary(Message $message): ?string
+    {
+        if ($message->sender_type === 'system') {
+            return null;
+        }
+
+        $sender = match ($message->sender_type) {
+            'user' => 'Customer',
+            'admin' => (int) $message->sender_id === 0 ? 'BEST AI' : 'Agent',
+            default => 'Support',
+        };
+
+        $messageType = $message->message_type ?: 'text';
+
+        if ($messageType === 'image') {
+            $content = Str::startsWith((string) $message->content, 'whatsapp-media-placeholder:')
+                ? 'Mengirim gambar dari WhatsApp.'
+                : 'Mengirim gambar' . $this->conversationSummaryFileSuffix($message->content) . '.';
+        } elseif ($messageType === 'file') {
+            $content = Str::startsWith((string) $message->content, 'whatsapp-media-placeholder:')
+                ? 'Mengirim file dari WhatsApp.'
+                : 'Mengirim file' . $this->conversationSummaryFileSuffix($message->content) . '.';
+        } else {
+            $content = preg_replace('/<img\b[^>]*alt=["\']([^"\']+)["\'][^>]*>/i', ' [Gambar produk: $1] ', (string) $message->content);
+            $content = preg_replace('/<img\b[^>]*>/i', ' [Gambar produk] ', (string) $content);
+            $content = html_entity_decode(strip_tags((string) $content), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $content = preg_replace('/\s+/u', ' ', (string) $content);
+            $content = trim((string) $content);
+        }
+
+        if ($content === '') {
+            return null;
+        }
+
+        return $sender . ': ' . $content;
+    }
+
+    private function conversationSummaryFileSuffix(?string $content): string
+    {
+        $path = parse_url((string) $content, PHP_URL_PATH);
+        $filename = is_string($path) ? basename($path) : '';
+
+        return $filename !== '' ? ' (' . $filename . ')' : '';
+    }
+
+    private function buildDeterministicConversationSummary(array $lines): ?array
+    {
+        $userMessages = collect($lines)
+            ->filter(fn ($line) => is_string($line) && str_starts_with($line, 'Customer:'))
+            ->map(fn (string $line) => trim(substr($line, strlen('Customer:'))))
+            ->filter(fn (string $line) => $this->isMeaningfulSummaryLine($line))
+            ->values();
+
+        $supportMessages = collect($lines)
+            ->filter(fn ($line) => is_string($line) && (str_starts_with($line, 'BEST AI:') || str_starts_with($line, 'Agent:')))
+            ->map(function (string $line) {
+                $line = preg_replace('/^(BEST AI|Agent):\s*/', '', $line);
+
+                return trim((string) $line);
+            })
+            ->filter(fn (string $line) => $this->isMeaningfulSummaryLine($line))
+            ->values();
+
+        if ($userMessages->isEmpty() || $supportMessages->isEmpty()) {
+            return null;
+        }
+
+        $userTopic = $this->limitSummaryText(
+            $userMessages
+                ->unique()
+                ->take(2)
+                ->implode(' ')
+        );
+
+        $supportResponse = $this->limitSummaryText(
+            $supportMessages
+                ->reverse()
+                ->unique()
+                ->take(2)
+                ->reverse()
+                ->implode(' ')
+        );
+
+        $summaryParts = [];
+        if ($userTopic !== '') {
+            $summaryParts[] = 'Pelanggan membahas ' . $this->lcfirstSafe($userTopic) . '.';
+        }
+        if ($supportResponse !== '') {
+            $summaryParts[] = 'Support menanggapi dengan ' . $this->lcfirstSafe($supportResponse) . '.';
+        }
+
+        $latestSupport = trim((string) $supportMessages->last());
+        if ($latestSupport !== '' && $latestSupport !== $supportResponse) {
+            $summaryParts[] = 'Status terakhir: ' . $this->lcfirstSafe($this->limitSummaryText($latestSupport, 160)) . '.';
+        }
+
+        $summaryText = trim(implode(' ', $summaryParts));
+        if ($summaryText === '') {
+            return null;
+        }
+
+        return [
+            'summary' => $summaryText,
+            'sentiment' => $this->detectDeterministicSentiment($userMessages, $supportMessages),
+        ];
+    }
+
+    private function detectDeterministicSentiment(Collection $userMessages, Collection $supportMessages): string
+    {
+        $allText = Str::lower($userMessages->implode(' ') . ' ' . $supportMessages->implode(' '));
+
+        $negativeSignals = [
+            'kendala',
+            'gagal',
+            'error',
+            'tidak bisa',
+            'belum bisa',
+            'komplain',
+            'masalah',
+            'bingung',
+            'maaf, sistem best ai lagi mengalami kendala',
+        ];
+
+        foreach ($negativeSignals as $signal) {
+            if (str_contains($allText, $signal)) {
+                return 'Negative';
+            }
+        }
+
+        $positiveSignals = [
+            'terima kasih',
+            'sudah jelas',
+            'cukup membantu',
+            'sudah paham',
+            'baik',
+            'siap',
+            'berhasil',
+            'sudah bisa',
+        ];
+
+        foreach ($positiveSignals as $signal) {
+            if (str_contains($allText, $signal)) {
+                return 'Positive';
+            }
+        }
+
+        return 'Neutral';
+    }
+
+    private function isMeaningfulSummaryLine(string $line): bool
+    {
+        $normalized = Str::lower(trim($line));
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        $ignoredLines = [
+            'agent',
+            'hubungi agent',
+            'tanya lagi',
+            'lanjut',
+            'menu',
+            'menu utama',
+        ];
+
+        return !in_array($normalized, $ignoredLines, true);
+    }
+
+    private function limitSummaryText(string $text, int $maxLength = 220): string
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', $text));
+
+        if ($text === '') {
+            return '';
+        }
+
+        return Str::limit($text, $maxLength, '...');
+    }
+
+    private function lcfirstSafe(string $text): string
+    {
+        $text = trim($text);
+
+        if ($text === '') {
+            return '';
+        }
+
+        $first = Str::substr($text, 0, 1);
+        $second = Str::substr($text, 1, 1);
+
+        if ($second !== '' && Str::upper($second) === $second) {
+            return $text;
+        }
+
+        return Str::lower($first) . Str::substr($text, 1);
     }
 
     private function handleBotResponse(Conversation $conversation, string $userMessage): array
