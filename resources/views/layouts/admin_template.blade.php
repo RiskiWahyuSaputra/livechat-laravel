@@ -643,6 +643,39 @@
                             <li class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                                 <a href="{{ route('admin.reports.index') }}"><i class="fe fe-users"></i> <span>Data Pelanggan</span></a>
                             </li>
+                            <li class="{{ request()->routeIs('admin.laporan.*') ? 'active' : '' }}">
+                                <a href="javascript:void(0);" class="lap-parent-link" onclick="toggleLaporanMenu()">
+                                    <i class="fe fe-bar-chart-2"></i>
+                                    <span>Laporan</span>
+                                    <i id="laporan-chevron" class="fe fe-chevron-right lap-chevron {{ request()->routeIs('admin.laporan.*') ? 'open' : '' }}"></i>
+                                </a>
+                                <ul id="laporan-submenu" class="lap-submenu {{ request()->routeIs('admin.laporan.*') ? 'open' : '' }}">
+                                    <li class="{{ request()->routeIs('admin.laporan.general') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.general') }}">
+                                            <i class="fe fe-bar-chart-2"></i>
+                                            <span>General</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.performa-agen') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.performa-agen') }}">
+                                            <i class="fe fe-users"></i>
+                                            <span>Performa Agen</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.performa-bot') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.performa-bot') }}">
+                                            <i class="fe fe-cpu"></i>
+                                            <span>Performa Bot</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.contact') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.contact') }}">
+                                            <i class="fe fe-user"></i>
+                                            <span>Contact</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
                             <li class="{{ request()->routeIs('admin.tags.*') ? 'active' : '' }}">
                                 <a href="{{ route('admin.tags.index') }}"><i class="fe fe-tag"></i> <span>Manajemen Tag</span></a>
                             </li>
