@@ -597,8 +597,7 @@
                                 <a href="{{ route('admin.admins.index') }}"><i class="fe fe-shield"></i> <span>User Management</span></a>
                             </li>
                             <li class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.roles.index') }}"><i class="fe fe-list"></i> <span>Daftar
-                                        Role</span></a>
+                                <a href="{{ route('admin.roles.index') }}"><i class="fe fe-list"></i> <span>Hak Akses</span></a>
                             </li>
                         @endif
 
