@@ -145,6 +145,16 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
             // --- Menu 10: Bot Menus Management ---
             Route::post('/bot-menus/greeting', [App\Http\Controllers\Admin\BotMenuController::class, 'updateGreeting'])->name('bot-menus.greeting');
             Route::resource('/bot-menus', App\Http\Controllers\Admin\BotMenuController::class)->except(['show', 'create', 'edit']);
+
+            // --- Menu 11: Tags Management ---
+            Route::middleware('admin.permission:view_chat')->group(function () {
+                Route::get('/tags', [App\Http\Controllers\Admin\TagController::class, 'index'])->name('tags.index');
+                Route::post('/tags', [App\Http\Controllers\Admin\TagController::class, 'store'])->name('tags.store');
+                Route::put('/tags/{tag}', [App\Http\Controllers\Admin\TagController::class, 'update'])->name('tags.update');
+                Route::delete('/tags/{tag}', [App\Http\Controllers\Admin\TagController::class, 'destroy'])->name('tags.destroy');
+                Route::post('/conversation/{conversation}/tags', [App\Http\Controllers\Admin\TagController::class, 'syncConversationTags'])->name('conversation.tags.sync');
+                Route::get('/conversation/{conversation}/tags', [App\Http\Controllers\Admin\TagController::class, 'getConversationTags'])->name('conversation.tags.get');
+            });
         }
         );
     });
