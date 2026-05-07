@@ -439,6 +439,57 @@
         body.dark-mode .btn-close {
             filter: invert(1) grayscale(100%) brightness(200%);
         }
+
+        /* ===== Laporan Submenu ===== */
+        /* .sidebar-menu ul specificity = 0-1-1, so use 0-2-0 to win */
+        .sidebar-menu .lap-submenu {
+            list-style: none !important;
+            padding-top: 2px !important;
+            padding-bottom: 4px !important;
+            margin: 0 !important;
+            overflow: hidden;
+        }
+        .lap-submenu li a {
+            display: flex !important;
+            align-items: center !important;
+            padding: 5px 16px 5px 48px !important;
+            font-size: 12.5px !important;
+            color: #a0a0a0;
+            border-radius: 0;
+            line-height: 1.4;
+            transition: background 0.2s, color 0.2s;
+        }
+        .lap-submenu li a:hover {
+            color: #fff !important;
+            background: rgba(255,255,255,0.08) !important;
+        }
+        .lap-submenu li.active a {
+            color: #fff !important;
+            font-weight: 600;
+        }
+        .lap-submenu li a i {
+            font-size: 13px !important;
+            margin-right: 8px !important;
+            width: 16px !important;
+            flex-shrink: 0;
+        }
+        .lap-parent-link {
+            display: flex !important;
+            align-items: center !important;
+            cursor: pointer;
+        }
+        .lap-chevron {
+            margin-left: auto;
+            font-size: 11px;
+            transition: transform 0.25s ease;
+            opacity: 0.5;
+        }
+        .lap-chevron.open {
+            transform: rotate(90deg);
+        }
+        body.dark-mode .lap-submenu li a { color: #888; }
+        body.dark-mode .lap-submenu li a:hover,
+        body.dark-mode .lap-submenu li.active a { color: #fff !important; }
     </style>
 
     @stack('styles')
@@ -587,8 +638,35 @@
                                 <a href="{{ route('admin.customers.index') }}"><i class="fe fe-users"></i> <span>Data
                                         Pelanggan</span></a>
                             </li>
-                            <li class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.reports.index') }}"><i class="fe fe-file-text"></i> <span>Laporan</span></a>
+                            {{-- Laporan Dropdown --}}
+                            <li class="{{ request()->routeIs('admin.laporan.*') ? 'active' : '' }}">
+                                <a href="javascript:void(0);" class="lap-parent-link" onclick="toggleLaporanMenu()">
+                                    <i class="fe fe-file-text"></i>
+                                    <span>Laporan</span>
+                                    <i class="fe fe-chevron-right lap-chevron{{ request()->routeIs('admin.laporan.*') ? ' open' : '' }}" id="laporan-chevron"></i>
+                                </a>
+                                <ul class="lap-submenu" id="laporan-submenu"@if(!request()->routeIs('admin.laporan.*')) style="display:none;"@endif>
+                                    <li class="{{ request()->routeIs('admin.laporan.general') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.general') }}">
+                                            <i class="fe fe-bar-chart-2"></i><span>General</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.performa-agen') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.performa-agen') }}">
+                                            <i class="fe fe-users"></i><span>Performa Agen</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.performa-bot') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.performa-bot') }}">
+                                            <i class="fe fe-cpu"></i><span>Performa Bot</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.contact') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.contact') }}">
+                                            <i class="fe fe-user"></i><span>Contact</span>
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         @endif
 
@@ -666,6 +744,16 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
     <script>
+        // Toggle Laporan submenu
+        function toggleLaporanMenu() {
+            const submenu = document.getElementById('laporan-submenu');
+            const chevron = document.getElementById('laporan-chevron');
+            if (!submenu) return;
+            const isOpen = submenu.style.display !== 'none' && submenu.style.display !== '';
+            submenu.style.display = isOpen ? 'none' : 'block';
+            if (chevron) chevron.classList.toggle('open', !isOpen);
+        }
+
         // GLOBAL FIX UNTUK SIDEBAR DI MOBILE
         document.addEventListener('DOMContentLoaded', function () {
             const mobileBtn = document.getElementById('mobile_btn');
