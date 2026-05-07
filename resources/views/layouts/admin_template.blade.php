@@ -439,6 +439,63 @@
         body.dark-mode .btn-close {
             filter: invert(1) grayscale(100%) brightness(200%);
         }
+
+        /* ===== Laporan Submenu ===== */
+        .sidebar-menu .lap-submenu {
+            list-style: none !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin: 0 !important;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        .sidebar-menu .lap-submenu.open {
+            max-height: 300px;
+            padding-top: 2px !important;
+            padding-bottom: 4px !important;
+        }
+        .lap-submenu li a {
+            display: flex !important;
+            align-items: center !important;
+            padding: 5px 16px 5px 48px !important;
+            font-size: 12.5px !important;
+            color: #a0a0a0;
+            border-radius: 0;
+            line-height: 1.4;
+            transition: background 0.2s, color 0.2s;
+        }
+        .lap-submenu li a:hover {
+            color: #fff !important;
+            background: rgba(255,255,255,0.08) !important;
+        }
+        .lap-submenu li.active a {
+            color: #fff !important;
+            font-weight: 600;
+        }
+        .lap-submenu li a i {
+            font-size: 13px !important;
+            margin-right: 8px !important;
+            width: 16px !important;
+            flex-shrink: 0;
+        }
+        .lap-parent-link {
+            display: flex !important;
+            align-items: center !important;
+            cursor: pointer;
+        }
+        .lap-chevron {
+            margin-left: auto;
+            font-size: 11px;
+            transition: transform 0.25s ease;
+            opacity: 0.5;
+        }
+        .lap-chevron.open {
+            transform: rotate(90deg);
+        }
+        body.dark-mode .lap-submenu li a { color: #888; }
+        body.dark-mode .lap-submenu li a:hover,
+        body.dark-mode .lap-submenu li.active a { color: #fff !important; }
     </style>
 
     @stack('styles')
@@ -583,12 +640,44 @@
                             <h6>Management</h6>
                         </li>
                         @if(auth('admin')->user()->hasPermission('manage_customers'))
-                            <li class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.customers.index') }}"><i class="fe fe-users"></i> <span>Data
-                                        Pelanggan</span></a>
-                            </li>
                             <li class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.reports.index') }}"><i class="fe fe-file-text"></i> <span>Laporan</span></a>
+                                <a href="{{ route('admin.reports.index') }}"><i class="fe fe-users"></i> <span>Data Pelanggan</span></a>
+                            </li>
+                            <li class="{{ request()->routeIs('admin.laporan.*') ? 'active' : '' }}">
+                                <a href="javascript:void(0);" class="lap-parent-link" onclick="toggleLaporanMenu()">
+                                    <i class="fe fe-bar-chart-2"></i>
+                                    <span>Laporan</span>
+                                    <i id="laporan-chevron" class="fe fe-chevron-right lap-chevron {{ request()->routeIs('admin.laporan.*') ? 'open' : '' }}"></i>
+                                </a>
+                                <ul id="laporan-submenu" class="lap-submenu {{ request()->routeIs('admin.laporan.*') ? 'open' : '' }}">
+                                    <li class="{{ request()->routeIs('admin.laporan.general') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.general') }}">
+                                            <i class="fe fe-bar-chart-2"></i>
+                                            <span>General</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.performa-agen') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.performa-agen') }}">
+                                            <i class="fe fe-users"></i>
+                                            <span>Performa Agen</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.performa-bot') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.performa-bot') }}">
+                                            <i class="fe fe-cpu"></i>
+                                            <span>Performa Bot</span>
+                                        </a>
+                                    </li>
+                                    <li class="{{ request()->routeIs('admin.laporan.contact') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.laporan.contact') }}">
+                                            <i class="fe fe-user"></i>
+                                            <span>Contact</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="{{ request()->routeIs('admin.tags.*') ? 'active' : '' }}">
+                                <a href="{{ route('admin.tags.index') }}"><i class="fe fe-tag"></i> <span>Manajemen Tag</span></a>
                             </li>
                         @endif
 
@@ -603,15 +692,10 @@
 
                         @if(auth('admin')->user()->hasPermission('manage_roles'))
                             <li class="{{ request()->routeIs('admin.admins.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.admins.index') }}"><i class="fe fe-shield"></i> <span>Hak
-                                        Akses</span></a>
+                                <a href="{{ route('admin.admins.index') }}"><i class="fe fe-shield"></i> <span>User Management</span></a>
                             </li>
                             <li class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.roles.index') }}"><i class="fe fe-list"></i> <span>Daftar
-                                        Role</span></a>
-                            </li>
-                            <li class="{{ request()->routeIs('admin.agents.*') ? 'active' : '' }}">
-                                <a href="{{ route('admin.agents.index') }}"><i class="fe fe-user-check"></i> <span>Manajemen Agent</span></a>
+                                <a href="{{ route('admin.roles.index') }}"><i class="fe fe-list"></i> <span>Hak Akses</span></a>
                             </li>
                         @endif
 
@@ -678,6 +762,15 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
     <script>
+        // Toggle Laporan submenu
+        function toggleLaporanMenu() {
+            const submenu = document.getElementById('laporan-submenu');
+            const chevron = document.getElementById('laporan-chevron');
+            if (!submenu) return;
+            submenu.classList.toggle('open');
+            if (chevron) chevron.classList.toggle('open', submenu.classList.contains('open'));
+        }
+
         // GLOBAL FIX UNTUK SIDEBAR DI MOBILE
         document.addEventListener('DOMContentLoaded', function () {
             const mobileBtn = document.getElementById('mobile_btn');

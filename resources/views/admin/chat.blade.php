@@ -399,6 +399,14 @@
         background: #ef4444;
         color: #fff;
     }
+    .status-tab-strip .nav-link.tab-closed.active {
+        color: #4b5563;
+        background: #f3f4f6;
+    }
+    .status-tab-strip .nav-link.tab-closed.active .tab-count {
+        background: #6b7280;
+        color: #fff;
+    }
 
     /* ── Chat List Container ── */
     .chat-list-panel {
@@ -627,7 +635,8 @@
         <div class="chat-cont-left flex-column transition-all"
             x-show="!sidebarCollapsed"
             :class="{
-                 'mobile-hide d-none d-lg-flex': selectedChat,
+                 'mobile-hide d-none': selectedChat,
+                 'd-lg-flex': selectedChat && !sidebarCollapsed,
                  'd-flex col-md-4 col-lg-5 col-xl-4': !sidebarCollapsed
              }">
             <!-- ═══════════ TOP PANEL (Header + Search + Content Filters) ═══════════ -->
@@ -677,25 +686,23 @@
                         Foto
                     </span>
                     <span class="content-chip"
-                        :class="filters.messageType.includes('video') ? 'active' : ''"
-                        @click="toggleFilter('video')">
-                        Video
-                    </span>
-                    <span class="content-chip"
                         :class="filters.messageType.includes('file') ? 'active' : ''"
                         @click="toggleFilter('file')">
                         Dokumen
                     </span>
-                    <span class="content-chip"
-                        :class="filters.messageType.includes('link') ? 'active' : ''"
-                        @click="toggleFilter('link')">
-                        Tautan
-                    </span>
-                    <span class="content-chip"
-                        :class="filters.messageType.includes('audio') ? 'active' : ''"
-                        @click="toggleFilter('audio')">
-                        Audio
-                    </span>
+                </div>
+
+                <!-- Tag Filter Row -->
+                <div class="content-filter-row pt-0 pb-3" x-show="allTags.length > 0">
+                    <template x-for="tag in allTags" :key="tag.id">
+                        <span class="content-chip"
+                            :class="filters.tagIds.includes(tag.id) ? 'active' : ''"
+                            @click="toggleTagFilter(tag.id)"
+                            :style="filters.tagIds.includes(tag.id) ? `border-color: ${tag.color}; background-color: ${tag.color}22; color: ${tag.color}` : ''">
+                            <i class="fe fe-tag" style="font-size: 0.7rem;"></i>
+                            <span x-text="tag.name"></span>
+                        </span>
+                    </template>
                 </div>
 
             </div> <!-- /TOP PANEL -->
@@ -717,6 +724,14 @@
                                     </span>
                                 </li>
                                 <li class="nav-item">
+                                    <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
+                                        @click="statusFilter = 'mine'" style="cursor:pointer;"
+                                        title="Chat yang sedang Anda tangani">
+                                        Milik Saya
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
+                                    </span>
+                                </li>
+                                <li class="nav-item">
                                     <span class="nav-link tab-queue" :class="statusFilter === 'queue' ? 'active' : ''"
                                         @click="statusFilter = 'queue'" style="cursor:pointer;">
                                         Antrean
@@ -731,19 +746,11 @@
                                     </span>
                                 </li>
                                 <li class="nav-item">
-                                    <span class="nav-link tab-mine" :class="statusFilter === 'mine' ? 'active' : ''"
-                                        @click="statusFilter = 'mine'" style="cursor:pointer;"
-                                        title="Chat yang sedang Anda tangani">
-                                        Milik Saya
-                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'active' && c.admin_id === adminId).length"></span>
-                                    </span>
-                                </li>
-                                <li class="nav-item">
-                                    <span class="nav-link tab-offline" :class="statusFilter === 'offline' ? 'active' : ''"
-                                        @click="statusFilter = 'offline'" style="cursor:pointer;"
-                                        title="User yang sedang offline">
-                                        Offline
-                                        <span class="tab-count" x-text="filteredChats.filter(c => !c.customer.is_online).length"></span>
+                                    <span class="nav-link tab-closed" :class="statusFilter === 'closed' ? 'active' : ''"
+                                        @click="statusFilter = 'closed'" style="cursor:pointer;"
+                                        title="Percakapan yang sudah selesai">
+                                        Selesai
+                                        <span class="tab-count" x-text="filteredChats.filter(c => c.status === 'closed').length"></span>
                                     </span>
                                 </li>
                             </ul>
@@ -751,7 +758,7 @@
 
                         <!-- Unified Chat List (scrollable) -->
                         <div style="overflow-y: auto; flex: 1;">
-                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true)))))" :key="chat.id">
+                            <template x-for="chat in filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'closed' ? c.status === 'closed' : true)))))" :key="chat.id">
                                 <a href="javascript:void(0);" @click="selectChat(chat)"
                                     class="chat-item"
                                     :class="selectedChat && selectedChat.id === chat.id ? 'is-selected' : ''"
@@ -778,16 +785,23 @@
                                                 :class="['pending','queued'].includes(chat.status) ? 'queue' : (chat.status === 'closed' ? 'closed' : (chat.admin_id === adminId ? 'active-mine' : 'active-other'))"
                                                 x-text="chat.status === 'queued' ? '🕐 Antrean #' + chat.queue_position : (chat.status === 'pending' ? '🔔 Permintaan Baru' : (chat.status === 'closed' ? '📁 Selesai' : (chat.admin_id === adminId ? '✦ Anda membantu' : '↗ Oleh ' + (chat.admin ? chat.admin.username : 'agen'))))"
                                             ></span>
+                                            <div class="d-flex flex-wrap gap-1 ms-1">
+                                                <template x-for="tag in chat.tags" :key="tag.id">
+                                                    <span class="badge" 
+                                                          :style="`background-color: ${tag.color}15; color: ${tag.color}; border: 1px solid ${tag.color}33; border-radius: 4px; font-size: 0.65rem; padding: 1px 6px; font-weight: 600;`" 
+                                                          x-text="tag.name"></span>
+                                                </template>
+                                            </div>
                                         </div>
                                     </div>
                                 </a>
                             </template>
 
                             <!-- Empty state -->
-                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'offline' ? !c.customer.is_online : true))))).length === 0"
+                            <div x-show="filteredChats.filter(c => statusFilter === 'all' ? true : (statusFilter === 'queue' ? ['pending','queued'].includes(c.status) : (statusFilter === 'mine' ? (c.status === 'active' && c.admin_id === adminId) : (statusFilter === 'active' ? c.status === 'active' : (statusFilter === 'closed' ? c.status === 'closed' : true))))).length === 0"
                                 class="chat-empty-state">
                                 <i class="fe fe-message-circle"></i>
-                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'offline' ? 'Tidak ada user offline.' : 'Belum ada percakapan.')))"></p>
+                                <p x-text="statusFilter === 'queue' ? 'Tidak ada antrean saat ini.' : (statusFilter === 'mine' ? 'Tidak ada chat yang sedang Anda tangani.' : (statusFilter === 'active' ? 'Tidak ada chat aktif.' : (statusFilter === 'closed' ? 'Tidak ada percakapan yang selesai.' : 'Belum ada percakapan.')))"></p>
                             </div>
                         </div>
 
@@ -877,7 +891,24 @@
                         </div>
                         <div class="user_info ms-2 flex-grow-1 overflow-hidden">
                             <span class="text-truncate d-block" x-text="selectedChat ? selectedChat.customer.name : ''"></span>
-                            <p class="mb-0 small" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
+                            <div class="d-flex align-items-center flex-wrap gap-1 mt-1">
+                                <p class="mb-0 small me-2" :class="selectedChat && selectedChat.customer.is_online ? 'text-success' : 'text-muted'" x-text="selectedChat && selectedChat.customer.is_online ? 'Online' : 'Offline'"></p>
+                                <template x-if="selectedChat && selectedChat.status === 'active'">
+                                    <div class="d-flex align-items-center flex-wrap gap-1 mt-1 mt-sm-0">
+                                        <template x-for="tag in selectedChat.tags" :key="tag.id">
+                                            <div class="tag-chip d-flex align-items-center px-2 py-1 shadow-sm" 
+                                                 :style="`background-color: ${tag.color}15; color: ${tag.color}; border: 1px solid ${tag.color}44; border-radius: 6px; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;`"
+                                                 @mouseenter="$el.style.backgroundColor = `${tag.color}25`"
+                                                 @mouseleave="$el.style.backgroundColor = `${tag.color}15`"
+                                            >
+                                                <i class="fe fe-tag me-1" style="font-size: 0.6rem; opacity: 0.7;"></i>
+                                                <span x-text="tag.name" class="text-truncate" style="max-width: 120px;"></span>
+                                                <button type="button" class="btn-close ms-1 p-0" style="width: 8px; height: 8px; font-size: 0.5rem; filter: none; opacity: 0.5;" @click.stop="detachTag(tag.id)"></button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                         <div class="chat-options ms-auto flex-shrink-0">
                             <ul class="d-flex align-items-center list-unstyled mb-0">
@@ -890,6 +921,10 @@
                                 </template>
                                 <template x-if="selectedChat && selectedChat.status === 'active' && (selectedChat.admin_id === adminId || adminRole === 'super_admin' || adminRole === 'agent1')">
                                     <li class="d-flex ms-2">
+                                        <button class="btn btn-sm btn-outline-secondary me-1" @click="showTagModal = true" title="Tambah Tag">
+                                            <i class="fe fe-tag"></i>
+                                        </button>
+
                                         <button class="btn btn-sm btn-outline-warning me-1" @click="showEscalationModal = true" title="Eskalasi Chat"><i class="fe fe-trending-up"></i></button>
                                         <button class="btn btn-sm btn-outline-info me-1" @click="showHandoverModal = true" title="Oper Chat"><i class="fe fe-repeat"></i></button>
                                         <button class="btn btn-sm btn-outline-success me-1" @click="confirmCloseChat()" :disabled="isSubmitting" title="Selesaikan"><i class="fe fe-check"></i></button>
@@ -914,6 +949,47 @@
                         style="border: none; display: block;"
                         @load="iframeLoaded = true"></iframe>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tag Selection Modal -->
+<div class="modal fade" :class="showTagModal ? 'show d-block' : ''" tabindex="-1" x-show="showTagModal" x-cloak>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 15px;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold">Pilih Tag Chat</h5>
+                <button type="button" class="btn-close" @click="showTagModal = false"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="input-group mb-3 shadow-sm" style="border-radius: 10px; overflow: hidden; border: 1px solid #e5e7eb;">
+                    <span class="input-group-text border-0 bg-white"><i class="fe fe-search text-muted"></i></span>
+                    <input type="text" class="form-control border-0 shadow-none ps-0" placeholder="Cari tag..." x-model="tagSearch">
+                </div>
+                
+                <div class="tag-list-scroll" style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                    <div class="row g-2">
+                        <template x-for="tag in availableTagsForSelectedChat" :key="tag.id">
+                            <div class="col-6">
+                                <div class="p-2 border rounded d-flex align-items-center cursor-pointer hover-bg-light transition-all" 
+                                     @click="attachTag(tag.id)" 
+                                     style="border-color: #f3f4f6 !important; border-radius: 10px;">
+                                    <span class="rounded-circle me-2 flex-shrink-0" :style="`width: 12px; height: 12px; background-color: ${tag.color || '#6c757d'}; border: 2px solid white; box-shadow: 0 0 0 1px ${tag.color || '#6c757d'}44;`" ></span>
+                                    <span x-text="tag.name" class="text-truncate small fw-bold text-dark"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div x-show="availableTagsForSelectedChat.length === 0" class="text-center py-4">
+                        <i class="fe fe-tag d-block mb-2 text-muted" style="font-size: 2rem; opacity: 0.2;"></i>
+                        <p class="text-muted small mb-0" x-text="tagSearch ? 'Tag tidak ditemukan' : 'Semua tag sudah terpasang'"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-light w-100 rounded-pill fw-bold" @click="showTagModal = false">Selesai</button>
             </div>
         </div>
     </div>
@@ -1004,6 +1080,7 @@
             isSubmitting: false,
             showHandoverModal: false,
             showEscalationModal: false,
+            showTagModal: false,
             handoverToAdminId: '',
             handoverNote: '',
             escalationToAdminId: '',
@@ -1011,6 +1088,8 @@
             audioUnlocked: false,
             notificationSound: null,
             iframeLoaded: false,
+            allTags: [],
+            tagSearch: '',
             searchResults: {
                 contacts: [],
                 groups: [],
@@ -1019,12 +1098,94 @@
             statusFilter: 'all',
             filters: {
                 messageType: [],
+                tagIds: [],
                 unreadOnly: false,
+            },
+
+            get availableTagsForSelectedChat() {
+                if (!this.selectedChat) return [];
+                const currentTagIds = (this.selectedChat.tags || []).map(t => t.id);
+                const search = this.tagSearch.toLowerCase().trim();
+                
+                return this.allTags.filter(tag => {
+                    const notAttached = !currentTagIds.includes(tag.id);
+                    const matchesSearch = tag.name.toLowerCase().includes(search);
+                    return notAttached && matchesSearch;
+                });
+            },
+
+            async attachTag(tagId) {
+                if (!this.selectedChat) return;
+                try {
+                    const currentTagIds = (this.selectedChat.tags || []).map(t => t.id);
+                    const newTagIds = [...currentTagIds, tagId];
+                    
+                    const res = await fetch(`/admin/conversation/${this.selectedChat.id}/tags`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ tag_ids: newTagIds })
+                    });
+                    
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.selectedChat.tags = data.data;
+                        this.tagSearch = '';
+                        // Also update in the main list
+                        const chatInList = this.chats.find(c => c.id === this.selectedChat.id);
+                        if (chatInList) chatInList.tags = data.data;
+                    }
+                } catch (e) {
+                    console.error('Gagal menambah tag', e);
+                }
+            },
+
+            async detachTag(tagId) {
+                if (!this.selectedChat) return;
+                try {
+                    const currentTagIds = (this.selectedChat.tags || []).map(t => t.id);
+                    const newTagIds = currentTagIds.filter(id => id !== tagId);
+                    
+                    const res = await fetch(`/admin/conversation/${this.selectedChat.id}/tags`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ tag_ids: newTagIds })
+                    });
+                    
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.selectedChat.tags = data.data;
+                        // Also update in the main list
+                        const chatInList = this.chats.find(c => c.id === this.selectedChat.id);
+                        if (chatInList) chatInList.tags = data.data;
+                    }
+                } catch (e) {
+                    console.error('Gagal melepas tag', e);
+                }
+            },
+
+            async fetchAllTags() {
+                try {
+                    const res = await fetch("{{ route('admin.tags.index') }}", {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    this.allTags = await res.json();
+                } catch (e) {
+                    console.error('Gagal mengambil daftar tag', e);
+                }
             },
 
             clearSearch() {
                 this.searchQuery = '';
                 this.filters.messageType = [];
+                this.filters.tagIds = [];
                 this.filters.unreadOnly = false;
                 this.statusFilter = 'all';
                 this.fetchChats();
@@ -1036,6 +1197,16 @@
                     this.filters.messageType.splice(index, 1);
                 } else {
                     this.filters.messageType.push(type);
+                }
+                this.fetchChats();
+            },
+
+            toggleTagFilter(tagId) {
+                const index = this.filters.tagIds.indexOf(tagId);
+                if (index > -1) {
+                    this.filters.tagIds.splice(index, 1);
+                } else {
+                    this.filters.tagIds.push(tagId);
                 }
                 this.fetchChats();
             },
@@ -1131,6 +1302,7 @@
             },
 
             init() {
+                this.fetchAllTags();
                 // Update currentTime every minute for relative time reactivity
                 setInterval(() => {
                     this.currentTime = Date.now();
@@ -1245,6 +1417,10 @@
 
                     if (this.filters.messageType.length > 0) {
                         params.set('quick_filters', this.filters.messageType.join(','));
+                    }
+
+                    if (this.filters.tagIds.length > 0) {
+                        params.set('tag_ids', this.filters.tagIds.join(','));
                     }
 
                     if (this.filters.unreadOnly) {

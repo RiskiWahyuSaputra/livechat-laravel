@@ -1,4 +1,75 @@
 <!-- Chat Widget Container -->
+<style>
+    .bubble-wrapper {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+    }
+    .msg-options-btn {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s, color 0.2s;
+        z-index: 10;
+        color: #fff;
+        filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+    }
+    .bubble-wrapper:hover .msg-options-btn {
+        opacity: 1;
+    }
+    .bubble-wrapper .bubble-content {
+        padding-right: 32px !important;
+    }
+    .msg-options-btn:hover {
+        color: #cbd5e1;
+    }
+
+    .msg-context-menu {
+        position: fixed;
+        z-index: 9999;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        width: 140px;
+        overflow: hidden;
+        border: 1px solid #f1f5f9;
+        animation: menuFadeIn 0.15s ease-out;
+    }
+    @keyframes menuFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .menu-item {
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: background 0.1s;
+    }
+    .menu-item:hover {
+        background: #f8fafc;
+    }
+    .menu-item.destructive {
+        color: #ef4444;
+    }
+    .menu-item i {
+        font-size: 13px;
+        opacity: 0.7;
+    }
+</style>
 <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[10020] flex flex-col items-end chat-widget-container">
     
     <!-- Chat Popup Window -->
@@ -10,7 +81,24 @@
          x-transition:leave-start="opacity-100 scale-100 translate-y-0"
          x-transition:leave-end="opacity-0 scale-50 translate-y-4"
          class="bg-white w-[340px] sm:w-[380px] h-[500px] max-h-[75vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden mb-4 relative"
-         style="display: none;">
+         style="display: none;"
+         @click="closeMenu()">
+        
+        <!-- CONTEXT MENU / DROPDOWN -->
+        <div x-show="menu.show" 
+             x-cloak
+             class="msg-context-menu" 
+             :style="`top: ${menu.y}px; left: ${menu.x}px;`"
+             @click.outside="closeMenu()">
+            <div class="menu-item" @click="editMessage(menu.msgId)">
+                <i class="fas fa-edit"></i>
+                Edit Pesan
+            </div>
+            <div class="menu-item destructive" @click="deleteMessage(menu.msgId)">
+                <i class="fas fa-trash-alt"></i>
+                Hapus Pesan
+            </div>
+        </div>
         
         <!-- Loading Overlay -->
         <div x-show="isLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -94,52 +182,62 @@
                         <div class="max-w-[88%] flex flex-col min-w-0" :class="msg.sender_type === 'user' ? 'items-end' : 'items-start'">
                             <span x-show="msg.sender_type !== 'user'" class="text-[10px] text-slate-400 font-medium mb-0.5 ml-1">Live Support</span>
 
-                            <div class="px-3 py-2 md:px-3.5 md:py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm relative overflow-hidden min-w-0 max-w-full"
-                                :class="msg.sender_type === 'user' 
-                                    ? 'bg-blue-600 text-white rounded-br-sm' 
-                                    : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'">
-
-                                <!-- Pesan Teks -->
-                                <template x-if="!msg.message_type || msg.message_type === 'text'">
-                                    <div class="break-words">
-                                        <div x-html="formatMessage(msg.content)"></div>
+                            <div class="bubble-wrapper">
+                                <!-- Option Button -->
+                                <template x-if="msg.sender_type === 'user'">
+                                    <div class="msg-options-btn" @click.stop="openMenu(msg.id, $event)">
+                                        <i class="fas fa-chevron-down"></i>
                                     </div>
                                 </template>
 
-                                <!-- Pesan Gambar -->
-                                <template x-if="msg.message_type === 'image'">
-                                    <div class="max-w-full">
-                                        <div class="space-y-2">
-                                            <img :src="msg.content" 
-                                                 class="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
-                                                 @click="window.open(msg.content, '_blank')"
-                                                 x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
+                                <div class="bubble-content px-3 py-2 md:px-3.5 md:py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm relative overflow-hidden min-w-0 max-w-full"
+                                    :class="msg.sender_type === 'user' 
+                                        ? 'bg-blue-600 text-white rounded-br-sm' 
+                                        : 'bg-white text-slate-800 rounded-bl-sm border border-slate-200'"
+                                    @contextmenu.prevent="handleContextMenu($event, msg.id)">
+    
+                                    <!-- Pesan Teks -->
+                                    <template x-if="!msg.message_type || msg.message_type === 'text'">
+                                        <div class="break-words">
+                                            <div x-html="formatMessage(msg.content)"></div>
                                         </div>
-                                    </div>
-                                </template>
+                                    </template>
 
-                                <!-- Pesan File -->
-                                <template x-if="msg.message_type === 'file'">
-                                    <div class="w-full min-w-0">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-white/10">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-[11px] font-bold truncate leading-tight mb-1" x-text="msg.content.split('/').pop()"></p>
-                                                <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:opacity-80" :class="msg.sender_type === 'user' ? 'text-white underline' : 'text-blue-600 underline'">
-                                                    <span>Unduh</span>
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                                </a>
+                                    <!-- Pesan Gambar -->
+                                    <template x-if="msg.message_type === 'image'">
+                                        <div class="max-w-full">
+                                            <div class="space-y-2">
+                                                <img :src="msg.content" 
+                                                     class="rounded-lg max-w-full h-auto cursor-zoom-in hover:opacity-90 transition-opacity min-h-[50px] bg-slate-100 object-cover" 
+                                                     @click="openLightbox(msg.content)"
+                                                     x-on:error="$el.src='https://placehold.co/200x150?text=Gambar+Gagal+Dimuat'">
                                             </div>
                                         </div>
-                                    </div>
-                                </template>
+                                    </template>
+    
+                                    <!-- Pesan File -->
+                                    <template x-if="msg.message_type === 'file'">
+                                        <div class="w-full min-w-0">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center text-current shrink-0 border border-white/10">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-[11px] font-bold truncate leading-tight mb-1" x-text="msg.content.split('/').pop()"></p>
+                                                    <a :href="msg.content" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:opacity-80" :class="msg.sender_type === 'user' ? 'text-white underline' : 'text-blue-600 underline'">
+                                                        <span>Unduh</span>
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                             <span class="text-[9px] text-slate-400 mt-1 mx-1" x-text="msg.created_at || 'mengirim...'"></span>
 
                             <!-- Bot Categories Inline -->
-                            <template x-if="msg.sender_id == 0 && index === messages.length - 1">
+                            <template x-if="(msg.sender_id == 0 || msg.sender_type === 'admin') && index === messages.length - 1">
                                 <div class="mt-2 flex flex-wrap gap-1.5 w-full">
                                     <!-- Phase: awaiting_category -->
                                     <template x-if="botPhase === 'awaiting_category'">
@@ -249,6 +347,75 @@
 
                 </div>
             </template>
+            <section x-show="shouldRenderInlineConversationSummary()" x-cloak class="mt-4">
+                <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                    <div class="flex items-start gap-3 bg-slate-50/80 px-4 py-4">
+                        <button type="button"
+                                @click="summary.expanded = !summary.expanded"
+                                class="flex-1 text-left">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                                        <i class="fas fa-wand-magic-sparkles text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-[13px] font-black text-slate-800">AI Conversation Summary</h3>
+                                            <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                                Privat
+                                            </span>
+                                        </div>
+                                        <p class="mt-1 text-[10px] text-slate-500">
+                                            Ringkasan ini hanya terlihat oleh kamu.
+                                        </p>
+                                    </div>
+                                </div>
+                                <i class="fas text-slate-400 transition-transform text-xs"
+                                   :class="summary.expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                            </div>
+                        </button>
+
+                        <button type="button"
+                                @click="fetchConversationSummary(true)"
+                                :disabled="summary.loading"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                title="Refresh summary">
+                            <i class="fas fa-rotate-right text-xs" :class="summary.loading ? 'animate-spin' : ''"></i>
+                        </button>
+                    </div>
+
+                    <div x-show="summary.expanded" x-cloak class="border-t border-slate-100 px-4 py-4">
+                        <div x-show="summary.loading" class="space-y-2.5">
+                            <div class="h-2.5 w-32 animate-pulse rounded-full bg-slate-200"></div>
+                            <div class="h-2.5 w-full animate-pulse rounded-full bg-slate-100"></div>
+                            <div class="h-2.5 w-10/12 animate-pulse rounded-full bg-slate-100"></div>
+                        </div>
+
+                        <div x-show="!summary.loading && summary.available" x-cloak class="space-y-3">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em]"
+                                      :class="summarySentimentClass()"
+                                      x-text="summary.sentiment"></span>
+                                <span x-show="summary.updatedAt"
+                                      class="text-[10px] text-slate-400"
+                                      x-text="`Diperbarui ${summary.updatedAt}`"></span>
+                            </div>
+                            <div class="text-[12px] leading-6 text-slate-700">
+                                <p class="font-semibold text-slate-800">Summary of conversation</p>
+                                <p class="mt-1.5" x-text="summary.text"></p>
+                            </div>
+                        </div>
+
+                        <div x-show="!summary.loading && !summary.available && summary.info" x-cloak class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-600">
+                            <span x-text="summary.info"></span>
+                        </div>
+
+                        <div x-show="!summary.loading && summary.error" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] leading-5 text-red-600">
+                            <span x-text="summary.error"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
             <div id="widget-scroll-anchor" class="h-1"></div>
         </div>
 
@@ -354,8 +521,133 @@
                 </div>
             </div>
 
-            <div x-show="status === 'closed'" x-cloak class="bg-slate-100 text-slate-500 text-xs text-center p-2.5 border-t border-slate-200 font-medium">
+            <div x-show="status === 'closed' && !feedbackPending" x-cloak class="bg-slate-100 text-slate-500 text-xs text-center p-2.5 border-t border-slate-200 font-medium">
                 Sesi pertanyaan ini telah ditutup oleh agen.
+            </div>
+
+            <div x-show="status === 'closed' && feedbackPending"
+                 x-cloak
+                 class="border-t border-blue-200 bg-blue-50 p-3 overflow-y-auto overscroll-contain"
+                 style="max-height: min(45vh, 360px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: stable;">
+                <section x-show="shouldRenderFeedbackConversationSummary()" x-cloak class="mb-3 overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm">
+                    <div class="flex items-start gap-3 bg-blue-50/70 px-4 py-4">
+                        <button type="button"
+                                @click="summary.expanded = !summary.expanded"
+                                class="flex-1 text-left">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                                        <i class="fas fa-wand-magic-sparkles text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-[13px] font-black text-slate-800">AI Conversation Summary</h3>
+                                            <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                                Privat
+                                            </span>
+                                        </div>
+                                        <p class="mt-1 text-[10px] text-slate-500">
+                                            Ringkasan ini tetap hanya terlihat oleh kamu.
+                                        </p>
+                                    </div>
+                                </div>
+                                <i class="fas text-slate-400 transition-transform text-xs"
+                                   :class="summary.expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                            </div>
+                        </button>
+
+                        <button type="button"
+                                @click="fetchConversationSummary(true)"
+                                :disabled="summary.loading"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                title="Refresh summary">
+                            <i class="fas fa-rotate-right text-xs" :class="summary.loading ? 'animate-spin' : ''"></i>
+                        </button>
+                    </div>
+
+                    <div x-show="summary.expanded" x-cloak class="border-t border-slate-100 px-4 py-4">
+                        <div x-show="summary.loading" class="space-y-2.5">
+                            <div class="h-2.5 w-32 animate-pulse rounded-full bg-slate-200"></div>
+                            <div class="h-2.5 w-full animate-pulse rounded-full bg-slate-100"></div>
+                            <div class="h-2.5 w-10/12 animate-pulse rounded-full bg-slate-100"></div>
+                        </div>
+
+                        <div x-show="!summary.loading && summary.available" x-cloak class="space-y-3">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em]"
+                                      :class="summarySentimentClass()"
+                                      x-text="summary.sentiment"></span>
+                                <span x-show="summary.updatedAt"
+                                      class="text-[10px] text-slate-400"
+                                      x-text="`Diperbarui ${summary.updatedAt}`"></span>
+                            </div>
+                            <div class="text-[12px] leading-6 text-slate-700">
+                                <p class="font-semibold text-slate-800">Summary of conversation</p>
+                                <p class="mt-1.5" x-text="summary.text"></p>
+                            </div>
+                        </div>
+
+                        <div x-show="!summary.loading && !summary.available && summary.info" x-cloak class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-600">
+                            <span x-text="summary.info"></span>
+                        </div>
+
+                        <div x-show="!summary.loading && summary.error" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] leading-5 text-red-600">
+                            <span x-text="summary.error"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="text-center mb-3">
+                    <div class="text-sm font-bold text-slate-800">Beri rating untuk agen</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Pilih bintang 1 sampai 5.</div>
+                </div>
+
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
+                            <button type="button"
+                                @click="selectedRating = star"
+                                @mouseenter="hoverRating = star"
+                                @mouseleave="hoverRating = 0"
+                                class="bg-transparent border-0 p-0">
+                            <i class="fas fa-star text-2xl"
+                               :class="(hoverRating || selectedRating) >= star ? 'text-blue-500' : 'text-slate-300'"></i>
+                        </button>
+                    </template>
+                </div>
+
+                <textarea x-model="feedbackComment"
+                          rows="2"
+                          maxlength="1000"
+                          class="form-control mb-3"
+                          placeholder="Opsional: tulis kesan singkat..."
+                          style="border-radius: 12px; border-color: #bfdbfe;"></textarea>
+
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <button type="button"
+                            @click="skipFeedback()"
+                            :disabled="isSubmittingFeedback"
+                            class="btn btn-link text-secondary text-decoration-none p-0">
+                        Lewati
+                    </button>
+                    <button type="button"
+                            @click="submitFeedback()"
+                            :disabled="!selectedRating || isSubmittingFeedback"
+                            class="btn text-white fw-bold"
+                            style="border-radius: 12px; background-color: #2563eb; border-color: #2563eb;">
+                        <span x-text="isSubmittingFeedback ? 'Mengirim...' : 'Kirim Feedback'"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editing Indicator -->
+            <div x-show="editingMsgId !== null" 
+                 class="px-4 py-2 bg-blue-50 border-t border-blue-100 flex items-center justify-between" 
+                 x-cloak>
+                <div class="flex items-center gap-2 text-blue-600 font-bold text-[10px]">
+                    <i class="fas fa-edit"></i>
+                    Mengedit pesan...
+                </div>
+                <button type="button" @click="cancelEdit()" class="text-[10px] text-slate-400 hover:text-slate-600 font-black uppercase">BATAL</button>
             </div>
 
             <form @submit.prevent="sendMessage" 
@@ -370,11 +662,11 @@
 
                 <textarea x-model="newMessage" 
                         x-ref="messageInput"
-                        @input="sendTypingEvent"
-                        @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
+                        @input="sendTypingEvent(); resizeComposer()"
+                        @keydown.enter="if(!event.shiftKey) { event.preventDefault(); sendMessage(); } else { $nextTick(() => resizeComposer()); }"
                         placeholder="Ketik balasan Anda..." 
                         class="form-control flex-1 resize-none"
-                        style="border-radius: 12px; background: #f8f9fa; border: none;"
+                        style="border-radius: 12px; background: #f8f9fa; border: none; padding: 8px 12px; line-height: 1.5; min-height: 40px; height: 40px;"
                         rows="1"></textarea>
                 <button type="submit" 
                         :disabled="!newMessage.trim() || isSending || isLoading"
@@ -439,11 +731,38 @@
             isChatting: false,
             typingMessage: '',
             typingTimeout: null,
+            summaryRefreshTimer: null,
+            summaryRequestId: 0,
 
             // Bot Settings
             botPhase: 'off',
             botCategories: ['Pertanyaan Umum', 'Masalah Teknis', 'Layanan Produk', 'Lainnya'],
             botSubmenus: [],
+            feedbackPending: false,
+            selectedRating: 0,
+            hoverRating: 0,
+            feedbackComment: '',
+            isSubmittingFeedback: false,
+            summary: {
+                loading: false,
+                available: false,
+                expanded: true,
+                text: '',
+                sentiment: 'Neutral',
+                info: 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.',
+                error: '',
+                updatedAt: null,
+                lastFingerprint: null,
+                historyHash: null
+            },
+
+            editingMsgId: null,
+            menu: {
+                show: false,
+                msgId: null,
+                x: 0,
+                y: 0
+            },
 
             // Closed/Rejected state
             isRejected: false,
@@ -464,14 +783,29 @@
                     this.unreadCount = 0;
                     this.$nextTick(() => {
                         this.scrollToBottom();
-                        if (this.$refs.messageInput) this.$refs.messageInput.focus();
+                        if (this.$refs.messageInput) {
+                            this.$refs.messageInput.focus();
+                            this.resizeComposer();
+                        }
                     });
                 }
             },
 
-            formatMessage(content) {
-                if (!content) return '';
-                return content.replace(/\n/g, '<br>');
+            formatMessage(text) {
+                if (!text) return '';
+                
+                const badge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mr-1.5 border border-blue-200 uppercase tracking-tight">BEST AI</span>';
+                
+                if (String(text).includes(badge)) {
+                    let parts = String(text).split(badge);
+                    let safeParts = parts.map(p => String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                    let joined = safeParts.join(badge).replace(/\n/g, '<br>');
+                    return joined.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                }
+
+                let safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                let withBr = safeText.replace(/\n/g, '<br>');
+                return withBr.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             },
 
             get statusText() {
@@ -481,6 +815,128 @@
                     case 'active': return 'Terhubung';
                     case 'closed': return 'Selesai';
                     default: return 'Online';
+                }
+            },
+
+            eligibleSummaryMessageCount() {
+                return this.messages.filter((msg) => {
+                    if (msg.sender_type === 'system') return false;
+                    const type = msg.message_type || 'text';
+                    return ['text', 'image', 'file'].includes(type);
+                }).length;
+            },
+
+            shouldRenderConversationSummary() {
+                return this.status === 'closed' && (
+                    this.summary.loading
+                    || this.summary.available
+                    || this.summary.error !== ''
+                    || this.eligibleSummaryMessageCount() >= 2
+                );
+            },
+
+            shouldRenderInlineConversationSummary() {
+                return false;
+            },
+
+            shouldRenderFeedbackConversationSummary() {
+                return this.status === 'closed' && this.feedbackPending && this.shouldRenderConversationSummary();
+            },
+
+            summaryFingerprint() {
+                return this.messages
+                    .filter((msg) => msg.sender_type !== 'system')
+                    .map((msg) => `${msg.id || msg.temp_id || 'temp'}:${msg.sender_type}:${msg.message_type || 'text'}:${String(msg.content || '').slice(0, 200)}`)
+                    .join('|');
+            },
+
+            summarySentimentClass() {
+                if (this.summary.sentiment === 'Positive') {
+                    return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                }
+                if (this.summary.sentiment === 'Negative') {
+                    return 'bg-rose-50 text-rose-700 border border-rose-200';
+                }
+
+                return 'bg-amber-50 text-amber-700 border border-amber-200';
+            },
+
+            queueSummaryRefresh(delay = 900) {
+                clearTimeout(this.summaryRefreshTimer);
+
+                if (this.status !== 'closed') {
+                    return;
+                }
+
+                if (this.eligibleSummaryMessageCount() < 2 || !this.conversationId) {
+                    this.summary.available = false;
+                    this.summary.text = '';
+                    this.summary.sentiment = 'Neutral';
+                    this.summary.error = '';
+                    this.summary.info = 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.';
+                    return;
+                }
+
+                this.summaryRefreshTimer = setTimeout(() => {
+                    this.fetchConversationSummary();
+                }, delay);
+            },
+
+            async fetchConversationSummary(force = false) {
+                if (this.status !== 'closed') {
+                    return;
+                }
+
+                if (this.eligibleSummaryMessageCount() < 2 || !this.conversationId) {
+                    this.summary.loading = false;
+                    this.summary.available = false;
+                    this.summary.text = '';
+                    this.summary.sentiment = 'Neutral';
+                    this.summary.error = '';
+                    this.summary.info = 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.';
+                    return;
+                }
+
+                const fingerprint = this.summaryFingerprint();
+                if (!force && fingerprint === this.summary.lastFingerprint) {
+                    return;
+                }
+
+                const requestId = ++this.summaryRequestId;
+                this.summary.loading = true;
+                this.summary.error = '';
+
+                try {
+                    const response = await fetch('{{ route('chat.summary') }}', {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (requestId !== this.summaryRequestId) return;
+                    if (!response.ok) throw new Error(data.error || 'Gagal memuat ringkasan AI.');
+
+                    this.summary.available = !!data.available;
+                    this.summary.text = data.summary || '';
+                    this.summary.sentiment = data.sentiment || 'Neutral';
+                    this.summary.info = data.message || '';
+                    this.summary.updatedAt = data.updated_at || null;
+                    this.summary.historyHash = data.history_hash || null;
+                    this.summary.lastFingerprint = fingerprint;
+                } catch (error) {
+                    if (requestId !== this.summaryRequestId) return;
+
+                    this.summary.available = false;
+                    this.summary.text = '';
+                    this.summary.sentiment = 'Neutral';
+                    this.summary.error = error.message || 'Gagal memuat ringkasan AI.';
+                    this.summary.info = '';
+                } finally {
+                    if (requestId === this.summaryRequestId) {
+                        this.summary.loading = false;
+                    }
                 }
             },
 
@@ -709,6 +1165,7 @@
                         this.userId = data.user_id;
                         this.status = data.status;
                         this.botPhase = data.bot_phase || data.conversation.bot_phase || 'off';
+                        this.feedbackPending = !!data.feedback_pending;
                         if (data.bot_submenus) this.botSubmenus = data.bot_submenus;
                         this.isAuthenticated = true;
                         if (data.user) {
@@ -723,10 +1180,12 @@
                             content: m.content,
                             created_at: m.created_at
                         }));
-                        this.isChatting = (this.messages.length > 0 && this.user.name !== 'Guest') || ['active','pending','queued'].includes(data.status);
+                        this.isChatting = (this.messages.length > 0 && this.user.name !== 'Guest') || ['active','pending','queued'].includes(data.status) || !!data.feedback_pending;
+                        this.queueSummaryRefresh(250);
                         this.listenForEvents();
                     } else {
                         this.isAuthenticated = false;
+                        this.feedbackPending = false;
                     }
                     this.isInitialized = true;
                     this.$nextTick(() => { this.scrollToBottom(); });
@@ -740,7 +1199,10 @@
                 if (typeof window.Echo === 'undefined' || !this.conversationId) return;
                 try {
                     if (this.userId) {
-                        window.Echo.private(`user.${this.userId}`).listen('.user.logged.out', (e) => { location.reload(); });
+                        window.Echo.private(`user.${this.userId}`).listen('.user.logged.out', (e) => {
+                            if (this.feedbackPending) return;
+                            location.reload();
+                        });
                     }
                     window.Echo.private(`conversation.${this.conversationId}`)
                         .listen('.message.sent', (e) => {
@@ -755,11 +1217,22 @@
                                 content: e.content,
                                 created_at: e.created_at ? new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                             });
+                            this.queueSummaryRefresh(600);
                             if (this.isOpen) this.scrollToBottom(); else this.unreadCount++;
                         })
                         .listen('.conversation.status.changed', (e) => {
                             this.status = e.status;
                             if (e.bot_phase) this.botPhase = e.bot_phase;
+                            this.feedbackPending = !!e.feedback_requested;
+                            if (this.feedbackPending) {
+                                this.summary.expanded = true;
+                                this.queueSummaryRefresh(250);
+                            }
+                            if (e.status === 'closed' && this.feedbackPending) {
+                                this.isChatting = true;
+                                this.isOpen = true;
+                                this.$nextTick(() => this.scrollToBottom());
+                            }
                         })
                         .listen('.typing', (e) => {
                             if (e.sender_type === 'admin') {
@@ -768,6 +1241,17 @@
                                 clearTimeout(this.typingTimeout);
                                 if (this.isTyping) this.typingTimeout = setTimeout(() => { this.isTyping = false; }, 3000);
                             }
+                        })
+                        .listen('.message.updated', (e) => {
+                            const msg = this.messages.find(m => m.id === e.id);
+                            if (msg) {
+                                msg.content = e.content;
+                                this.queueSummaryRefresh(400);
+                            }
+                        })
+                        .listen('.message.deleted', (e) => {
+                            this.messages = this.messages.filter(m => m.id !== e.id);
+                            this.queueSummaryRefresh(400);
                         });
                 } catch (err) {}
             },
@@ -775,8 +1259,10 @@
             async sendMessage() {
                 if (!this.newMessage.trim() || this.isSending) return;
                 const content = this.newMessage;
-                this.newMessage = ''; 
+                this.newMessage = '';
+                this.$nextTick(() => this.resizeComposer());
                 if (!this.conversationId) {
+
                     this.messages.push({
                         id: 'local-msg-' + Date.now(),
                         sender_type: 'user',
@@ -802,46 +1288,203 @@
                     return;
                 }
                 this.isSending = true;
-                const tempId = Date.now();
-                this.messages.push({
-                    temp_id: tempId,
-                    sender_type: 'user',
-                    message_type: 'text',
-                    content: content,
-                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                const isEditing = this.editingMsgId !== null;
+                const editId = this.editingMsgId;
+                this.editingMsgId = null;
+
+                if (!isEditing) {
+                    const tempId = Date.now();
+                    this.messages.push({
+                        temp_id: tempId,
+                        sender_type: 'user',
+                        message_type: 'text',
+                        content: content,
+                        created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+                    this.scrollToBottom();
+                    try {
+                        const formData = new FormData();
+                        formData.append('conversation_id', this.conversationId);
+                        formData.append('content', content);
+                        const response = await fetch('{{ route('chat.send') }}', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                            body: formData
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.success) {
+                            const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
+                            if (msgIndex !== -1) {
+                                this.messages[msgIndex].id = data.message.id;
+                                this.messages[msgIndex].content = data.message.content;
+                            }
+                            if (data.bot_replies) data.bot_replies.forEach(botMsg => {
+                                if (!this.messages.some(m => m.id === botMsg.id)) this.messages.push(botMsg);
+                            });
+                            if (data.bot_phase) {
+                                this.botPhase = data.bot_phase;
+                                if (data.bot_phase === 'require_registration') this.showRegForm = true;
+                            }
+                            this.queueSummaryRefresh(800);
+                        } else {
+                            this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                        }
+                    } catch (error) {
+                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                    } finally {
+                        this.isSending = false;
+                        this.sendTypingEvent(false);
+                    }
+                } else {
+                    // Handle Update
+                    try {
+                        const updateUrl = "{{ route('chat.message.update', ['message' => '__ID__']) }}".replace('__ID__', editId);
+                        const formData = new FormData();
+                        formData.append('content', content);
+                        formData.append('_method', 'PATCH');
+                        formData.append('_token', '{{ csrf_token() }}');
+                        
+                        const response = await fetch(updateUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Gagal memperbarui pesan.');
+
+                        const msg = this.messages.find(m => m.id === editId);
+                        if (msg) {
+                            msg.content = content;
+                            this.queueSummaryRefresh(400);
+                        }
+                    } catch (error) {
+                        alert(error.message);
+                        this.newMessage = content;
+                        this.editingMsgId = editId;
+                    } finally {
+                        this.isSending = false;
+                    }
+                }
+                
+                this.$nextTick(() => {
+                    if (this.$refs.messageInput) this.$refs.messageInput.focus();
                 });
-                this.scrollToBottom();
+            },
+
+            resizeComposer() {
+                const textarea = this.$refs.messageInput;
+                if (!textarea) return;
+                
+                textarea.style.height = 'auto';
+                const newHeight = Math.min(textarea.scrollHeight, 150);
+                textarea.style.height = newHeight + 'px';
+                
+                // Toggle overflow based on height
+                textarea.style.overflowY = textarea.scrollHeight > 150 ? 'auto' : 'hidden';
+            },
+
+            openMenu(msgId, event) {
+                this.menu.msgId = msgId;
+                this.menu.show = true;
+                
+                const rect = event.currentTarget.getBoundingClientRect();
+                this.menu.x = rect.left - 120; 
+                this.menu.y = rect.top + 20;
+
+                this.$nextTick(() => {
+                    const menuWidth = 140;
+                    if (this.menu.x + menuWidth > window.innerWidth) {
+                        this.menu.x = window.innerWidth - menuWidth - 10;
+                    }
+                });
+            },
+
+            handleContextMenu(event, msgId) {
+                const msg = this.messages.find(m => m.id === msgId);
+                if (!msg || msg.sender_type !== 'user') return;
+
+                this.menu.msgId = msgId;
+                this.menu.show = true;
+                this.menu.x = event.clientX;
+                this.menu.y = event.clientY;
+
+                this.$nextTick(() => {
+                    const menuWidth = 140;
+                    const menuHeight = 80;
+                    if (this.menu.x + menuWidth > window.innerWidth) this.menu.x -= menuWidth;
+                    if (this.menu.y + menuHeight > window.innerHeight) this.menu.y -= menuHeight;
+                });
+            },
+
+            closeMenu() {
+                this.menu.show = false;
+            },
+
+            editMessage(msgId) {
+                const msg = this.messages.find(m => m.id === msgId);
+                if (!msg) return;
+                
+                if (msg.sender_type !== 'user') {
+                    alert('Anda hanya dapat mengedit pesan Anda sendiri.');
+                    this.closeMenu();
+                    return;
+                }
+
+                this.editingMsgId = msgId;
+                this.newMessage = msg.content.replace(/<br>/g, '\n');
+                this.closeMenu();
+                
+                this.$nextTick(() => {
+                    if (this.$refs.messageInput) this.$refs.messageInput.focus();
+                });
+            },
+
+            cancelEdit() {
+                this.editingMsgId = null;
+                this.newMessage = '';
+            },
+
+            async deleteMessage(msgId) {
+                const msg = this.messages.find(m => m.id === msgId);
+                if (!msg) return;
+
+                if (msg.sender_type !== 'user') {
+                    alert('Anda hanya dapat menghapus pesan Anda sendiri.');
+                    this.closeMenu();
+                    return;
+                }
+
+                if (!confirm('Apakah Anda yakin ingin menghapus pesan ini?')) {
+                    this.closeMenu();
+                    return;
+                }
+
                 try {
+                    const deleteUrl = "{{ route('chat.message.destroy', ['message' => '__ID__']) }}".replace('__ID__', msgId);
                     const formData = new FormData();
-                    formData.append('conversation_id', this.conversationId);
-                    formData.append('content', content);
-                    const response = await fetch('{{ route('chat.send') }}', {
+                    formData.append('_method', 'DELETE');
+                    formData.append('_token', '{{ csrf_token() }}');
+
+                    const response = await fetch(deleteUrl, {
                         method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                        headers: {
+                            'Accept': 'application/json'
+                        },
                         body: formData
                     });
+
                     const data = await response.json();
-                    if (response.ok && data.success) {
-                        const msgIndex = this.messages.findIndex(m => m.temp_id === tempId);
-                        if (msgIndex !== -1) {
-                            this.messages[msgIndex].id = data.message.id;
-                            this.messages[msgIndex].content = data.message.content;
-                        }
-                        if (data.bot_replies) data.bot_replies.forEach(botMsg => {
-                            if (!this.messages.some(m => m.id === botMsg.id)) this.messages.push(botMsg);
-                        });
-                        if (data.bot_phase) {
-                            this.botPhase = data.bot_phase;
-                            if (data.bot_phase === 'require_registration') this.showRegForm = true;
-                        }
-                    } else {
-                        this.messages = this.messages.filter(m => m.temp_id !== tempId);
-                    }
+                    if (!response.ok) throw new Error(data.error || 'Gagal menghapus pesan.');
+
+                    this.messages = this.messages.filter(m => m.id !== msgId);
+                    this.queueSummaryRefresh(400);
                 } catch (error) {
-                    this.messages = this.messages.filter(m => m.temp_id !== tempId);
+                    alert(error.message);
                 } finally {
-                    this.isSending = false;
-                    this.sendTypingEvent(false);
+                    this.closeMenu();
                 }
             },
 
@@ -875,6 +1518,7 @@
                             this.messages[msgIndex].id = data.message.id;
                             this.messages[msgIndex].content = data.message.content;
                         }
+                        this.queueSummaryRefresh(800);
                     }
                 } catch (error) {
                     this.messages = this.messages.filter(m => m.temp_id !== tempId);
@@ -888,6 +1532,79 @@
                 if (this.isSending || this.botPhase !== 'awaiting_category') return;
                 this.newMessage = category;
                 await this.sendMessage();
+            },
+
+            async submitFeedback() {
+                if (!this.selectedRating || this.isSubmittingFeedback) return;
+
+                this.isSubmittingFeedback = true;
+
+                try {
+                    const submitUrl = "{{ route('chat.feedback.submit', ['conversation' => '__ID__']) }}".replace('__ID__', this.conversationId);
+                    const response = await fetch(submitUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            rating: this.selectedRating,
+                            comment: this.feedbackComment
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Gagal mengirim feedback.');
+
+                    this.feedbackPending = false;
+                    await fetch('{{ route('chat.logout') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    location.reload();
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    this.isSubmittingFeedback = false;
+                }
+            },
+
+            async skipFeedback() {
+                if (this.isSubmittingFeedback) return;
+
+                this.isSubmittingFeedback = true;
+
+                try {
+                    const skipUrl = "{{ route('chat.feedback.skip', ['conversation' => '__ID__']) }}".replace('__ID__', this.conversationId);
+                    const response = await fetch(skipUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Gagal melewati feedback.');
+
+                    this.feedbackPending = false;
+                    await fetch('{{ route('chat.logout') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    location.reload();
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    this.isSubmittingFeedback = false;
+                }
             },
 
             sendTypingEvent(isTyping = true) {
@@ -909,3 +1626,5 @@
     });
 </script>
 @endpush
+
+@include('partials.image-lightbox')

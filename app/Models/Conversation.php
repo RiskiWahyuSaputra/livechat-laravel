@@ -14,17 +14,18 @@ class Conversation extends Model
         'admin_id',
         'status',
         'bot_phase',
-        'selected_menu_id',
         'queue_position',
         'problem_category',
+        'feedback_status',
+        'feedback_requested_at',
         'last_message_at',
-        'reminder_count',
     ];
 
     protected function casts(): array
     {
         return [
             'last_message_at' => 'datetime',
+            'feedback_requested_at' => 'datetime',
         ];
     }
 
@@ -46,6 +47,11 @@ class Conversation extends Model
         return $this->hasMany(Message::class)->orderBy('created_at');
     }
 
+    public function rating()
+    {
+        return $this->hasOne(ConversationRating::class);
+    }
+
     // Ambil hanya pesan yang bisa dilihat user (bukan whisper)
     public function publicMessages()
     {
@@ -54,9 +60,24 @@ class Conversation extends Model
             ->orderBy('created_at');
     }
 
+    /**
+     * Relasi ke Tags (Many-to-Many)
+     */
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'conversation_tag');
+    }
+
     // Cek apakah conversation masih bisa dibalas
     public function isOpen(): bool
     {
         return in_array($this->status, ['pending', 'active', 'queued']);
+    }
+
+    public function hasPendingFeedback(): bool
+    {
+        return $this->status === 'closed'
+            && $this->feedback_status === 'pending'
+            && !is_null($this->admin_id);
     }
 }

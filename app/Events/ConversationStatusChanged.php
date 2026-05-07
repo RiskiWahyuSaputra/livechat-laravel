@@ -40,6 +40,8 @@ class ConversationStatusChanged implements ShouldBroadcastNow
             'bot_phase'       => $this->conversation->bot_phase,
             'admin_id'        => $this->conversation->admin_id,
             'queue_position'  => $this->conversation->queue_position,
+            'feedback_status' => $this->conversation->feedback_status,
+            'feedback_requested' => $this->conversation->hasPendingFeedback(),
             'changed_by'      => $this->changedBy ?? 'system',
             'customer'        => [
                 'id'        => $this->conversation->customer->id,

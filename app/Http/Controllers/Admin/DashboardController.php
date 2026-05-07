@@ -4,15 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Events\ConversationStatusChanged;
 use App\Events\MessageSent;
+use App\Events\MessageUpdated;
+use App\Events\MessageDeleted;
 use App\Events\TypingIndicator;
 use App\Events\UserShouldBeLoggedOut;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Customer;
-use App\Models\QuickReply;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\ConversationSummaryService;
 use App\Services\MessageSearchService;
 use App\Services\OpenClawWhatsappService;
 use Illuminate\Http\Request;
@@ -23,11 +25,17 @@ class DashboardController extends Controller
 {
     protected $analyticsService;
     protected $openClawWhatsappService;
+    protected $conversationSummaryService;
 
-    public function __construct(AnalyticsService $analyticsService, OpenClawWhatsappService $openClawWhatsappService)
+    public function __construct(
+        AnalyticsService $analyticsService,
+        OpenClawWhatsappService $openClawWhatsappService,
+        ConversationSummaryService $conversationSummaryService
+    )
     {
         $this->analyticsService = $analyticsService;
         $this->openClawWhatsappService = $openClawWhatsappService;
+        $this->conversationSummaryService = $conversationSummaryService;
     }
 
     /**
@@ -164,9 +172,10 @@ class DashboardController extends Controller
         $sortOrder = $request->get('sort', 'recent') === 'oldest' ? 'asc' : 'desc';
         $search = trim((string) $request->get('search', ''));
         $quickFilters = array_values(array_filter(explode(',', (string) $request->get('quick_filters', ''))));
+        $tagIds = array_values(array_filter(explode(',', (string) $request->get('tag_ids', ''))));
         $unreadOnly = $request->boolean('unread_only');
 
-        $mainQuery = Conversation::with(['customer', 'admin', 'messages' => function ($query) {
+        $mainQuery = Conversation::with(['customer', 'admin', 'tags', 'messages' => function ($query) {
                 $query->latest()->limit(1);
             }])
             ->whereIn('status', ['pending', 'queued', 'active', 'closed'])
@@ -177,6 +186,12 @@ class DashboardController extends Controller
                         ->where('name', 'Guest');
                 });
             });
+
+        if (!empty($tagIds)) {
+            $mainQuery->whereHas('tags', function ($q) use ($tagIds) {
+                $q->whereIn('tags.id', $tagIds);
+            });
+        }
 
         if ($search !== '') {
             $needle = '%' . mb_strtolower($search) . '%';
@@ -240,9 +255,8 @@ class DashboardController extends Controller
         $conversation = Conversation::withTrashed()->findOrFail($id);
         $admin    = Auth::guard('admin')->user();
         $messages = $conversation->messages()->get();
-        $quickReplies = QuickReply::select('id', 'command', 'content')->orderBy('command')->get();
 
-        return view('admin.conversation', compact('conversation', 'messages', 'admin', 'quickReplies'));
+        return view('admin.conversation', compact('conversation', 'messages', 'admin'));
     }
 
     /**
@@ -262,19 +276,19 @@ class DashboardController extends Controller
             return response()->json(['error' => 'Anda sudah mencapai batas maksimum chat aktif.'], 422);
         }
 
-         // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)  
-         $updated = Conversation::where('id', $conversation->id)
-             ->whereIn('status', ['pending', 'queued'])
-             ->where(function($q) use ($admin) {
-                 $q->whereNull('admin_id')
-                   ->orWhere('admin_id', $admin->id);
-             })
-             ->update([
-                 'admin_id'       => $admin->id,
-                 'status'         => 'active',
-                 'bot_phase'      => 'off', // Matikan bot saat admin mengambil alih
-                 'queue_position' => null,
-             ]);
+        // Optimistic Locking: update jika status masih pending/queued dan (belum diklaim ATAU diklaim oleh admin ini sendiri)  
+        $updated = Conversation::where('id', $conversation->id)
+            ->whereIn('status', ['pending', 'queued'])
+            ->where(function($q) use ($admin) {
+                $q->whereNull('admin_id')
+                  ->orWhere('admin_id', $admin->id);
+            })
+            ->update([
+                'admin_id'       => $admin->id,
+                'status'         => 'active',
+                'bot_phase'      => 'off', // Matikan bot saat admin mengambil alih
+                'queue_position' => null,
+            ]);
 
         if (!$updated) {
             return response()->json([
@@ -349,6 +363,14 @@ class DashboardController extends Controller
                 'admin_id' => $admin->id,
                 'deleted_at' => null, // Restore the conversation if soft-deleted
             ]);
+
+            if ($conversation->feedback_status === 'pending') {
+                $conversation->update([
+                    'feedback_status' => 'not_requested',
+                    'feedback_requested_at' => null,
+                ]);
+            }
+
             // Broadcast status change
             broadcast(new ConversationStatusChanged($conversation, $admin->username));
         }
@@ -411,6 +433,69 @@ class DashboardController extends Controller
                 'created_at'   => $message->created_at->format('H:i'),
             ],
         ]);
+    }
+
+    /**
+     * Update pesan yang sudah dikirim.
+     */
+    public function updateMessage(Request $request, Message $message)
+    {
+        $request->validate([
+            'content' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $admin = Auth::guard('admin')->user();
+
+        // Pastikan hanya pengirim atau superadmin yang bisa edit
+        if ($message->sender_id != $admin->id && !$admin->is_superadmin) {
+            return response()->json(['error' => 'Anda tidak memiliki akses untuk mengedit pesan ini.'], 403);
+        }
+
+        $message->update([
+            'content' => $request->content,
+        ]);
+
+        broadcast(new MessageUpdated($message))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'message' => [
+                'id'      => $message->id,
+                'content' => $message->content,
+            ]
+        ]);
+    }
+
+    /**
+     * Hapus pesan secara permanen (atau soft delete tergantung kebutuhan).
+     */
+    public function deleteMessage(Request $request, Message $message)
+    {
+        $admin = Auth::guard('admin')->user();
+
+        if (!$admin) {
+            \Log::warning('Hapus pesan admin gagal: Admin tidak terautentikasi.');
+            return response()->json(['error' => 'Sesi admin berakhir.'], 401);
+        }
+
+        // Pastikan hanya pengirim atau superadmin yang bisa hapus
+        if ($message->sender_id != $admin->id && !$admin->is_superadmin && $admin->role !== 'agent1') {
+            \Log::warning('Hapus pesan admin ditolak: Hak akses tidak cukup.', [
+                'admin_id' => $admin->id,
+                'admin_role' => $admin->role,
+                'msg_sender_id' => $message->sender_id
+            ]);
+            return response()->json(['error' => 'Anda tidak memiliki akses untuk menghapus pesan ini.'], 403);
+        }
+
+        $messageId = $message->id;
+        $conversationId = $message->conversation_id;
+
+        $message->delete();
+
+        broadcast(new MessageDeleted($messageId, $conversationId))->toOthers();
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -563,6 +648,8 @@ class DashboardController extends Controller
         $conversation->update([
             'status'           => 'closed',
             'problem_category' => $category,
+            'feedback_status'  => $conversation->admin_id ? 'pending' : 'not_requested',
+            'feedback_requested_at' => $conversation->admin_id ? now() : null,
         ]);
 
         // Soft delete the conversation to move it to history
@@ -576,7 +663,9 @@ class DashboardController extends Controller
             'sender_id'       => 0,
             'sender_type'     => 'system',
             'message_type'    => 'text',
-            'content'         => 'Chat telah ditutup. Terima kasih telah menghubungi kami!',
+            'content'         => $conversation->admin_id
+                ? 'Chat telah ditutup. Terima kasih telah menghubungi kami. Mohon berikan rating untuk layanan agen kami.'
+                : 'Chat telah ditutup. Terima kasih telah menghubungi kami!',
         ]);
 
         try {
@@ -590,9 +679,19 @@ class DashboardController extends Controller
             && !empty($customer->contact)
             && mb_strtolower((string) $customer->origin) === 'whatsapp'
         ) {
-            $sent = $this->openClawWhatsappService->sendText(
+            $introText = "Chat kamu sudah diselesaikan oleh {$admin->username}. Terima kasih sudah menghubungi kami.";
+            $summaryPayload = $this->conversationSummaryService->summarizeConversation($conversation);
+
+            if (is_array($summaryPayload)) {
+                $this->openClawWhatsappService->sendText(
+                    $customer,
+                    $this->conversationSummaryService->formatWhatsappSummary($summaryPayload)
+                );
+            }
+
+            $sent = $this->openClawWhatsappService->sendFeedbackPrompt(
                 $customer,
-                "Chat kamu sudah diselesaikan oleh {$admin->username}. Terima kasih sudah menghubungi kami."
+                $introText . "\n\nBoleh bantu beri rating untuk layanan agen kami?"
             );
 
             if (!$sent) {
@@ -602,10 +701,6 @@ class DashboardController extends Controller
                     'admin_id' => $admin->id,
                 ]);
             }
-        }
-
-        if ($conversation->customer) {
-            event(new UserShouldBeLoggedOut($conversation->customer));
         }
 
         return response()->json(['success' => true]);

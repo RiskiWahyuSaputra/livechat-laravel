@@ -24,7 +24,14 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-lg-3">
+                        <div class="col-lg-2">
+                            <select name="tag_ids[]" id="tag_ids" class="form-select select2" multiple data-placeholder="Filter Tag">
+                                @foreach($tags as $tag)
+                                    <option value="{{ $tag->id }}" {{ is_array(request('tag_ids')) && in_array($tag->id, request('tag_ids')) ? 'selected' : '' }}>{{ $tag->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-lg-2">
                             <input type="text" name="date_range" id="date_range" value="{{ request('date_range') }}" class="form-control" placeholder="Pilih tanggal...">
                         </div>
                         <div class="col-lg-3">
@@ -75,6 +82,12 @@
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif
+
+                                    <div class="mt-1">
+                                        @foreach($chat->tags as $tag)
+                                            <span class="badge rounded-pill" style="background-color: {{ $tag->color ?? '#6c757d' }}; color: white; font-size: 0.6rem;">{{ $tag->name }}</span>
+                                        @endforeach
+                                    </div>
                                 </td>
                                 <td>
                                     {{ $chat->deleted_at->timezone('Asia/Jakarta')->translatedFormat('d F Y') }}
@@ -106,6 +119,10 @@
 @push('scripts')
 <script>
     $(function() {
+        if ($('.select2').length > 0) {
+            $('.select2').select2();
+        }
+
         $('#date_range').daterangepicker({
             opens: 'left',
             autoUpdateInput: false,

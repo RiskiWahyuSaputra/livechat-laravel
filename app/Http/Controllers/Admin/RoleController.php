@@ -105,16 +105,16 @@ class RoleController extends Controller
             'username' => 'required|string|max:255|unique:admins',
             'email' => 'required|string|email|max:255|unique:admins',
             'password' => 'required|string|min:8',
-            'role' => 'required|string',
+            'role' => 'required|string', // Ini sekarang slug role
             'permissions' => 'nullable|array',
             'level' => 'required|integer|min:1',
-            'division' => 'nullable|in:cyber,topup,customer_service',
         ]);
 
         $role = Role::where('slug', $request->role)->first();
         $is_superadmin = $request->role === 'super_admin';
         $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
 
+        // Level otomatis berdasarkan Role, atau input manual jika diberikan
         $level = $request->level;
         if ($is_superadmin) {
             $level = 1;
@@ -127,11 +127,10 @@ class RoleController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role_id' => $role ? $role->id : null,
-            'role' => $request->role,
+            'role' => $request->role, // simpan slug sebagai fallback
             'is_superadmin' => $is_superadmin,
             'permissions' => $permissions,
             'level' => $level,
-            'division' => $request->division,
         ]);
 
         return redirect()->route('admin.admins.index')->with('success', 'Admin baru berhasil ditambahkan.');
@@ -146,13 +145,13 @@ class RoleController extends Controller
             'role' => 'required|string',
             'permissions' => 'nullable|array',
             'level' => 'required|integer|min:1',
-            'division' => 'nullable|in:cyber,topup,customer_service',
         ]);
 
         $role = Role::where('slug', $request->role)->first();
         $is_superadmin = $request->role === 'super_admin';
         $permissions = $is_superadmin ? array_keys($this->availablePermissions) : ($request->permissions ?? []);
 
+        // Level otomatis berdasarkan Role, atau input manual jika diberikan
         $level = $request->level;
         if ($is_superadmin) {
             $level = 1;
@@ -168,7 +167,6 @@ class RoleController extends Controller
             'is_superadmin' => $is_superadmin,
             'permissions' => $permissions,
             'level' => $level,
-            'division' => $request->division,
         ];
 
         if ($request->filled('password')) {

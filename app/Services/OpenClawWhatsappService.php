@@ -72,6 +72,19 @@ class OpenClawWhatsappService
         return $this->runMessageCommand($user, $this->normalizeTextForWhatsapp($caption), $mediaUrl, $buttons);
     }
 
+    public function sendFeedbackPrompt(User $user, ?string $introText = null): bool
+    {
+        $primaryText = trim((string) $introText);
+
+        if ($primaryText === '') {
+            $primaryText = "Boleh bantu beri rating untuk layanan agen kami?";
+        }
+
+        $fullText = $primaryText . "\n\n[1] 1\n[2] 2\n[3] 3\n[4] 4\n[5] 5\n[6] LEWATI\n\nBalas dengan angka 1-5, atau pilih LEWATI jika tidak ingin memberi rating.";
+
+        return $this->sendText($user, $fullText, $this->feedbackButtons());
+    }
+
     public function markAsRead(User $user, string $messageId): bool
     {
         if ($this->usesPollingTransport()) {
@@ -189,6 +202,15 @@ class OpenClawWhatsappService
         }
 
         return $normalized;
+    }
+
+    private function feedbackButtons(): array
+    {
+        return [
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_4', 'title' => '4']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_5', 'title' => '5']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_skip', 'title' => 'LEWATI']],
+        ];
     }
 
     private function buildBaseCommand(string $target): array

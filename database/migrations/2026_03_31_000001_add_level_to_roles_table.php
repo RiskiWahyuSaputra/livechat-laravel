@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('roles', function (Blueprint $table) {
-            $table->integer('level')->default(2)->after('slug')->comment('1 is the highest level');
+            $table->integer('level')->default(2)->after('name')->comment('1 is the highest level');
         });
     }
 

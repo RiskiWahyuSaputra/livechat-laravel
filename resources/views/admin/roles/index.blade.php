@@ -1,6 +1,6 @@
 @extends('layouts.admin_template')
 
-@section('title', 'Manajemen Role')
+@section('title', 'Hak Akses')
 
 @section('content')
 <div class="row">
@@ -9,7 +9,7 @@
             <div class="card-header">
                 <div class="row align-items-center">
                     <div class="col">
-                        <h4 class="card-title">Daftar Role</h4>
+                        <h4 class="card-title">Hak Akses</h4>
                     </div>
                     <div class="col-auto">
                         <a href="{{ route('admin.roles.create') }}" class="btn btn-primary btn-sm"><i class="fe fe-plus"></i> Tambah Role</a>

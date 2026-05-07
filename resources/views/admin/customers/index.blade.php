@@ -21,17 +21,27 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row mb-4">
+                <form action="{{ route('admin.customers.index') }}" method="GET" class="row mb-4">
+                    @if(request('status'))
+                        <input type="hidden" name="status" value="{{ request('status') }}">
+                    @endif
                     <div class="col-md-4">
-                        <form action="{{ route('admin.customers.index') }}" method="GET" class="d-flex">
-                            @if(request('status'))
-                                <input type="hidden" name="status" value="{{ request('status') }}">
-                            @endif
+                        <div class="input-group">
                             <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Cari nama, kontak, atau instansi...">
-                            <button type="submit" class="btn btn-primary ms-2"><i class="fe fe-search"></i></button>
-                        </form>
+                            <button type="submit" class="btn btn-primary"><i class="fe fe-search"></i></button>
+                        </div>
                     </div>
-                </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fe fe-calendar"></i></span>
+                            <input type="text" name="date_range" id="date_range" value="{{ request('date_range') }}" class="form-control" placeholder="Filter Tanggal..." readonly>
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                            @if(request('date_range'))
+                                <a href="{{ route('admin.customers.index', request()->except('date_range')) }}" class="btn btn-secondary" title="Reset Filter"><i class="fe fe-refresh-cw"></i></a>
+                            @endif
+                        </div>
+                    </div>
+                </form>
 
                 <div class="table-responsive">
                     <table class="table table-center table-hover">
@@ -40,6 +50,7 @@
                                 <th>Pelanggan</th>
                                 <th>Kontak & Instansi</th>
                                 <th>Status Akses</th>
+                                <th>Terakhir Update</th>
                                 <th class="text-end">Aksi</th>
                             </tr>
                         </thead>
@@ -89,6 +100,10 @@
                                         {{ $customer->is_online ? 'Online' : 'Offline' }}
                                     </small>
                                 </td>
+                                <td>
+                                    <div>{{ $customer->updated_at->format('d-m-Y') }}</div>
+                                    <small class="text-muted">{{ $customer->updated_at->format('H:i') }}</small>
+                                </td>
                                 <td class="text-end">
                                     <div class="d-flex justify-content-end">
                                         <form :id="'form-status-'+{{ $customer->id }}" action="{{ route('admin.customers.update', $customer->id) }}" method="POST" class="me-2" @submit.prevent="confirmStatus(event, {{ $customer->id }}, '{{ $customer->is_blocked ? 'Aktifkan' : 'Blokir' }}')">
@@ -129,6 +144,61 @@
 
 @push('scripts')
 <script>
+    $(function() {
+        let start = moment().subtract(29, 'days');
+        let end = moment();
+        
+        const dateRangeInput = $('#date_range');
+        const initialValue = dateRangeInput.val();
+        
+        if (initialValue) {
+            const parts = initialValue.split(' - ');
+            if (parts.length === 2) {
+                start = moment(parts[0], 'DD/MM/YYYY');
+                end = moment(parts[1], 'DD/MM/YYYY');
+            }
+        }
+
+        dateRangeInput.daterangepicker({
+            autoUpdateInput: false,
+            startDate: start,
+            endDate: end,
+            locale: {
+                format: 'DD/MM/YYYY',
+                cancelLabel: 'Clear',
+                applyLabel: 'Terapkan',
+                fromLabel: 'Dari',
+                toLabel: 'Sampai',
+                customRangeLabel: 'Pilih Tanggal Custom',
+                daysOfWeek: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+                monthNames: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+                firstDay: 1
+            },
+            ranges: {
+                'Hari Ini': [moment(), moment()],
+                'Kemarin': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                '7 Hari Terakhir': [moment().subtract(6, 'days'), moment()],
+                'Per Minggu': [moment().startOf('week'), moment().endOf('week')],
+                'Bulan Ini': [moment().startOf('month'), moment().endOf('month')],
+                'Bulan Lalu': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+                'Semua Waktu': [moment().subtract(10, 'years'), moment()],
+            },
+            showDropdowns: true,
+            alwaysShowCalendars: true,
+            opens: 'left'
+        });
+
+        dateRangeInput.on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+            $(this).parents('form').submit();
+        });
+
+        dateRangeInput.on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+            $(this).parents('form').submit();
+        });
+    });
+
     document.addEventListener('alpine:init', () => {
         Alpine.data('customerManagement', () => ({
             confirmStatus(event, customerId, actionName) {

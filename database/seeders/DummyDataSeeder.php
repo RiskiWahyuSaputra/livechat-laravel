@@ -125,7 +125,7 @@ class DummyDataSeeder extends Seeder
                     ['email' => $agent['email']],
                     [
                         'username' => $agent['username'],
-                        'password' => 'password',
+                        'password' => Hash::make('password'),
                         'role' => 'agent',
                         'is_superadmin' => false,
                         'status' => $agent['status'],
@@ -167,7 +167,7 @@ class DummyDataSeeder extends Seeder
                 'name' => $names[$i],
                 'email' => strtolower(str_replace(' ', '.', $names[$i])) . '@gmail.com',
                 'email_verified_at' => Carbon::now()->subDays(rand(1, 7)), // 7 days backwards
-                'password' => 'password',
+                'password' => Hash::make('password'),
                 'is_online' => $i < 15, // 15 online users
                 'is_blocked' => rand(1, 100) > 95, // 5% blocked
                 'contact' => '+6281' . rand(10000000, 99999999),
@@ -270,21 +270,21 @@ class DummyDataSeeder extends Seeder
         // QUICK REPLIES
         // ============================================
         $quickReplies = [
-            ['title' => 'Salam Utama',   'command' => 'salam_utama',   'content' => 'Halo! Terima kasih telah menghubungi kami. Ada yang bisa saya bantu hari ini?'],
-            ['title' => 'Sapaan Pagi',   'command' => 'sapaan_pagi',   'content' => 'Selamat Pagi! Ada yang bisa kami bantu?'],
-            ['title' => 'Mohon Tunggu',  'command' => 'mohon_tunggu',  'content' => 'Mohon tunggu sebentar ya kak, kami sedang melakukan pengecekan data.'],
-            ['title' => 'Tanya Resi',    'command' => 'tanya_resi',    'content' => 'Boleh dibantu informasikan nomor resi atau ID Pesanannya kak?'],
-            ['title' => 'Kirim BuktiTF', 'command' => 'kirim_buktitf', 'content' => 'Mohon bantuannya untuk mengirimkan bukti transfer agar bisa kami verifikasi.'],
-            ['title' => 'Masalah Teknis','command' => 'masalah_teknis','content' => "Bisa jelaskan lebih detail kendala teknis yang dialami? Apakah ada pesan error yang muncul?"],
-            ['title' => 'Tindak Lanjut', 'command' => 'tindak_lanjut', 'content' => 'Kendala kakak sudah kami teruskan ke tim terkait. Mohon kesediaannya menunggu.'],
-            ['title' => 'Penutup',       'command' => 'penutup',       'content' => 'Apakah ada hal lain yang bisa kami bantu kak?'],
-            ['title' => 'Terima Kasih',  'command' => 'terima_kasih',  'content' => 'Terima kasih telah menghubungi kami. Semoga harinya menyenangkan!'],
+            ['title' => 'Salam Utama', 'content' => 'Halo! Terima kasih telah menghubungi kami. Ada yang bisa saya bantu hari ini?'],
+            ['title' => 'Sapaan Pagi', 'content' => 'Selamat Pagi! Ada yang bisa kami bantu?'],
+            ['title' => 'Mohon Tunggu', 'content' => 'Mohon tunggu sebentar ya kak, kami sedang melakukan pengecekan data.'],
+            ['title' => 'Tanya Resi', 'content' => 'Boleh dibantu informasikan nomor resi atau ID Pesanannya kak?'],
+            ['title' => 'Kirim BuktiTF', 'content' => 'Mohon bantuannya untuk mengirimkan bukti transfer agar bisa kami verifikasi.'],
+            ['title' => 'Masalah Teknis', 'content' => "Bisa jelaskan lebih detail kendala teknis yang dialami? Apakah ada pesan error yang muncul?"],
+            ['title' => 'Tindak Lanjut', 'content' => 'Kendala kakak sudah kami teruskan ke tim terkait. Mohon kesediaannya menunggu.'],
+            ['title' => 'Penutup', 'content' => 'Apakah ada hal lain yang bisa kami bantu kak?'],
+            ['title' => 'Terima Kasih', 'content' => 'Terima kasih telah menghubungi kami. Semoga harinya menyenangkan!']
         ];
 
         foreach ($quickReplies as $reply) {
             QuickReply::firstOrCreate(
                 ['title' => $reply['title']],
-                ['command' => $reply['command'], 'content' => $reply['content']]
+                ['content' => $reply['content']]
             );
         }
 

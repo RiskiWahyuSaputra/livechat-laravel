@@ -76,24 +76,32 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request)
     {
-        $filter = $request->get('filter');
-        return Excel::download(new CustomersExport($filter), 'laporan_pelanggan.xlsx');
+        try {
+            $filter = $request->get('filter');
+            return Excel::download(new CustomersExport($filter), 'laporan_pelanggan.xlsx');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal mengekspor Excel: ' . $e->getMessage());
+        }
     }
 
     public function exportPdf(Request $request)
     {
-        $filter = $request->get('filter');
-        $query = $this->getBaseQuery($request);
-        $customers = $query->with('conversations')->latest()->get();
+        try {
+            $filter = $request->get('filter');
+            $query = $this->getBaseQuery($request);
+            $customers = $query->with('conversations')->latest()->get();
 
-        foreach ($customers as $customer) {
-            $statusData = $this->mapUserStatus($customer);
-            $customer->status_label = $statusData['label'];
+            foreach ($customers as $customer) {
+                $statusData = $this->mapUserStatus($customer);
+                $customer->status_label = $statusData['label'];
+            }
+
+            $pdf = Pdf::loadView('admin.reports.pdf', compact('customers', 'filter'));
+
+            return $pdf->download('laporan_pelanggan.pdf');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal mengekspor PDF: ' . $e->getMessage());
         }
-
-        $pdf = Pdf::loadView('admin.reports.pdf', compact('customers', 'filter'));
-
-        return $pdf->download('laporan_pelanggan.pdf');
     }
 
     public function apiData(Request $request)
@@ -109,6 +117,7 @@ class ReportController extends Controller
                 'origin' => $c->origin,
                 'status' => $statusData['label'],
                 'status_class' => $statusData['class'],
+                'is_blocked' => $c->is_blocked,
                 'created_at' => $c->created_at->format('d M Y H:i')
             ];
         });

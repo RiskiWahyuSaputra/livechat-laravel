@@ -151,7 +151,7 @@
                     <template x-if="msg.message_type === 'image'">
                         <div class="bubble" :class="msg.sender_id == adminId ? 'bubble-me' : 'bubble-other'" style="padding:6px;">
                             <template x-if="!String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
-                                <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:pointer;" class="hover:opacity-90 transition-opacity" @click="window.open(msg.content, '_blank')">
+                                <img :src="msg.content" style="border-radius:12px; max-width:100%; max-height:240px; display:block; cursor:zoom-in;" class="hover:opacity-90 transition-opacity" @click="openLightbox(msg.content)">
                             </template>
                             <template x-if="String(msg.content || '').startsWith('whatsapp-media-placeholder:')">
                                 <div style="padding:10px 12px; border-radius:12px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.5; border:1px solid #fcd34d;">
@@ -211,7 +211,9 @@
                 </button>
                 <input type="file" x-ref="fileInput" style="display:none;" @change="uploadFile">
 
-                <textarea x-model="newMessage" @keydown.enter.prevent="if(!event.shiftKey) sendMessage()"
+                <textarea x-model="newMessage" x-ref="messageInput"
+                          @input="resizeComposer()"
+                          @keydown.enter="if(!event.shiftKey) { event.preventDefault(); sendMessage(); } else { $nextTick(() => resizeComposer()); }"
                           placeholder="Ketik pesan ke agen..."
                           class="msg-textarea" rows="1"></textarea>
 
@@ -280,6 +282,7 @@
 
                     const content = this.newMessage;
                     this.newMessage = '';
+                    this.$nextTick(() => this.resizeComposer());
                     this.isSending = true;
 
                     const tempId = Date.now();
@@ -319,6 +322,12 @@
                     } finally {
                         this.isSending = false;
                     }
+                },
+
+                resizeComposer() {
+                    if (!this.$refs.messageInput) return;
+                    this.$refs.messageInput.style.height = 'auto';
+                    this.$refs.messageInput.style.height = `${this.$refs.messageInput.scrollHeight}px`;
                 },
 
                 async uploadFile(e) {
@@ -384,5 +393,7 @@
             }));
         });
     </script>
+
+    @include('partials.image-lightbox')
 </body>
 </html>

@@ -10,12 +10,15 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class ConversationFlowService
 {
-    public function __construct(protected GeminiService $geminiService)
-    {
+    public function __construct(
+        protected GeminiService $geminiService,
+        protected OpenClawWhatsappService $openClawWhatsappService,
+    ) {
     }
 
     private function getSystemMode(): string
@@ -35,9 +38,9 @@ class ConversationFlowService
             $rejectMessage = Setting::get('bot_greeting_closed', $defaultMessage) ?? $defaultMessage;
 
             return [
-                'conversation'   => null,
-                'bot_messages'   => [],
-                'rejected'       => true,
+                'conversation' => null,
+                'bot_messages' => [],
+                'rejected' => true,
                 'reject_message' => $rejectMessage,
             ];
         }
@@ -159,9 +162,9 @@ class ConversationFlowService
         }
 
         return [
-            'conversation'   => $conversation,
-            'bot_messages'   => $createdMessages,
-            'rejected'       => false,
+            'conversation' => $conversation,
+            'bot_messages' => $createdMessages,
+            'rejected' => false,
             'reject_message' => '',
         ];
     }
@@ -178,7 +181,6 @@ class ConversationFlowService
 
         $conversation->update([
             'last_message_at' => now(),
-            'reminder_count' => 0,
         ]);
 
         if ($broadcast) {
@@ -279,7 +281,7 @@ class ConversationFlowService
         } elseif ($conversation->bot_phase === 'awaiting_submenu') {
             $parentMenu = $this->resolveAwaitingSubmenuParentMenu($conversation);
             $child = $this->findSubmenuSelection($userMessage, $parentMenu?->id);
-            
+
             // Web fallback: if label matching fails but it's a known submenu option
             if (!$child) {
                 $normalizedInput = mb_strtolower(trim($userMessage));
@@ -310,7 +312,7 @@ class ConversationFlowService
                         // For specific departments, we also transition to offer_agent_transfer
                         $conversation->update(['bot_phase' => 'offer_agent_transfer']);
                         $content = $child->message_response ?: 'Hai! Saya BEST AI, asisten virtual kamu. Ceritakan aja kendala atau pertanyaan kamu, nanti saya bantu sebisa saya. Kalau mau langsung ngobrol sama Agent, klik tombol **Hubungi Agent** di bawah ya.';
-                        
+
                         $msg = Message::create([
                             'conversation_id' => $conversation->id,
                             'sender_id' => 0,
@@ -349,14 +351,13 @@ class ConversationFlowService
             if ($this->wantsAgentTransfer($userMessage)) {
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
-                    $officeStart = Setting::get('office_hours_start', '08:00');
-                    $officeEnd   = Setting::get('office_hours_end', '17:00');
+                    $hours = $this->getOfficeHoursForToday();
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
-                        'sender_id'       => 0,
-                        'sender_type'     => 'admin',
-                        'message_type'    => 'text',
-                        'content'         => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                        'sender_id' => 0,
+                        'sender_type' => 'admin',
+                        'message_type' => 'text',
+                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$hours['start']} - {$hours['end']}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
                     ]);
                     return $this->formatBotReplies($newBotMessages, $conversation, $broadcast);
                 }
@@ -405,14 +406,13 @@ class ConversationFlowService
             if ($this->wantsAgentTransfer($userMessage)) {
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
-                    $officeStart = Setting::get('office_hours_start', '08:00');
-                    $officeEnd   = Setting::get('office_hours_end', '17:00');
+                    $hours = $this->getOfficeHoursForToday();
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
-                        'sender_id'       => 0,
-                        'sender_type'     => 'admin',
-                        'message_type'    => 'text',
-                        'content'         => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                        'sender_id' => 0,
+                        'sender_type' => 'admin',
+                        'message_type' => 'text',
+                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$hours['start']} - {$hours['end']}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
                     ]);
                 } elseif ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
@@ -486,20 +486,20 @@ class ConversationFlowService
                 }
             }
         } elseif ($conversation->bot_phase === 'require_registration') {
-             // Generate token if not exists
-             if (!$user->registration_token) {
-                 $user->update(['registration_token' => Str::random(32)]);
-             }
+            // Generate token if not exists
+            if (!$user->registration_token) {
+                $user->update(['registration_token' => Str::random(32)]);
+            }
 
-             $regUrl = route('chat.register.whatsapp', ['token' => $user->registration_token]);
+            $regUrl = route('chat.register.whatsapp', ['token' => $user->registration_token]);
 
-             $newBotMessages[] = Message::create([
-                 'conversation_id' => $conversation->id,
-                 'sender_id'       => 0,
-                 'sender_type'     => 'admin',
-                 'message_type'    => 'text',
-                 'content'         => "Silakan isi data diri Anda melalui link berikut agar dapat terhubung dengan Agent:\n\n" . $regUrl,
-             ]);
+            $newBotMessages[] = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => 0,
+                'sender_type' => 'admin',
+                'message_type' => 'text',
+                'content' => "Silakan isi data diri Anda melalui link berikut agar dapat terhubung dengan Agent:\n\n" . $regUrl,
+            ]);
         } elseif ($conversation->bot_phase === 'awaiting_main_menu') {
             $menu = $this->findRootMenuSelection($userMessage);
             if ($menu) {
@@ -584,9 +584,14 @@ class ConversationFlowService
         $messages = [];
         $productImage = $this->detectProductImageForMessage($userMessage);
         $isFallbackResponse = $this->isAiFallbackResponse($aiResponse);
+        $aiResponse = $this->sanitizeAiResponse($aiResponse);
 
         if ($productImage && !$isFallbackResponse) {
             $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
+        }
+
+        if ($productImage && $this->isOutOfScopeProductRefusal($aiResponse)) {
+            $aiResponse = $productImage['description'] ?? "Produk {$productImage['label']} termasuk bagian dari PT BEST CORPORATION SYARIAH. Kalau kamu mau, saya juga bisa bantu tampilkan gambarnya.";
         }
 
         $msg = Message::create([
@@ -612,7 +617,7 @@ class ConversationFlowService
                 'sender_id' => 0,
                 'sender_type' => 'admin',
                 'message_type' => 'image',
-                'content' => asset('images/produk/' . $productImage['file']),
+                'content' => asset('images/' . $productImage['path']),
             ]);
         }
 
@@ -628,16 +633,18 @@ class ConversationFlowService
     {
         $normalized = $this->normalizeBotInput($userMessage);
 
-        if (in_array($normalized, [
-            '2',
-            'agent',
-            'hubungi agent',
-            'hubungin agent',
-            'hubungi cs',
-            'hubungin cs',
-            'cs',
-            'customer service',
-        ], true)) {
+        if (
+            in_array($normalized, [
+                '2',
+                'agent',
+                'hubungi agent',
+                'hubungin agent',
+                'hubungi cs',
+                'hubungin cs',
+                'cs',
+                'customer service',
+            ], true)
+        ) {
             return true;
         }
 
@@ -649,14 +656,16 @@ class ConversationFlowService
     {
         $normalized = $this->normalizeBotInput($userMessage);
 
-        if (in_array($normalized, [
-            '1',
-            'lanjut',
-            'lanjut tanya',
-            'tanya best ai',
-            'best ai',
-            'tanya ai',
-        ], true)) {
+        if (
+            in_array($normalized, [
+                '1',
+                'lanjut',
+                'lanjut tanya',
+                'tanya best ai',
+                'best ai',
+                'tanya ai',
+            ], true)
+        ) {
             return true;
         }
 
@@ -714,72 +723,224 @@ class ConversationFlowService
         return false;
     }
 
+    private function isOutOfScopeProductRefusal(string $aiResponse): bool
+    {
+        $normalized = strtolower(trim(strip_tags($aiResponse)));
+
+        return str_contains($normalized, 'maaf, saya hanya bisa membantu pertanyaan seputar pt best corporation syariah');
+    }
+
     private function detectProductImageForMessage(string $message): ?array
     {
-        $normalized = strtolower($message);
-        $genericProductIntentKeywords = [
-            'produk',
-            'product',
-            'kategori produk',
-            'jenis produk',
-            'katalog',
-            'catalog',
-            'gambar produk',
-            'foto produk',
-            'barang',
-        ];
+        $normalized = $this->normalizeProductLookupText($message);
 
-        $productMap = [
-            [
-                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
-                'file' => 'produk-kecantikan.png',
-                'label' => 'kecantikan',
-            ],
-            [
-                'keywords' => ['kesehatan', 'health', 'herbal', 'vitamin', 'suplemen'],
-                'file' => 'produk-kesehatan.png',
-                'label' => 'kesehatan',
-            ],
-            [
-                'keywords' => ['otomotif', 'motor', 'mobil', 'bengkel', 'oli'],
-                'file' => 'produk-otomotif.png',
-                'label' => 'otomotif',
-            ],
-            [
-                'keywords' => ['pertanian', 'pupuk', 'tani', 'agrikultur', 'agro'],
-                'file' => 'produk-pertanian.png',
-                'label' => 'pertanian',
-            ],
-        ];
+        if ($specificProduct = $this->findSpecificProductImage($normalized)) {
+            return $specificProduct;
+        }
 
-        foreach ($productMap as $product) {
+        return $this->findCategoryProductImage($normalized);
+    }
+
+    private function findSpecificProductImage(string $normalizedMessage): ?array
+    {
+        foreach ($this->productImageCatalog() as $product) {
             foreach ($product['keywords'] as $keyword) {
-                if (str_contains($normalized, $keyword)) {
+                if (str_contains($normalizedMessage, $keyword)) {
                     return [
-                        'file' => $product['file'],
+                        'path' => $product['path'],
                         'label' => $product['label'],
                     ];
                 }
             }
         }
 
-        foreach ($genericProductIntentKeywords as $keyword) {
-            if (str_contains($normalized, $keyword)) {
-                return [
-                    'file' => 'produk-best.png',
-                    'label' => 'BEST',
-                ];
+        return null;
+    }
+
+    private function findCategoryProductImage(string $normalizedMessage): ?array
+    {
+        $productIntentKeywords = [
+            'produk',
+            'product',
+            'daftar produk',
+            'kategori produk',
+            'jenis produk',
+            'katalog',
+            'catalog',
+            'gambar produk',
+            'foto produk',
+            'lihat produk',
+            'tampilkan produk',
+        ];
+
+        $hasProductIntent = false;
+        foreach ($productIntentKeywords as $keyword) {
+            if (str_contains($normalizedMessage, $this->normalizeProductLookupText($keyword))) {
+                $hasProductIntent = true;
+                break;
             }
         }
 
-        if (str_contains($normalized, 'best') && str_contains($normalized, 'produk')) {
+        if (!$hasProductIntent) {
+            return null;
+        }
+
+        $categoryMap = [
+            [
+                'keywords' => ['otomotif', 'kendaraan', 'motor', 'mobil'],
+                'path' => 'produk/produk-otomotif.png',
+                'label' => 'otomotif',
+            ],
+            [
+                'keywords' => ['kesehatan', 'herbal', 'suplemen', 'vitamin'],
+                'path' => 'produk/produk-kesehatan.png',
+                'label' => 'herbal dan kesehatan',
+            ],
+            [
+                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
+                'path' => 'produk/produk-kecantikan.png',
+                'label' => 'skincare dan kecantikan',
+            ],
+            [
+                'keywords' => ['pertanian', 'perkebunan', 'pupuk', 'tani', 'agrikultur'],
+                'path' => 'produk/produk-pertanian.png',
+                'label' => 'pertanian dan perkebunan',
+            ],
+            [
+                'keywords' => ['minuman kesehatan', 'minuman', 'kopi', 'coffee'],
+                'path' => 'produk minuman untuk kesehatan tubuh/Evitgo 100.jpg',
+                'label' => 'minuman kesehatan',
+            ],
+            [
+                'keywords' => ['pembersih tubuh', 'pembersih area tubuh', 'hygiene', 'kesehatan area tubuh'],
+                'path' => 'produk pembersih untuk kesehatan tubuh/LVN CRYSTAL V LVN CRYSTAL Q.jpg',
+                'label' => 'pembersih area tubuh',
+            ],
+        ];
+
+        foreach ($categoryMap as $category) {
+            foreach ($category['keywords'] as $keyword) {
+                if (str_contains($normalizedMessage, $this->normalizeProductLookupText($keyword))) {
+                    return $category;
+                }
+            }
+        }
+
+        if (str_contains($normalizedMessage, 'best')) {
             return [
-                'file' => 'produk-best.png',
+                'path' => 'produk/produk-best.png',
                 'label' => 'BEST',
             ];
         }
 
         return null;
+    }
+
+    private function sanitizeAiResponse(string $aiResponse): string
+    {
+        $cleaned = preg_replace('/<img\b[^>]*>/i', '', $aiResponse);
+        $cleaned = preg_replace('/<figure\b[^>]*>.*?<\/figure>/is', '', (string) $cleaned);
+        $cleaned = preg_replace('/\n{3,}/', "\n\n", (string) $cleaned);
+
+        return trim((string) $cleaned);
+    }
+
+    private function productImageCatalog(): array
+    {
+        static $catalog = null;
+
+        if (is_array($catalog)) {
+            return $catalog;
+        }
+
+        $catalog = [];
+        $directories = collect(File::directories(public_path('images')))
+            ->map(fn (string $path) => basename($path))
+            ->reject(fn (string $directory) => in_array($directory, ['produk'], true))
+            ->values()
+            ->all();
+        $aliasMap = [
+            'bmaxxx' => 'B MAXX',
+            'agro sawit' => 'Agrosawit',
+            'nano tech' => 'Eco Racing Nano Tech atau Nano Oil',
+            'nano oil' => 'Eco Racing Nano Tech atau Nano Oil',
+        ];
+        $labelOverrides = [
+            'ecoracing' => 'Eco Racing',
+            'ecodiesel' => 'Eco Diesel',
+            'ecoracingnanotechataunanooil' => 'Eco Racing Nano Tech atau Nano Oil',
+            'agrosawit' => 'Agrosawit',
+            'bmaxx' => 'B-MAXX',
+            'ecovico' => 'ECO VICO',
+            'habspro' => 'HABSPRO',
+            'redoneboost' => 'RED ONE BOOST',
+            'lvnserum' => 'LVN Serum',
+            'lvnlipcream' => 'LVN Lipcream',
+            'lvndayandnightcream' => 'LVN Day and Night Cream',
+        ];
+        $descriptionOverrides = [
+            'agrosawit' => 'Agrosawit adalah produk pupuk untuk pertanian dan perkebunan dari PT BEST yang pada artikel bisnisraksasa.com dijelaskan sebagai Premium Water Soluble Fertilizer, mudah larut, cepat diserap tanaman, dan diposisikan untuk membantu meningkatkan fungsi akar, batang, dan daun pada tanaman sawit.',
+            'ecoracing' => 'Eco Racing adalah aditif bahan bakar PT BEST untuk membantu mengoptimalkan pembakaran pada kendaraan. Menurut halaman produk bisnisraksasa.com, manfaat umumnya meliputi membantu membersihkan dan merawat mesin, menyempurnakan pembakaran, mengurangi knocking, meningkatkan akselerasi, dan membantu mengurangi emisi gas buang.',
+            'ecodiesel' => 'Eco Diesel adalah aditif bahan bakar PT BEST yang ditujukan untuk mesin diesel. Menurut halaman produk bisnisraksasa.com, produk ini diposisikan untuk membantu mengoptimalkan pembakaran dan meningkatkan kualitas bahan bakar.',
+            'ecoracingnanotechataunanooil' => 'Eco Racing Nano Tech atau Nano Oil adalah aditif oli mesin PT BEST berbasis teknologi nano yang diposisikan untuk membantu memberikan pelumasan lebih baik dan melindungi komponen mesin.',
+            'bmaxx' => 'B-MAXX adalah kapsul herbal PT BEST yang pada bisnisraksasa.com dijelaskan sebagai penyeimbang nutrisi organ dengan kandungan seperti cabe jawa, merica, gamat emas, purwaceng, dan pasak bumi.',
+            'ecovico' => 'ECO VICO adalah kapsul herbal PT BEST yang dibuat dari penyulingan minyak kelapa murni dan pada bisnisraksasa.com diposisikan untuk membantu menjaga stamina dan kesehatan tubuh.',
+            'habspro' => 'HABSPRO adalah suplemen herbal PT BEST berbentuk kapsul dengan kandungan utama habbatussauda, bee pollen, dan propolis. Di bisnisraksasa.com produk ini diposisikan untuk membantu menjaga stamina dan daya tahan tubuh.',
+            'lvnserum' => 'LVN Serum adalah produk skincare PT BEST yang pada bisnisraksasa.com dijelaskan mengandung Hyaluronic Acid, Vitamin C, Vitamin E, dan Collagen untuk membantu menutrisi kulit dan menyamarkan tanda-tanda penuaan dini.',
+            'lvnlipcream' => 'LVN Lipcream adalah produk kecantikan PT BEST yang pada bisnisraksasa.com dijelaskan memiliki banyak pilihan warna dengan tampilan natural, tekstur ringan, dan tidak mudah luntur.',
+            'lvndayandnightcream' => 'LVN Day and Night Cream adalah produk skincare PT BEST. Menurut bisnisraksasa.com, varian day cream diposisikan untuk membantu mencerahkan, melembapkan, dan melindungi kulit dari paparan sinar matahari.',
+        ];
+
+        foreach ($directories as $directory) {
+            $fullPath = public_path('images/' . $directory);
+
+            if (!File::isDirectory($fullPath)) {
+                continue;
+            }
+
+            foreach (File::files($fullPath) as $file) {
+                $filename = $file->getFilenameWithoutExtension();
+                $normalizedName = $this->normalizeProductLookupText($filename);
+                $label = $labelOverrides[$normalizedName] ?? $this->humanizeProductFilename($filename);
+                $keywords = array_values(array_unique(array_filter([
+                    $normalizedName,
+                    $this->normalizeProductLookupText($label),
+                ])));
+
+                foreach ($aliasMap as $alias => $aliasLabel) {
+                    if ($normalizedName === $this->normalizeProductLookupText($aliasLabel)) {
+                        $keywords[] = $this->normalizeProductLookupText($alias);
+                    }
+                }
+
+                $catalog[] = [
+                    'path' => $directory . '/' . $file->getFilename(),
+                    'label' => $label,
+                    'description' => $descriptionOverrides[$normalizedName] ?? null,
+                    'keywords' => array_values(array_unique($keywords)),
+                ];
+            }
+        }
+
+        return $catalog;
+    }
+
+    private function normalizeProductLookupText(string $text): string
+    {
+        $text = preg_replace('/(?<!^)([A-Z])/', ' $1', $text);
+        $text = Str::lower((string) $text);
+        $text = preg_replace('/[^a-z0-9]+/i', '', $text);
+
+        return trim((string) $text);
+    }
+
+    private function humanizeProductFilename(string $filename): string
+    {
+        $label = preg_replace('/(?<!^)([A-Z])/', ' $1', $filename);
+        $label = str_replace(['-', '_'], ' ', (string) $label);
+        $label = preg_replace('/\s+/', ' ', (string) $label);
+
+        return trim((string) $label);
     }
 
     private function formatBotReplies(array $messages, Conversation $conversation, bool $broadcast = true): array
@@ -874,16 +1035,16 @@ class ConversationFlowService
         }
 
         if ($menus->isEmpty()) {
-             $lines[] = "Menu utama belum tersedia saat ini.";
+            $lines[] = "Menu utama belum tersedia saat ini.";
         } else {
             $lines[] = "Silakan pilih salah satu menu utama berikut:";
             $lines[] = "";
-            
+
             foreach ($menus as $index => $menu) {
                 $lines[] = "[" . ($index + 1) . "] " . $menu->label;
             }
         }
-        
+
         $lines[] = "";
         $lines[] = "Balas dengan angka atau nama menu yang kamu pilih.";
 
@@ -892,15 +1053,17 @@ class ConversationFlowService
 
     private function buildSubmenuPrompt(?int $parentId = null): ?string
     {
-        if (!$parentId) return null;
+        if (!$parentId)
+            return null;
         $children = BotMenu::where('parent_id', $parentId)->orderBy('order_index')->get(['label']);
-        if ($children->isEmpty()) return null;
+        if ($children->isEmpty())
+            return null;
 
         $lines = ["Silakan pilih salah satu submenu berikut:", ""];
         foreach ($children as $index => $child) {
             $lines[] = "[" . ($index + 1) . "] " . $child->label;
         }
-        
+
         $lines[] = "";
         $lines[] = "Balas dengan angka atau nama menu pilihan Anda.";
 
@@ -962,7 +1125,7 @@ class ConversationFlowService
 
         return $menus
             ->values()
-            ->map(fn ($menu, $index) => '[' . ($index + 1) . '] ' . $menu->label)
+            ->map(fn($menu, $index) => '[' . ($index + 1) . '] ' . $menu->label)
             ->implode("\n");
     }
 
@@ -1003,7 +1166,7 @@ class ConversationFlowService
     {
         $count = $this->rootMenus()->count();
         if ($count === 0) {
-             \Illuminate\Support\Facades\Log::warning('usesBotMenuFlow: Root menus count is 0');
+            \Illuminate\Support\Facades\Log::warning('usesBotMenuFlow: Root menus count is 0');
         }
         return $count > 0;
     }
@@ -1135,6 +1298,31 @@ class ConversationFlowService
     }
 
     /**
+     * Get office hours for today based on per-day settings and timezone.
+     */
+    public function getOfficeHoursForToday(): array
+    {
+        $timezone = Setting::get('office_hours_timezone', 'Asia/Jakarta');
+        try {
+            $now = now($timezone);
+        } catch (\Exception $e) {
+            $now = now();
+        }
+        $day = strtolower($now->format('l'));
+
+        $isActive = Setting::get("office_hours_{$day}_active", in_array($day, ['saturday', 'sunday']) ? '0' : '1');
+        $start = Setting::get("office_hours_{$day}_start", Setting::get('office_hours_start', '08:00'));
+        $end = Setting::get("office_hours_{$day}_end", Setting::get('office_hours_end', '17:00'));
+
+        return [
+            'is_active' => $isActive == '1',
+            'start' => $start,
+            'end' => $end,
+            'timezone' => $timezone
+        ];
+    }
+
+    /**
      * Notify all queued conversations that agent service is temporarily unavailable.
      *
      * Called when system_mode changes to `outside_office_hour` or `closed`.
@@ -1149,27 +1337,43 @@ class ConversationFlowService
             return;
         }
 
-        $message = $newMode === 'closed'
-            ? 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena sistem sedang ditutup. Kami akan segera kembali melayani Anda.'
-            : 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali saat jam operasional.';
+        if ($newMode === 'closed') {
+            $defaultClosed = 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena sistem sedang ditutup. Kami akan segera kembali melayani Anda.';
+            $message = Setting::get('bot_greeting_closed', $defaultClosed) ?? $defaultClosed;
+        } else {
+            $hours = $this->getOfficeHoursForToday();
+            $defaultOutside = 'Mohon maaf, saat ini kami sedang di luar jam kerja. Silakan tinggalkan pesan dan kami akan segera membalas saat jam kerja dimulai.';
+            $outsideMessage = Setting::get('bot_greeting_outside_office_hour', $defaultOutside) ?? $defaultOutside;
+            $message = $outsideMessage . "\n\nJam operasional kami: {$hours['start']} - {$hours['end']}.";
+        }
 
         $queuedConversations = Conversation::whereIn('status', ['queued', 'pending'])
             ->whereNull('admin_id')
+            ->with('customer')
             ->get();
 
         foreach ($queuedConversations as $conversation) {
             $notif = Message::create([
                 'conversation_id' => $conversation->id,
-                'sender_id'       => 0,
-                'sender_type'     => 'system',
-                'message_type'    => 'text',
-                'content'         => $message,
+                'sender_id' => 0,
+                'sender_type' => 'system',
+                'message_type' => 'text',
+                'content' => $message,
             ]);
 
             try {
                 broadcast(new MessageSent($notif));
             } catch (\Exception $e) {
                 \Log::warning('Broadcast failed for queue notification: ' . $e->getMessage());
+            }
+
+            // Also send via WhatsApp if the user came from WhatsApp
+            if ($conversation->customer && $conversation->customer->origin === 'WhatsApp') {
+                try {
+                    $this->openClawWhatsappService->sendText($conversation->customer, $message);
+                } catch (\Exception $e) {
+                    \Log::warning('WhatsApp notify failed for conversation ' . $conversation->id . ': ' . $e->getMessage());
+                }
             }
         }
     }
@@ -1186,9 +1390,9 @@ class ConversationFlowService
     private function createOutsideOfficeHourConversation(User $user): array
     {
         $conversation = Conversation::create([
-            'user_id'        => $user->id,
-            'status'         => 'pending',
-            'bot_phase'      => 'chatting_with_ai',
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'bot_phase' => 'chatting_with_ai',
             'queue_position' => null,
             'last_message_at' => now(),
         ]);
@@ -1196,17 +1400,16 @@ class ConversationFlowService
         $defaultMessage = 'Mohon maaf, saat ini kami sedang di luar jam kerja. Silakan tinggalkan pesan dan kami akan segera membalas saat jam kerja dimulai.';
         $outsideMessage = Setting::get('bot_greeting_outside_office_hour', $defaultMessage) ?? $defaultMessage;
 
-        $officeStart = Setting::get('office_hours_start', '08:00');
-        $officeEnd   = Setting::get('office_hours_end', '17:00');
+        $hours = $this->getOfficeHoursForToday();
 
-        $fullMessage = $outsideMessage . "\n\nJam operasional kami: {$officeStart} - {$officeEnd}.";
+        $fullMessage = $outsideMessage . "\n\nJam operasional kami: {$hours['start']} - {$hours['end']}.";
 
         $botMsg = Message::create([
             'conversation_id' => $conversation->id,
-            'sender_id'       => 0,
-            'sender_type'     => 'admin',
-            'message_type'    => 'text',
-            'content'         => $fullMessage,
+            'sender_id' => 0,
+            'sender_type' => 'admin',
+            'message_type' => 'text',
+            'content' => $fullMessage,
         ]);
 
         try {
@@ -1220,9 +1423,9 @@ class ConversationFlowService
         }
 
         return [
-            'conversation'   => $conversation,
-            'bot_messages'   => [$botMsg],
-            'rejected'       => false,
+            'conversation' => $conversation,
+            'bot_messages' => [$botMsg],
+            'rejected' => false,
             'reject_message' => '',
         ];
     }

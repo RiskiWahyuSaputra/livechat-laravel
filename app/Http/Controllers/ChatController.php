@@ -4,14 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Events\ConversationStatusChanged;
 use App\Events\MessageSent;
+use App\Events\MessageUpdated;
+use App\Events\MessageDeleted;
 use App\Events\TypingIndicator;
 use App\Models\Admin;
 use App\Models\Conversation;
+use App\Models\ConversationRating;
 use App\Models\Message;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 use App\Models\User;
@@ -66,11 +73,19 @@ class ChatController extends Controller
             return redirect()->route('user.home');
         }
 
+        Auth::guard('web')->login($user, true);
+
         $activeConversation = $user->conversations()
             ->whereIn('status', ['pending', 'active', 'queued'])
             ->first();
 
-        if (!$activeConversation) {
+        $pendingFeedbackConversation = $this->findPendingFeedbackConversation($user);
+
+        if (!$activeConversation && $pendingFeedbackConversation) {
+            $activeConversation = $pendingFeedbackConversation;
+        }
+
+        if (!$activeConversation && !$pendingFeedbackConversation) {
             $result = $this->conversationFlowService->createConversation($user);
             if ($result['rejected'] ?? false) {
                 return view('chat.index', [
@@ -105,6 +120,7 @@ class ChatController extends Controller
             'conversation' => $activeConversation,
             'messages' => $messages,
             'botCategories' => config('chat.complaint_categories'),
+            'feedbackPending' => $this->conversationRequiresFeedback($activeConversation),
         ]);
     }
 
@@ -508,6 +524,12 @@ class ChatController extends Controller
                 ->whereIn('status', ['pending', 'active', 'queued'])
                 ->first();
 
+            $pendingFeedbackConversation = $this->findPendingFeedbackConversation($user);
+
+            if (!$activeConversation && $pendingFeedbackConversation) {
+                $activeConversation = $pendingFeedbackConversation;
+            }
+
             // Jika mode closed, tolak kecuali conversation sudah active dengan agent
             $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
             if ($systemMode === 'closed') {
@@ -521,7 +543,7 @@ class ChatController extends Controller
                 }
             }
 
-            if (!$activeConversation) {
+            if (!$activeConversation && !$pendingFeedbackConversation) {
                 $result = $this->conversationFlowService->createConversation($user);
                 if ($result['rejected'] ?? false) {
                     return response()->json(array_merge($publicData, [
@@ -558,6 +580,8 @@ class ChatController extends Controller
                 'user_id'      => $user->id,
                 'status'       => $activeConversation->status,
                 'bot_phase'    => $activeConversation->bot_phase,
+                'feedback_pending' => $this->conversationRequiresFeedback($activeConversation),
+                'feedback_status' => $activeConversation->feedback_status,
                 'botCategories' => config('chat.complaint_categories'),
                 'bot_submenus' => ($activeConversation->bot_phase === 'awaiting_submenu') 
                     ? \App\Models\BotMenu::whereNotNull('parent_id')->orderBy('order_index')->get()->map(fn($m) => ['id' => $m->id, 'label' => $m->label, 'parent_id' => $m->parent_id])
@@ -640,6 +664,69 @@ class ChatController extends Controller
         ]);
     }
 
+    /**
+     * Update pesan yang dikirim oleh user (jika diperbolehkan).
+     */
+    public function updateMessage(Request $request, Message $message)
+    {
+        $request->validate([
+            'content' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user || $message->sender_id != $user->id || $message->sender_type !== 'user') {
+            Log::warning('Edit gagal: Akses ditolak.', [
+                'user_id' => $user->id ?? 'null',
+                'msg_sender_id' => $message->sender_id,
+                'msg_sender_type' => $message->sender_type,
+                'cookie_token' => $token ?? 'null'
+            ]);
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        $message->update(['content' => $request->content]);
+
+        broadcast(new MessageUpdated($message))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'message' => [
+                'id'      => $message->id,
+                'content' => $message->content,
+            ]
+        ]);
+    }
+
+    /**
+     * Hapus pesan yang dikirim oleh user.
+     */
+    public function deleteMessage(Request $request, Message $message)
+    {
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user || $message->sender_id != $user->id || $message->sender_type !== 'user') {
+            Log::warning('Hapus gagal: Akses ditolak.', [
+                'user_id' => $user->id ?? 'null',
+                'msg_sender_id' => $message->sender_id,
+                'msg_sender_type' => $message->sender_type,
+                'cookie_token' => $token ?? 'null'
+            ]);
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        $messageId = $message->id;
+        $conversationId = $message->conversation_id;
+
+        $message->delete();
+
+        broadcast(new MessageDeleted($messageId, $conversationId))->toOthers();
+
+        return response()->json(['success' => true]);
+    }
+
     public function typing(Request $request)
     {
         $request->validate(['conversation_id' => ['required'], 'is_typing' => ['required', 'boolean']]);
@@ -659,6 +746,406 @@ class ChatController extends Controller
         } catch (\Exception $e) {}
 
         return response()->json(['success' => true]);
+    }
+
+    public function submitFeedback(Request $request, $conversationId)
+    {
+        $request->validate([
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Sesi tidak valid.'], 401);
+        }
+
+        $conversation = Conversation::withTrashed()->findOrFail($conversationId);
+
+        if ($conversation->user_id !== $user->id) {
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        if (!$this->conversationRequiresFeedback($conversation)) {
+            return response()->json(['error' => 'Feedback untuk chat ini sudah tidak tersedia.'], 422);
+        }
+
+        ConversationRating::updateOrCreate(
+            ['conversation_id' => $conversation->id],
+            [
+                'user_id' => $user->id,
+                'admin_id' => $conversation->admin_id,
+                'rating' => (int) $request->rating,
+                'comment' => trim((string) $request->comment) ?: null,
+            ]
+        );
+
+        $conversation->update([
+            'feedback_status' => 'submitted',
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function skipFeedback(Request $request, $conversationId)
+    {
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Sesi tidak valid.'], 401);
+        }
+
+        $conversation = Conversation::withTrashed()->findOrFail($conversationId);
+
+        if ($conversation->user_id !== $user->id) {
+            return response()->json(['error' => 'Akses ditolak.'], 403);
+        }
+
+        if ($conversation->feedback_status === 'pending') {
+            $conversation->update([
+                'feedback_status' => 'skipped',
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function conversationSummary(Request $request)
+    {
+        $token = $request->cookie('guest_chat_token');
+        $user = User::where('email', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Sesi tidak valid.'], 401);
+        }
+
+        $latestConversation = $user->conversations()
+            ->withTrashed()
+            ->latest('updated_at')
+            ->first();
+
+        if ($latestConversation && $latestConversation->status !== 'closed') {
+            return response()->json([
+                'available' => false,
+                'message' => 'Ringkasan AI baru tersedia setelah percakapan selesai.',
+            ]);
+        }
+
+        $summarySource = $this->buildConversationSummarySource(
+            $this->getVisibleMessagesForSummary($user)
+        );
+
+        if (!$summarySource['available']) {
+            return response()->json([
+                'available' => false,
+                'message' => $summarySource['message'],
+                'message_count' => $summarySource['message_count'],
+            ]);
+        }
+
+        $cacheKey = 'chat_user_conversation_summary_' . $user->id . '_' . $summarySource['history_hash'];
+        $summary = Cache::get($cacheKey);
+
+        if (!is_array($summary)) {
+            $summary = $this->geminiService->summarizeConversationForCustomer($summarySource['history']);
+
+            if (is_array($summary)) {
+                Cache::put($cacheKey, $summary, now()->addMinutes(30));
+            }
+        }
+
+        if (!is_array($summary)) {
+            $summary = $this->buildDeterministicConversationSummary($summarySource['lines']);
+
+            if (is_array($summary)) {
+                Cache::put($cacheKey, $summary, now()->addMinutes(10));
+            }
+        }
+
+        if (!is_array($summary)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Ringkasan AI belum tersedia saat ini. Silakan coba lagi sebentar lagi.',
+                'message_count' => $summarySource['message_count'],
+                'history_hash' => $summarySource['history_hash'],
+            ]);
+        }
+
+        return response()->json([
+            'available' => true,
+            'summary' => $summary['summary'],
+            'sentiment' => $summary['sentiment'],
+            'message_count' => $summarySource['message_count'],
+            'history_hash' => $summarySource['history_hash'],
+            'updated_at' => now()->format('H:i'),
+        ]);
+    }
+
+    private function findPendingFeedbackConversation(User $user): ?Conversation
+    {
+        return $user->conversations()
+            ->withTrashed()
+            ->where('status', 'closed')
+            ->where('feedback_status', 'pending')
+            ->whereNotNull('admin_id')
+            ->latest('feedback_requested_at')
+            ->latest('updated_at')
+            ->first();
+    }
+
+    private function conversationRequiresFeedback(?Conversation $conversation): bool
+    {
+        return $conversation instanceof Conversation
+            && $conversation->hasPendingFeedback();
+    }
+
+    private function getVisibleMessagesForSummary(User $user): Collection
+    {
+        $conversationIds = $user->conversations()->withTrashed()->pluck('id');
+
+        return Message::query()
+            ->whereIn('conversation_id', $conversationIds)
+            ->where('message_type', '!=', 'whisper')
+            ->latest('created_at')
+            ->limit(80)
+            ->get();
+    }
+
+    private function buildConversationSummarySource(Collection $messages): array
+    {
+        $lines = $messages
+            ->sortBy('created_at')
+            ->map(fn (Message $message) => $this->normalizeMessageForConversationSummary($message))
+            ->filter(fn ($line) => is_string($line) && trim($line) !== '')
+            ->values();
+
+        $messageCount = $lines->count();
+        $userLines = $lines->filter(fn (string $line) => str_starts_with($line, 'Customer:'))->count();
+        $supportLines = $lines->filter(fn (string $line) => str_starts_with($line, 'BEST AI:') || str_starts_with($line, 'Agent:'))->count();
+
+        if ($messageCount < 4 || $userLines === 0 || $supportLines === 0) {
+            return [
+                'available' => false,
+                'message' => 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.',
+                'message_count' => $messageCount,
+                'history' => '',
+                'history_hash' => null,
+                'lines' => [],
+            ];
+        }
+
+        $historyLines = $lines->slice(-40)->values();
+        $history = $historyLines->implode("\n");
+
+        return [
+            'available' => true,
+            'message' => null,
+            'message_count' => $messageCount,
+            'history' => $history,
+            'history_hash' => sha1($history),
+            'lines' => $historyLines->all(),
+        ];
+    }
+
+    private function normalizeMessageForConversationSummary(Message $message): ?string
+    {
+        if ($message->sender_type === 'system') {
+            return null;
+        }
+
+        $sender = match ($message->sender_type) {
+            'user' => 'Customer',
+            'admin' => (int) $message->sender_id === 0 ? 'BEST AI' : 'Agent',
+            default => 'Support',
+        };
+
+        $messageType = $message->message_type ?: 'text';
+
+        if ($messageType === 'image') {
+            $content = Str::startsWith((string) $message->content, 'whatsapp-media-placeholder:')
+                ? 'Mengirim gambar dari WhatsApp.'
+                : 'Mengirim gambar' . $this->conversationSummaryFileSuffix($message->content) . '.';
+        } elseif ($messageType === 'file') {
+            $content = Str::startsWith((string) $message->content, 'whatsapp-media-placeholder:')
+                ? 'Mengirim file dari WhatsApp.'
+                : 'Mengirim file' . $this->conversationSummaryFileSuffix($message->content) . '.';
+        } else {
+            $content = preg_replace('/<img\b[^>]*alt=["\']([^"\']+)["\'][^>]*>/i', ' [Gambar produk: $1] ', (string) $message->content);
+            $content = preg_replace('/<img\b[^>]*>/i', ' [Gambar produk] ', (string) $content);
+            $content = html_entity_decode(strip_tags((string) $content), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $content = preg_replace('/\s+/u', ' ', (string) $content);
+            $content = trim((string) $content);
+        }
+
+        if ($content === '') {
+            return null;
+        }
+
+        return $sender . ': ' . $content;
+    }
+
+    private function conversationSummaryFileSuffix(?string $content): string
+    {
+        $path = parse_url((string) $content, PHP_URL_PATH);
+        $filename = is_string($path) ? basename($path) : '';
+
+        return $filename !== '' ? ' (' . $filename . ')' : '';
+    }
+
+    private function buildDeterministicConversationSummary(array $lines): ?array
+    {
+        $userMessages = collect($lines)
+            ->filter(fn ($line) => is_string($line) && str_starts_with($line, 'Customer:'))
+            ->map(fn (string $line) => trim(substr($line, strlen('Customer:'))))
+            ->filter(fn (string $line) => $this->isMeaningfulSummaryLine($line))
+            ->values();
+
+        $supportMessages = collect($lines)
+            ->filter(fn ($line) => is_string($line) && (str_starts_with($line, 'BEST AI:') || str_starts_with($line, 'Agent:')))
+            ->map(function (string $line) {
+                $line = preg_replace('/^(BEST AI|Agent):\s*/', '', $line);
+
+                return trim((string) $line);
+            })
+            ->filter(fn (string $line) => $this->isMeaningfulSummaryLine($line))
+            ->values();
+
+        if ($userMessages->isEmpty() || $supportMessages->isEmpty()) {
+            return null;
+        }
+
+        $userTopic = $this->limitSummaryText(
+            $userMessages
+                ->unique()
+                ->take(2)
+                ->implode(' ')
+        );
+
+        $supportResponse = $this->limitSummaryText(
+            $supportMessages
+                ->reverse()
+                ->unique()
+                ->take(2)
+                ->reverse()
+                ->implode(' ')
+        );
+
+        $summaryParts = [];
+        if ($userTopic !== '') {
+            $summaryParts[] = 'Pelanggan membahas ' . $this->lcfirstSafe($userTopic) . '.';
+        }
+        if ($supportResponse !== '') {
+            $summaryParts[] = 'Support menanggapi dengan ' . $this->lcfirstSafe($supportResponse) . '.';
+        }
+
+        $latestSupport = trim((string) $supportMessages->last());
+        if ($latestSupport !== '' && $latestSupport !== $supportResponse) {
+            $summaryParts[] = 'Status terakhir: ' . $this->lcfirstSafe($this->limitSummaryText($latestSupport, 160)) . '.';
+        }
+
+        $summaryText = trim(implode(' ', $summaryParts));
+        if ($summaryText === '') {
+            return null;
+        }
+
+        return [
+            'summary' => $summaryText,
+            'sentiment' => $this->detectDeterministicSentiment($userMessages, $supportMessages),
+        ];
+    }
+
+    private function detectDeterministicSentiment(Collection $userMessages, Collection $supportMessages): string
+    {
+        $allText = Str::lower($userMessages->implode(' ') . ' ' . $supportMessages->implode(' '));
+
+        $negativeSignals = [
+            'kendala',
+            'gagal',
+            'error',
+            'tidak bisa',
+            'belum bisa',
+            'komplain',
+            'masalah',
+            'bingung',
+            'maaf, sistem best ai lagi mengalami kendala',
+        ];
+
+        foreach ($negativeSignals as $signal) {
+            if (str_contains($allText, $signal)) {
+                return 'Negative';
+            }
+        }
+
+        $positiveSignals = [
+            'terima kasih',
+            'sudah jelas',
+            'cukup membantu',
+            'sudah paham',
+            'baik',
+            'siap',
+            'berhasil',
+            'sudah bisa',
+        ];
+
+        foreach ($positiveSignals as $signal) {
+            if (str_contains($allText, $signal)) {
+                return 'Positive';
+            }
+        }
+
+        return 'Neutral';
+    }
+
+    private function isMeaningfulSummaryLine(string $line): bool
+    {
+        $normalized = Str::lower(trim($line));
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        $ignoredLines = [
+            'agent',
+            'hubungi agent',
+            'tanya lagi',
+            'lanjut',
+            'menu',
+            'menu utama',
+        ];
+
+        return !in_array($normalized, $ignoredLines, true);
+    }
+
+    private function limitSummaryText(string $text, int $maxLength = 220): string
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', $text));
+
+        if ($text === '') {
+            return '';
+        }
+
+        return Str::limit($text, $maxLength, '...');
+    }
+
+    private function lcfirstSafe(string $text): string
+    {
+        $text = trim($text);
+
+        if ($text === '') {
+            return '';
+        }
+
+        $first = Str::substr($text, 0, 1);
+        $second = Str::substr($text, 1, 1);
+
+        if ($second !== '' && Str::upper($second) === $second) {
+            return $text;
+        }
+
+        return Str::lower($first) . Str::substr($text, 1);
     }
 
     private function handleBotResponse(Conversation $conversation, string $userMessage): array
@@ -920,9 +1407,14 @@ class ChatController extends Controller
     {
         $messages = [];
         $productImage = $this->detectProductImageForMessage($userMessage);
+        $aiResponse = $this->sanitizeAiResponse($aiResponse);
 
         if ($productImage) {
             $aiResponse = $this->normalizeAiResponseForProductImage($aiResponse, $productImage['label']);
+        }
+
+        if ($productImage && $this->isOutOfScopeProductRefusal($aiResponse)) {
+            $aiResponse = $productImage['description'] ?? "Produk {$productImage['label']} termasuk bagian dari PT BEST CORPORATION SYARIAH. Kalau kamu mau, saya juga bisa bantu tampilkan gambarnya.";
         }
 
         $messages[] = Message::create([
@@ -947,7 +1439,7 @@ class ChatController extends Controller
                 'sender_id'       => 0,
                 'sender_type'     => 'admin',
                 'message_type'    => 'image',
-                'content'         => asset('images/produk/' . $productImage['file']),
+                'content'         => asset('images/' . $productImage['path']),
             ]);
         }
 
@@ -996,72 +1488,224 @@ class ChatController extends Controller
         return false;
     }
 
+    private function isOutOfScopeProductRefusal(string $aiResponse): bool
+    {
+        $normalized = strtolower(trim(strip_tags($aiResponse)));
+
+        return str_contains($normalized, 'maaf, saya hanya bisa membantu pertanyaan seputar pt best corporation syariah');
+    }
+
     private function detectProductImageForMessage(string $message): ?array
     {
-        $normalized = strtolower($message);
-        $genericProductIntentKeywords = [
-            'produk',
-            'product',
-            'kategori produk',
-            'jenis produk',
-            'katalog',
-            'catalog',
-            'gambar produk',
-            'foto produk',
-            'barang',
-        ];
+        $normalized = $this->normalizeProductLookupText($message);
 
-        $productMap = [
-            [
-                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
-                'file' => 'produk-kecantikan.png',
-                'label' => 'kecantikan',
-            ],
-            [
-                'keywords' => ['kesehatan', 'health', 'herbal', 'vitamin', 'suplemen'],
-                'file' => 'produk-kesehatan.png',
-                'label' => 'kesehatan',
-            ],
-            [
-                'keywords' => ['otomotif', 'motor', 'mobil', 'bengkel', 'oli'],
-                'file' => 'produk-otomotif.png',
-                'label' => 'otomotif',
-            ],
-            [
-                'keywords' => ['pertanian', 'pupuk', 'tani', 'agrikultur', 'agro'],
-                'file' => 'produk-pertanian.png',
-                'label' => 'pertanian',
-            ],
-        ];
+        if ($specificProduct = $this->findSpecificProductImage($normalized)) {
+            return $specificProduct;
+        }
 
-        foreach ($productMap as $product) {
+        return $this->findCategoryProductImage($normalized);
+    }
+
+    private function findSpecificProductImage(string $normalizedMessage): ?array
+    {
+        foreach ($this->productImageCatalog() as $product) {
             foreach ($product['keywords'] as $keyword) {
-                if (str_contains($normalized, $keyword)) {
+                if (str_contains($normalizedMessage, $keyword)) {
                     return [
-                        'file' => $product['file'],
+                        'path' => $product['path'],
                         'label' => $product['label'],
                     ];
                 }
             }
         }
 
-        foreach ($genericProductIntentKeywords as $keyword) {
-            if (str_contains($normalized, $keyword)) {
-                return [
-                    'file' => 'produk-best.png',
-                    'label' => 'BEST',
-                ];
+        return null;
+    }
+
+    private function findCategoryProductImage(string $normalizedMessage): ?array
+    {
+        $productIntentKeywords = [
+            'produk',
+            'product',
+            'daftar produk',
+            'kategori produk',
+            'jenis produk',
+            'katalog',
+            'catalog',
+            'gambar produk',
+            'foto produk',
+            'lihat produk',
+            'tampilkan produk',
+        ];
+
+        $hasProductIntent = false;
+        foreach ($productIntentKeywords as $keyword) {
+            if (str_contains($normalizedMessage, $this->normalizeProductLookupText($keyword))) {
+                $hasProductIntent = true;
+                break;
             }
         }
 
-        if (str_contains($normalized, 'best') && str_contains($normalized, 'produk')) {
+        if (!$hasProductIntent) {
+            return null;
+        }
+
+        $categoryMap = [
+            [
+                'keywords' => ['otomotif', 'kendaraan', 'motor', 'mobil'],
+                'path' => 'produk/produk-otomotif.png',
+                'label' => 'otomotif',
+            ],
+            [
+                'keywords' => ['kesehatan', 'herbal', 'suplemen', 'vitamin'],
+                'path' => 'produk/produk-kesehatan.png',
+                'label' => 'herbal dan kesehatan',
+            ],
+            [
+                'keywords' => ['kecantikan', 'beauty', 'skincare', 'kosmetik'],
+                'path' => 'produk/produk-kecantikan.png',
+                'label' => 'skincare dan kecantikan',
+            ],
+            [
+                'keywords' => ['pertanian', 'perkebunan', 'pupuk', 'tani', 'agrikultur'],
+                'path' => 'produk/produk-pertanian.png',
+                'label' => 'pertanian dan perkebunan',
+            ],
+            [
+                'keywords' => ['minuman kesehatan', 'minuman', 'kopi', 'coffee'],
+                'path' => 'produk minuman untuk kesehatan tubuh/Evitgo 100.jpg',
+                'label' => 'minuman kesehatan',
+            ],
+            [
+                'keywords' => ['pembersih tubuh', 'pembersih area tubuh', 'hygiene', 'kesehatan area tubuh'],
+                'path' => 'produk pembersih untuk kesehatan tubuh/LVN CRYSTAL V LVN CRYSTAL Q.jpg',
+                'label' => 'pembersih area tubuh',
+            ],
+        ];
+
+        foreach ($categoryMap as $category) {
+            foreach ($category['keywords'] as $keyword) {
+                if (str_contains($normalizedMessage, $this->normalizeProductLookupText($keyword))) {
+                    return $category;
+                }
+            }
+        }
+
+        if (str_contains($normalizedMessage, 'best')) {
             return [
-                'file' => 'produk-best.png',
+                'path' => 'produk/produk-best.png',
                 'label' => 'BEST',
             ];
         }
 
         return null;
+    }
+
+    private function sanitizeAiResponse(string $aiResponse): string
+    {
+        $cleaned = preg_replace('/<img\b[^>]*>/i', '', $aiResponse);
+        $cleaned = preg_replace('/<figure\b[^>]*>.*?<\/figure>/is', '', (string) $cleaned);
+        $cleaned = preg_replace('/\n{3,}/', "\n\n", (string) $cleaned);
+
+        return trim((string) $cleaned);
+    }
+
+    private function productImageCatalog(): array
+    {
+        static $catalog = null;
+
+        if (is_array($catalog)) {
+            return $catalog;
+        }
+
+        $catalog = [];
+        $directories = collect(File::directories(public_path('images')))
+            ->map(fn (string $path) => basename($path))
+            ->reject(fn (string $directory) => in_array($directory, ['produk'], true))
+            ->values()
+            ->all();
+        $aliasMap = [
+            'bmaxxx' => 'B MAXX',
+            'agro sawit' => 'Agrosawit',
+            'nano tech' => 'Eco Racing Nano Tech atau Nano Oil',
+            'nano oil' => 'Eco Racing Nano Tech atau Nano Oil',
+        ];
+        $labelOverrides = [
+            'ecoracing' => 'Eco Racing',
+            'ecodiesel' => 'Eco Diesel',
+            'ecoracingnanotechataunanooil' => 'Eco Racing Nano Tech atau Nano Oil',
+            'agrosawit' => 'Agrosawit',
+            'bmaxx' => 'B-MAXX',
+            'ecovico' => 'ECO VICO',
+            'habspro' => 'HABSPRO',
+            'redoneboost' => 'RED ONE BOOST',
+            'lvnserum' => 'LVN Serum',
+            'lvnlipcream' => 'LVN Lipcream',
+            'lvndayandnightcream' => 'LVN Day and Night Cream',
+        ];
+        $descriptionOverrides = [
+            'agrosawit' => 'Agrosawit adalah produk pupuk untuk pertanian dan perkebunan dari PT BEST yang pada artikel bisnisraksasa.com dijelaskan sebagai Premium Water Soluble Fertilizer, mudah larut, cepat diserap tanaman, dan diposisikan untuk membantu meningkatkan fungsi akar, batang, dan daun pada tanaman sawit.',
+            'ecoracing' => 'Eco Racing adalah aditif bahan bakar PT BEST untuk membantu mengoptimalkan pembakaran pada kendaraan. Menurut halaman produk bisnisraksasa.com, manfaat umumnya meliputi membantu membersihkan dan merawat mesin, menyempurnakan pembakaran, mengurangi knocking, meningkatkan akselerasi, dan membantu mengurangi emisi gas buang.',
+            'ecodiesel' => 'Eco Diesel adalah aditif bahan bakar PT BEST yang ditujukan untuk mesin diesel. Menurut halaman produk bisnisraksasa.com, produk ini diposisikan untuk membantu mengoptimalkan pembakaran dan meningkatkan kualitas bahan bakar.',
+            'ecoracingnanotechataunanooil' => 'Eco Racing Nano Tech atau Nano Oil adalah aditif oli mesin PT BEST berbasis teknologi nano yang diposisikan untuk membantu memberikan pelumasan lebih baik dan melindungi komponen mesin.',
+            'bmaxx' => 'B-MAXX adalah kapsul herbal PT BEST yang pada bisnisraksasa.com dijelaskan sebagai penyeimbang nutrisi organ dengan kandungan seperti cabe jawa, merica, gamat emas, purwaceng, dan pasak bumi.',
+            'ecovico' => 'ECO VICO adalah kapsul herbal PT BEST yang dibuat dari penyulingan minyak kelapa murni dan pada bisnisraksasa.com diposisikan untuk membantu menjaga stamina dan kesehatan tubuh.',
+            'habspro' => 'HABSPRO adalah suplemen herbal PT BEST berbentuk kapsul dengan kandungan utama habbatussauda, bee pollen, dan propolis. Di bisnisraksasa.com produk ini diposisikan untuk membantu menjaga stamina dan daya tahan tubuh.',
+            'lvnserum' => 'LVN Serum adalah produk skincare PT BEST yang pada bisnisraksasa.com dijelaskan mengandung Hyaluronic Acid, Vitamin C, Vitamin E, dan Collagen untuk membantu menutrisi kulit dan menyamarkan tanda-tanda penuaan dini.',
+            'lvnlipcream' => 'LVN Lipcream adalah produk kecantikan PT BEST yang pada bisnisraksasa.com dijelaskan memiliki banyak pilihan warna dengan tampilan natural, tekstur ringan, dan tidak mudah luntur.',
+            'lvndayandnightcream' => 'LVN Day and Night Cream adalah produk skincare PT BEST. Menurut bisnisraksasa.com, varian day cream diposisikan untuk membantu mencerahkan, melembapkan, dan melindungi kulit dari paparan sinar matahari.',
+        ];
+
+        foreach ($directories as $directory) {
+            $fullPath = public_path('images/' . $directory);
+
+            if (!File::isDirectory($fullPath)) {
+                continue;
+            }
+
+            foreach (File::files($fullPath) as $file) {
+                $filename = $file->getFilenameWithoutExtension();
+                $normalizedName = $this->normalizeProductLookupText($filename);
+                $label = $labelOverrides[$normalizedName] ?? $this->humanizeProductFilename($filename);
+                $keywords = array_values(array_unique(array_filter([
+                    $normalizedName,
+                    $this->normalizeProductLookupText($label),
+                ])));
+
+                foreach ($aliasMap as $alias => $aliasLabel) {
+                    if ($normalizedName === $this->normalizeProductLookupText($aliasLabel)) {
+                        $keywords[] = $this->normalizeProductLookupText($alias);
+                    }
+                }
+
+                $catalog[] = [
+                    'path' => $directory . '/' . $file->getFilename(),
+                    'label' => $label,
+                    'description' => $descriptionOverrides[$normalizedName] ?? null,
+                    'keywords' => array_values(array_unique($keywords)),
+                ];
+            }
+        }
+
+        return $catalog;
+    }
+
+    private function normalizeProductLookupText(string $text): string
+    {
+        $text = preg_replace('/(?<!^)([A-Z])/', ' $1', $text);
+        $text = Str::lower((string) $text);
+        $text = preg_replace('/[^a-z0-9]+/i', '', $text);
+
+        return trim((string) $text);
+    }
+
+    private function humanizeProductFilename(string $filename): string
+    {
+        $label = preg_replace('/(?<!^)([A-Z])/', ' $1', $filename);
+        $label = str_replace(['-', '_'], ' ', (string) $label);
+        $label = preg_replace('/\s+/', ' ', (string) $label);
+
+        return trim((string) $label);
     }
 
     private function formatBotReplies($messages, $conversation)

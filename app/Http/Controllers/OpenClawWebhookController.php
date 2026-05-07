@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BotMenu;
 use App\Models\Conversation;
+use App\Models\ConversationRating;
 use App\Models\Message;
 use App\Models\User;
 use App\Services\ConversationFlowService;
@@ -53,7 +54,7 @@ class OpenClawWebhookController extends Controller
         }
 
         if ($message['external_id']) {
-            Cache::put('openclaw_whatsapp_inbound_' . $message['external_id'], true, now()->addMinutes(5));
+            Cache::put('openclaw_whatsapp_inbound_' . $message['external_id'], true, now()->addMinutes(30));
         }
 
         $user = $this->findOrCreateWhatsappUser($message);
@@ -61,6 +62,19 @@ class OpenClawWebhookController extends Controller
         // Mark incoming message as read
         if ($message['external_id']) {
             $this->openClawWhatsappService->markAsRead($user, $message['external_id']);
+        }
+
+        $pendingFeedbackConversation = $this->findPendingFeedbackConversation($user);
+        if ($pendingFeedbackConversation) {
+            $feedbackResult = $this->handlePendingWhatsappFeedback($user, $pendingFeedbackConversation, $message);
+
+            if ($feedbackResult !== null) {
+                return response()->json(array_merge([
+                    'status' => 'ok',
+                    'conversation_id' => $pendingFeedbackConversation->id,
+                    'user_id' => $user->id,
+                ], $feedbackResult));
+            }
         }
 
         $conversation = $this->resolveConversation($user, $message['content']);
@@ -73,6 +87,16 @@ class OpenClawWebhookController extends Controller
                 'uses_bot_menu' => $usesBotMenu
             ]);
             $result = $this->conversationFlowService->createConversation($user);
+
+            // Handle rejected mode (e.g. closed) — send the rejection message to WhatsApp
+            if (!empty($result['rejected'])) {
+                $rejectText = $result['reject_message'] ?? '';
+                if ($rejectText !== '') {
+                    $this->openClawWhatsappService->sendText($user, $rejectText);
+                }
+                return response()->json(['status' => 'ok', 'rejected' => true]);
+            }
+
             $conversation = $result['conversation'];
             $isNewConversation = true;
 
@@ -173,12 +197,8 @@ class OpenClawWebhookController extends Controller
     {
         $contact = $this->normalizeContact($message['from']);
         $email = ltrim($contact ?? ('wa_' . uniqid()), '+') . '@livechat.best';
-        $name = $message['sender_name'] ?: 'Pelanggan WhatsApp';
 
-        /** @var User $user */
-        $user = User::where('contact', $contact)->first()
-            ?? User::where('email', $email)->first();
-
+        $user = User::where('contact', $contact)->orWhere('email', $email)->first();
         if ($user) {
             $user->update([
                 'name' => $message['sender_name'] ?: $user->name,
@@ -189,17 +209,14 @@ class OpenClawWebhookController extends Controller
             return $user;
         }
 
-        // firstOrCreate is atomic at DB level because contact has a unique index
-        return User::firstOrCreate(
-            ['contact' => $contact],
-            [
-                'name' => $name,
-                'email' => $email,
-                'origin' => 'WhatsApp',
-                'password' => bcrypt('guest123'),
-                'is_online' => true,
-            ]
-        );
+        return User::create([
+            'name' => $message['sender_name'] ?: 'Pelanggan WhatsApp',
+            'email' => $email,
+            'contact' => $contact,
+            'origin' => 'WhatsApp',
+            'password' => bcrypt('guest123'),
+            'is_online' => true,
+        ]);
     }
 
     private function normalizePayload(array $payload): ?array
@@ -645,6 +662,135 @@ class OpenClawWebhookController extends Controller
     private function normalizeIncomingText(string $content): string
     {
         return mb_strtolower(trim($content));
+    }
+
+    private function findPendingFeedbackConversation(User $user): ?Conversation
+    {
+        return $user->conversations()
+            ->withTrashed()
+            ->where('status', 'closed')
+            ->where('feedback_status', 'pending')
+            ->whereNotNull('admin_id')
+            ->latest('feedback_requested_at')
+            ->latest('updated_at')
+            ->first();
+    }
+
+    private function handlePendingWhatsappFeedback(User $user, Conversation $conversation, array $message): ?array
+    {
+        if (($message['message_type'] ?? 'text') !== 'text') {
+            $this->openClawWhatsappService->sendFeedbackPrompt($user, $this->whatsappFeedbackPrompt());
+
+            return [
+                'feedback_status' => 'awaiting_input',
+            ];
+        }
+
+        $parsed = $this->parseWhatsappFeedback($message['content'] ?? '');
+
+        if ($parsed === null) {
+            $this->openClawWhatsappService->sendFeedbackPrompt($user, $this->whatsappFeedbackPrompt());
+
+            return [
+                'feedback_status' => 'awaiting_input',
+            ];
+        }
+
+        if (($parsed['action'] ?? null) === 'skip') {
+            $conversation->update([
+                'feedback_status' => 'skipped',
+            ]);
+
+            Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => 0,
+                'sender_type' => 'system',
+                'message_type' => 'text',
+                'content' => 'Pelanggan melewati feedback WhatsApp.',
+            ]);
+
+            $this->openClawWhatsappService->sendText($user, 'Baik, feedback dilewati. Terima kasih sudah menghubungi kami.');
+
+            return [
+                'feedback_status' => 'skipped',
+            ];
+        }
+
+        $rating = (int) ($parsed['rating'] ?? 0);
+        $comment = trim((string) ($parsed['comment'] ?? '')) ?: null;
+
+        if ($rating < 1 || $rating > 5) {
+            $this->openClawWhatsappService->sendFeedbackPrompt($user, $this->whatsappFeedbackPrompt());
+
+            return [
+                'feedback_status' => 'awaiting_input',
+            ];
+        }
+
+        ConversationRating::updateOrCreate(
+            ['conversation_id' => $conversation->id],
+            [
+                'user_id' => $user->id,
+                'admin_id' => $conversation->admin_id,
+                'rating' => $rating,
+                'comment' => $comment,
+            ]
+        );
+
+        $conversation->update([
+            'feedback_status' => 'submitted',
+        ]);
+
+        Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => 0,
+            'sender_type' => 'system',
+            'message_type' => 'text',
+            'content' => 'Pelanggan memberikan rating WhatsApp ' . $rating . '/5' . ($comment ? ': ' . $comment : '.'),
+        ]);
+
+        $this->openClawWhatsappService->sendText(
+            $user,
+            "Terima kasih, rating {$rating}/5 sudah kami terima."
+        );
+
+        return [
+            'feedback_status' => 'submitted',
+            'rating' => $rating,
+        ];
+    }
+
+    private function parseWhatsappFeedback(string $content): ?array
+    {
+        $normalized = trim($content);
+        $normalizedLower = mb_strtolower($normalized);
+
+        if (in_array($normalizedLower, ['lewati', 'skip', 'nanti', 'tidak', 'ga usah', 'gak usah'], true)) {
+            return ['action' => 'skip'];
+        }
+
+        if (preg_match('/^\s*([1-5])(?:\s*[-:.,]?\s*(.*))?$/u', $normalized, $matches) === 1) {
+            return [
+                'action' => 'submit',
+                'rating' => (int) $matches[1],
+                'comment' => trim((string) ($matches[2] ?? '')),
+            ];
+        }
+
+        if (preg_match('/^\s*(?:rating|bintang)\s*([1-5])(?:\s*[-:.,]?\s*(.*))?$/iu', $normalized, $matches) === 1) {
+            return [
+                'action' => 'submit',
+                'rating' => (int) $matches[1],
+                'comment' => trim((string) ($matches[2] ?? '')),
+            ];
+        }
+
+        return null;
+    }
+
+    private function whatsappFeedbackPrompt(): string
+    {
+        return "Untuk memberi rating, pilih tombol yang tersedia atau balas dengan angka 1-5.\nContoh: 5 atau 5 pelayanan bagus.";
     }
 
     private function matchesRootMenuLabel(string $normalized): bool

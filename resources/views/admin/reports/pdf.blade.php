@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Laporan Pelanggan</title>
+    <title>Data Pelanggan</title>
     <style>
         body { font-family: sans-serif; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -13,7 +13,7 @@
 </head>
 <body>
     <div class="header">
-        <h2>Laporan Data Pelanggan</h2>
+        <h2>Data Pelanggan</h2>
         <p>LiveChat System</p>
     </div>
 
