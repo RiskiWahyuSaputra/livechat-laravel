@@ -412,10 +412,10 @@
                 Sesi obrolan ini telah ditutup.
             </div>
 
-            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-amber-200 bg-amber-50 p-4 md:p-5">
+            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-blue-200 bg-blue-50 p-4 md:p-5">
                 <div class="max-w-xl mx-auto">
-                    <section x-show="shouldRenderFeedbackConversationSummary()" x-cloak class="mb-4 overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
-                        <div class="flex items-start gap-3 bg-amber-50/60 px-4 py-4">
+                    <section x-show="shouldRenderFeedbackConversationSummary()" x-cloak class="mb-4 overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm">
+                        <div class="flex items-start gap-3 bg-blue-50/70 px-4 py-4">
                             <button type="button"
                                     @click="summary.expanded = !summary.expanded"
                                     class="flex-1 text-left">
@@ -496,7 +496,7 @@
                                     @mouseleave="hoverRating = 0"
                                     class="transition-transform hover:scale-110 active:scale-95">
                                 <i class="fas fa-star text-2xl md:text-3xl"
-                                   :class="(hoverRating || selectedRating) >= star ? 'text-amber-400' : 'text-slate-300'"></i>
+                                   :class="(hoverRating || selectedRating) >= star ? 'text-blue-500' : 'text-slate-300'"></i>
                             </button>
                         </template>
                     </div>
@@ -505,7 +505,7 @@
                               rows="3"
                               maxlength="1000"
                               placeholder="Opsional: tulis kesan atau saran singkat..."
-                              class="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 resize-none"></textarea>
+                              class="w-full rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 resize-none"></textarea>
 
                     <div class="mt-4 flex items-center justify-between gap-3">
                         <button type="button"
@@ -517,7 +517,7 @@
                         <button type="button"
                                 @click="submitFeedback()"
                                 :disabled="!selectedRating || isSubmittingFeedback"
-                                class="rounded-2xl bg-amber-500 px-4 py-2.5 text-xs md:text-sm font-black text-white shadow-lg shadow-amber-200 transition-all hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50">
+                                class="rounded-2xl bg-blue-600 px-4 py-2.5 text-xs md:text-sm font-black text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
                             <span x-text="isSubmittingFeedback ? 'Mengirim...' : 'Kirim Feedback'"></span>
                         </button>
                     </div>

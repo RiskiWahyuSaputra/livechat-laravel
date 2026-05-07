@@ -525,9 +525,9 @@
                 Sesi pertanyaan ini telah ditutup oleh agen.
             </div>
 
-            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-amber-200 bg-amber-50 p-3 max-h-[45vh] overflow-y-auto overscroll-contain">
-                <section x-show="shouldRenderFeedbackConversationSummary()" x-cloak class="mb-3 overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
-                    <div class="flex items-start gap-3 bg-amber-50/60 px-4 py-4">
+            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-blue-200 bg-blue-50 p-3 max-h-[45vh] overflow-y-auto overscroll-contain">
+                <section x-show="shouldRenderFeedbackConversationSummary()" x-cloak class="mb-3 overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm">
+                    <div class="flex items-start gap-3 bg-blue-50/70 px-4 py-4">
                         <button type="button"
                                 @click="summary.expanded = !summary.expanded"
                                 class="flex-1 text-left">
@@ -601,13 +601,13 @@
 
                 <div class="d-flex justify-content-center gap-2 mb-3">
                     <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
-                        <button type="button"
+                            <button type="button"
                                 @click="selectedRating = star"
                                 @mouseenter="hoverRating = star"
                                 @mouseleave="hoverRating = 0"
                                 class="bg-transparent border-0 p-0">
                             <i class="fas fa-star text-2xl"
-                               :class="(hoverRating || selectedRating) >= star ? 'text-warning' : 'text-secondary opacity-50'"></i>
+                               :class="(hoverRating || selectedRating) >= star ? 'text-blue-500' : 'text-slate-300'"></i>
                         </button>
                     </template>
                 </div>
@@ -617,7 +617,7 @@
                           maxlength="1000"
                           class="form-control mb-3"
                           placeholder="Opsional: tulis kesan singkat..."
-                          style="border-radius: 12px;"></textarea>
+                          style="border-radius: 12px; border-color: #bfdbfe;"></textarea>
 
                 <div class="d-flex justify-content-between align-items-center gap-2">
                     <button type="button"
@@ -629,8 +629,8 @@
                     <button type="button"
                             @click="submitFeedback()"
                             :disabled="!selectedRating || isSubmittingFeedback"
-                            class="btn btn-warning text-white fw-bold"
-                            style="border-radius: 12px;">
+                            class="btn text-white fw-bold"
+                            style="border-radius: 12px; background-color: #2563eb; border-color: #2563eb;">
                         <span x-text="isSubmittingFeedback ? 'Mengirim...' : 'Kirim Feedback'"></span>
                     </button>
                 </div>
