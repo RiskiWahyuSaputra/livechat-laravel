@@ -441,13 +441,19 @@
         }
 
         /* ===== Laporan Submenu ===== */
-        /* .sidebar-menu ul specificity = 0-1-1, so use 0-2-0 to win */
         .sidebar-menu .lap-submenu {
             list-style: none !important;
-            padding-top: 2px !important;
-            padding-bottom: 4px !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
             margin: 0 !important;
             overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        .sidebar-menu .lap-submenu.open {
+            max-height: 300px;
+            padding-top: 2px !important;
+            padding-bottom: 4px !important;
         }
         .lap-submenu li a {
             display: flex !important;
@@ -645,7 +651,7 @@
                                     <span>Laporan</span>
                                     <i class="fe fe-chevron-right lap-chevron{{ request()->routeIs('admin.laporan.*') ? ' open' : '' }}" id="laporan-chevron"></i>
                                 </a>
-                                <ul class="lap-submenu" id="laporan-submenu"@if(!request()->routeIs('admin.laporan.*')) style="display:none;"@endif>
+                                <ul class="lap-submenu{{ request()->routeIs('admin.laporan.*') ? ' open' : '' }}" id="laporan-submenu">
                                     <li class="{{ request()->routeIs('admin.laporan.general') ? 'active' : '' }}">
                                         <a href="{{ route('admin.laporan.general') }}">
                                             <i class="fe fe-bar-chart-2"></i><span>General</span>
@@ -749,9 +755,8 @@
             const submenu = document.getElementById('laporan-submenu');
             const chevron = document.getElementById('laporan-chevron');
             if (!submenu) return;
-            const isOpen = submenu.style.display !== 'none' && submenu.style.display !== '';
-            submenu.style.display = isOpen ? 'none' : 'block';
-            if (chevron) chevron.classList.toggle('open', !isOpen);
+            submenu.classList.toggle('open');
+            if (chevron) chevron.classList.toggle('open', submenu.classList.contains('open'));
         }
 
         // GLOBAL FIX UNTUK SIDEBAR DI MOBILE
