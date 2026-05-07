@@ -36,6 +36,7 @@ Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.s
 Route::patch('/chat/message/{message}', [ChatController::class, 'updateMessage'])->name('chat.message.update');
 Route::delete('/chat/message/{message}', [ChatController::class, 'deleteMessage'])->name('chat.message.destroy');
 Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
+Route::get('/chat/summary', [ChatController::class, 'conversationSummary'])->name('chat.summary');
 Route::post('/chat/conversation/{conversation}/feedback', [ChatController::class, 'submitFeedback'])->name('chat.feedback.submit');
 Route::post('/chat/conversation/{conversation}/feedback/skip', [ChatController::class, 'skipFeedback'])->name('chat.feedback.skip');
 
@@ -131,12 +132,21 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
             Route::get('/analytics/realtime', [App\Http\Controllers\Admin\AnalyticsController::class, 'realtime'])->name('analytics.realtime');
             Route::get('/analytics/export', [App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
 
-            // --- Menu: Reports / Laporan ---
+            // --- Menu: Reports / Laporan (lama - tetap untuk kompatibilitas) ---
             Route::prefix('reports')->name('reports.')->group(function () {
                 Route::get('/', [App\Http\Controllers\Admin\ReportController::class, 'index'])->name('index');
                 Route::get('/export/excel', [App\Http\Controllers\Admin\ReportController::class, 'exportExcel'])->name('export.excel');
                 Route::get('/export/pdf', [App\Http\Controllers\Admin\ReportController::class, 'exportPdf'])->name('export.pdf');
                 Route::get('/api-data', [App\Http\Controllers\Admin\ReportController::class, 'apiData'])->name('api-data');
+            });
+
+            // --- Menu: Laporan (Baru - dengan sub-menu) ---
+            Route::prefix('laporan')->name('laporan.')->group(function () {
+                Route::get('/general',       [App\Http\Controllers\Admin\LaporanController::class, 'general'])->name('general');
+                Route::get('/performa-agen', [App\Http\Controllers\Admin\LaporanController::class, 'performaAgen'])->name('performa-agen');
+                Route::get('/performa-bot',  [App\Http\Controllers\Admin\LaporanController::class, 'performaBot'])->name('performa-bot');
+                Route::get('/contact',       [App\Http\Controllers\Admin\LaporanController::class, 'contact'])->name('contact');
+                Route::get('/contact/api',   [App\Http\Controllers\Admin\LaporanController::class, 'contactApiData'])->name('contact.api');
             });
 
             // --- Menu 9: Settings ---
@@ -147,6 +157,16 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
             // --- Menu 10: Bot Menus Management ---
             Route::post('/bot-menus/greeting', [App\Http\Controllers\Admin\BotMenuController::class, 'updateGreeting'])->name('bot-menus.greeting');
             Route::resource('/bot-menus', App\Http\Controllers\Admin\BotMenuController::class)->except(['show', 'create', 'edit']);
+
+            // --- Menu 11: Tags Management ---
+            Route::middleware('admin.permission:view_chat')->group(function () {
+                Route::get('/tags', [App\Http\Controllers\Admin\TagController::class, 'index'])->name('tags.index');
+                Route::post('/tags', [App\Http\Controllers\Admin\TagController::class, 'store'])->name('tags.store');
+                Route::put('/tags/{tag}', [App\Http\Controllers\Admin\TagController::class, 'update'])->name('tags.update');
+                Route::delete('/tags/{tag}', [App\Http\Controllers\Admin\TagController::class, 'destroy'])->name('tags.destroy');
+                Route::post('/conversation/{conversation}/tags', [App\Http\Controllers\Admin\TagController::class, 'syncConversationTags'])->name('conversation.tags.sync');
+                Route::get('/conversation/{conversation}/tags', [App\Http\Controllers\Admin\TagController::class, 'getConversationTags'])->name('conversation.tags.get');
+            });
         }
         );
     });

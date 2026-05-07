@@ -351,14 +351,13 @@ class ConversationFlowService
             if ($this->wantsAgentTransfer($userMessage)) {
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
-                    $officeStart = Setting::get('office_hours_start', '08:00');
-                    $officeEnd = Setting::get('office_hours_end', '17:00');
+                    $hours = $this->getOfficeHoursForToday();
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id' => 0,
                         'sender_type' => 'admin',
                         'message_type' => 'text',
-                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$hours['start']} - {$hours['end']}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
                     ]);
                     return $this->formatBotReplies($newBotMessages, $conversation, $broadcast);
                 }
@@ -407,14 +406,13 @@ class ConversationFlowService
             if ($this->wantsAgentTransfer($userMessage)) {
                 // Requirement 3.4, 3.5: Prevent queuing when outside_office_hour
                 if ($this->getSystemMode() === 'outside_office_hour') {
-                    $officeStart = Setting::get('office_hours_start', '08:00');
-                    $officeEnd = Setting::get('office_hours_end', '17:00');
+                    $hours = $this->getOfficeHoursForToday();
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id' => 0,
                         'sender_type' => 'admin',
                         'message_type' => 'text',
-                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$officeStart} - {$officeEnd}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
+                        'content' => "Mohon maaf, Agent kami saat ini tidak tersedia karena di luar jam kerja. Silakan hubungi kembali pada jam operasional kami: {$hours['start']} - {$hours['end']}. Sementara itu, saya (BEST AI) siap membantu pertanyaan Anda. 😊",
                     ]);
                 } elseif ($user->name === 'Guest') {
                     $conversation->update(['bot_phase' => 'require_registration']);
@@ -1284,6 +1282,31 @@ class ConversationFlowService
     }
 
     /**
+     * Get office hours for today based on per-day settings and timezone.
+     */
+    public function getOfficeHoursForToday(): array
+    {
+        $timezone = Setting::get('office_hours_timezone', 'Asia/Jakarta');
+        try {
+            $now = now($timezone);
+        } catch (\Exception $e) {
+            $now = now();
+        }
+        $day = strtolower($now->format('l'));
+
+        $isActive = Setting::get("office_hours_{$day}_active", in_array($day, ['saturday', 'sunday']) ? '0' : '1');
+        $start = Setting::get("office_hours_{$day}_start", Setting::get('office_hours_start', '08:00'));
+        $end = Setting::get("office_hours_{$day}_end", Setting::get('office_hours_end', '17:00'));
+
+        return [
+            'is_active' => $isActive == '1',
+            'start' => $start,
+            'end' => $end,
+            'timezone' => $timezone
+        ];
+    }
+
+    /**
      * Notify all queued conversations that agent service is temporarily unavailable.
      *
      * Called when system_mode changes to `outside_office_hour` or `closed`.
@@ -1302,11 +1325,10 @@ class ConversationFlowService
             $defaultClosed = 'Mohon maaf, layanan Agent kami saat ini tidak tersedia karena sistem sedang ditutup. Kami akan segera kembali melayani Anda.';
             $message = Setting::get('bot_greeting_closed', $defaultClosed) ?? $defaultClosed;
         } else {
-            $officeStart = Setting::get('office_hours_start', '09:00');
-            $officeEnd   = Setting::get('office_hours_end', '17:00');
+            $hours = $this->getOfficeHoursForToday();
             $defaultOutside = 'Mohon maaf, saat ini kami sedang di luar jam kerja. Silakan tinggalkan pesan dan kami akan segera membalas saat jam kerja dimulai.';
             $outsideMessage = Setting::get('bot_greeting_outside_office_hour', $defaultOutside) ?? $defaultOutside;
-            $message = $outsideMessage . "\n\nJam operasional kami: {$officeStart} - {$officeEnd}.";
+            $message = $outsideMessage . "\n\nJam operasional kami: {$hours['start']} - {$hours['end']}.";
         }
 
         $queuedConversations = Conversation::whereIn('status', ['queued', 'pending'])
@@ -1362,10 +1384,9 @@ class ConversationFlowService
         $defaultMessage = 'Mohon maaf, saat ini kami sedang di luar jam kerja. Silakan tinggalkan pesan dan kami akan segera membalas saat jam kerja dimulai.';
         $outsideMessage = Setting::get('bot_greeting_outside_office_hour', $defaultMessage) ?? $defaultMessage;
 
-        $officeStart = Setting::get('office_hours_start', '08:00');
-        $officeEnd = Setting::get('office_hours_end', '17:00');
+        $hours = $this->getOfficeHoursForToday();
 
-        $fullMessage = $outsideMessage . "\n\nJam operasional kami: {$officeStart} - {$officeEnd}.";
+        $fullMessage = $outsideMessage . "\n\nJam operasional kami: {$hours['start']} - {$hours['end']}.";
 
         $botMsg = Message::create([
             'conversation_id' => $conversation->id,

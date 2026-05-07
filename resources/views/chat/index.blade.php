@@ -314,6 +314,82 @@
                     </template>
                 </div>
             </template>
+
+            <section x-show="shouldRenderInlineConversationSummary()" x-cloak class="mt-6">
+                <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                    <div class="flex items-start gap-3 bg-slate-50/80 px-4 py-4 md:px-5">
+                        <button type="button"
+                                @click="summary.expanded = !summary.expanded"
+                                class="flex-1 text-left">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                                        <i class="fas fa-wand-magic-sparkles text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-sm font-black text-slate-800 md:text-[15px]">AI Conversation Summary</h3>
+                                            <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                                Privat
+                                            </span>
+                                        </div>
+                                        <p class="mt-1 text-[11px] text-slate-500 md:text-xs">
+                                            Hanya kamu yang bisa melihat ringkasan percakapan ini.
+                                        </p>
+                                    </div>
+                                </div>
+                                <i class="fas text-slate-400 transition-transform"
+                                   :class="summary.expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                            </div>
+                        </button>
+
+                        <button type="button"
+                                @click="fetchConversationSummary(true)"
+                                :disabled="summary.loading"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                title="Refresh summary">
+                            <i class="fas fa-rotate-right" :class="summary.loading ? 'animate-spin' : ''"></i>
+                        </button>
+                    </div>
+
+                    <div x-show="summary.expanded" x-cloak class="border-t border-slate-100 px-4 py-4 md:px-5">
+                        <div x-show="summary.loading" class="space-y-3">
+                            <div class="h-3 w-40 animate-pulse rounded-full bg-slate-200"></div>
+                            <div class="h-3 w-full animate-pulse rounded-full bg-slate-100"></div>
+                            <div class="h-3 w-11/12 animate-pulse rounded-full bg-slate-100"></div>
+                            <div class="h-3 w-3/4 animate-pulse rounded-full bg-slate-100"></div>
+                        </div>
+
+                        <div x-show="!summary.loading && summary.available" x-cloak class="space-y-4">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em]"
+                                      :class="summarySentimentClass()"
+                                      x-text="summary.sentiment"></span>
+                                <span x-show="summary.updatedAt"
+                                      class="text-[11px] text-slate-400"
+                                      x-text="`Diperbarui ${summary.updatedAt}`"></span>
+                            </div>
+
+                            <div class="text-[13px] leading-6 text-slate-700 md:text-sm">
+                                <p class="font-semibold text-slate-800">Summary of conversation</p>
+                                <p class="mt-2" x-text="summary.text"></p>
+                            </div>
+                        </div>
+
+                        <div x-show="!summary.loading && !summary.available && summary.info" x-cloak class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[12px] leading-6 text-slate-600 md:text-sm">
+                            <span x-text="summary.info"></span>
+                        </div>
+
+                        <div x-show="!summary.loading && summary.error" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] leading-6 text-red-600 md:text-sm">
+                            <span x-text="summary.error"></span>
+                        </div>
+
+                        <p class="mt-4 text-[11px] text-slate-400">
+                            Ringkasan AI bisa kurang akurat dan tetap perlu dilihat bersama konteks percakapan.
+                        </p>
+                    </div>
+                </div>
+            </section>
             
             <!-- Elemen ini membantu scroll mentok bawah -->
             <div id="scroll-anchor" class="h-1"></div>
@@ -336,8 +412,77 @@
                 Sesi obrolan ini telah ditutup.
             </div>
 
-            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-amber-200 bg-amber-50 p-4 md:p-5">
+            <div x-show="status === 'closed' && feedbackPending" x-cloak class="border-t border-blue-200 bg-blue-50 p-4 md:p-5">
                 <div class="max-w-xl mx-auto">
+                    <section x-show="shouldRenderFeedbackConversationSummary()" x-cloak class="mb-4 overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm">
+                        <div class="flex items-start gap-3 bg-blue-50/70 px-4 py-4">
+                            <button type="button"
+                                    @click="summary.expanded = !summary.expanded"
+                                    class="flex-1 text-left">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start gap-3">
+                                        <div class="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                                            <i class="fas fa-wand-magic-sparkles text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <h3 class="text-sm font-black text-slate-800 md:text-[15px]">AI Conversation Summary</h3>
+                                                <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                                    Privat
+                                                </span>
+                                            </div>
+                                            <p class="mt-1 text-[11px] text-slate-500 md:text-xs">
+                                                Ringkasan percakapan ini tetap hanya terlihat oleh kamu.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <i class="fas text-slate-400 transition-transform"
+                                       :class="summary.expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                </div>
+                            </button>
+
+                            <button type="button"
+                                    @click="fetchConversationSummary(true)"
+                                    :disabled="summary.loading"
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    title="Refresh summary">
+                                <i class="fas fa-rotate-right" :class="summary.loading ? 'animate-spin' : ''"></i>
+                            </button>
+                        </div>
+
+                        <div x-show="summary.expanded" x-cloak class="border-t border-slate-100 px-4 py-4">
+                            <div x-show="summary.loading" class="space-y-3">
+                                <div class="h-3 w-40 animate-pulse rounded-full bg-slate-200"></div>
+                                <div class="h-3 w-full animate-pulse rounded-full bg-slate-100"></div>
+                                <div class="h-3 w-11/12 animate-pulse rounded-full bg-slate-100"></div>
+                            </div>
+
+                            <div x-show="!summary.loading && summary.available" x-cloak class="space-y-4">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em]"
+                                          :class="summarySentimentClass()"
+                                          x-text="summary.sentiment"></span>
+                                    <span x-show="summary.updatedAt"
+                                          class="text-[11px] text-slate-400"
+                                          x-text="`Diperbarui ${summary.updatedAt}`"></span>
+                                </div>
+
+                                <div class="text-[13px] leading-6 text-slate-700 md:text-sm">
+                                    <p class="font-semibold text-slate-800">Summary of conversation</p>
+                                    <p class="mt-2" x-text="summary.text"></p>
+                                </div>
+                            </div>
+
+                            <div x-show="!summary.loading && !summary.available && summary.info" x-cloak class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[12px] leading-6 text-slate-600 md:text-sm">
+                                <span x-text="summary.info"></span>
+                            </div>
+
+                            <div x-show="!summary.loading && summary.error" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] leading-6 text-red-600 md:text-sm">
+                                <span x-text="summary.error"></span>
+                            </div>
+                        </div>
+                    </section>
+
                     <div class="text-center mb-4">
                         <h3 class="text-sm md:text-base font-black text-slate-800">Bagaimana pengalaman Anda dengan agen kami?</h3>
                         <p class="text-[11px] md:text-xs text-slate-500 mt-1">Pilih rating bintang 1 sampai 5 untuk membantu evaluasi performa agen.</p>
@@ -351,7 +496,7 @@
                                     @mouseleave="hoverRating = 0"
                                     class="transition-transform hover:scale-110 active:scale-95">
                                 <i class="fas fa-star text-2xl md:text-3xl"
-                                   :class="(hoverRating || selectedRating) >= star ? 'text-amber-400' : 'text-slate-300'"></i>
+                                   :class="(hoverRating || selectedRating) >= star ? 'text-blue-500' : 'text-slate-300'"></i>
                             </button>
                         </template>
                     </div>
@@ -360,7 +505,7 @@
                               rows="3"
                               maxlength="1000"
                               placeholder="Opsional: tulis kesan atau saran singkat..."
-                              class="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 resize-none"></textarea>
+                              class="w-full rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 resize-none"></textarea>
 
                     <div class="mt-4 flex items-center justify-between gap-3">
                         <button type="button"
@@ -372,7 +517,7 @@
                         <button type="button"
                                 @click="submitFeedback()"
                                 :disabled="!selectedRating || isSubmittingFeedback"
-                                class="rounded-2xl bg-amber-500 px-4 py-2.5 text-xs md:text-sm font-black text-white shadow-lg shadow-amber-200 transition-all hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50">
+                                class="rounded-2xl bg-blue-600 px-4 py-2.5 text-xs md:text-sm font-black text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
                             <span x-text="isSubmittingFeedback ? 'Mengirim...' : 'Kirim Feedback'"></span>
                         </button>
                     </div>
@@ -439,8 +584,22 @@
                 isTyping: false,
                 typingMessage: 'Agen sedang merespon',
                 typingTimeout: null,
+                summaryRefreshTimer: null,
+                summaryRequestId: 0,
                 botCategories: botCategories,
                 editingMsgId: null,
+                summary: {
+                    loading: false,
+                    available: false,
+                    expanded: true,
+                    text: '',
+                    sentiment: 'Neutral',
+                    info: 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.',
+                    error: '',
+                    updatedAt: null,
+                    lastFingerprint: null,
+                    historyHash: null
+                },
                 menu: {
                     show: false,
                     msgId: null,
@@ -452,6 +611,7 @@
                     this.scrollToBottom();
                     this.listenForEvents();
                     this.$nextTick(() => this.resizeComposer());
+                    this.queueSummaryRefresh(250);
 
                     // Polling fallback: sync status dari server setiap 20 detik
                     setInterval(async () => {
@@ -503,6 +663,126 @@
                     return 'Sesi Ditutup';
                 },
 
+                eligibleSummaryMessageCount() {
+                    return this.messages.filter((msg) => {
+                        if (msg.sender_type === 'system') return false;
+                        const type = msg.message_type || 'text';
+                        return ['text', 'image', 'file'].includes(type);
+                    }).length;
+                },
+
+                shouldRenderConversationSummary() {
+                    return this.status === 'closed' && (
+                        this.summary.loading
+                        || this.summary.available
+                        || this.summary.error !== ''
+                        || this.eligibleSummaryMessageCount() >= 2
+                    );
+                },
+
+                shouldRenderInlineConversationSummary() {
+                    return false;
+                },
+
+                shouldRenderFeedbackConversationSummary() {
+                    return this.status === 'closed' && this.feedbackPending && this.shouldRenderConversationSummary();
+                },
+
+                summaryFingerprint() {
+                    return this.messages
+                        .filter((msg) => msg.sender_type !== 'system')
+                        .map((msg) => `${msg.id || msg.temp_id || 'temp'}:${msg.sender_type}:${msg.message_type || 'text'}:${String(msg.content || '').slice(0, 200)}`)
+                        .join('|');
+                },
+
+                summarySentimentClass() {
+                    if (this.summary.sentiment === 'Positive') {
+                        return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                    }
+                    if (this.summary.sentiment === 'Negative') {
+                        return 'bg-rose-50 text-rose-700 border border-rose-200';
+                    }
+
+                    return 'bg-amber-50 text-amber-700 border border-amber-200';
+                },
+
+                queueSummaryRefresh(delay = 900) {
+                    clearTimeout(this.summaryRefreshTimer);
+
+                    if (this.status !== 'closed') {
+                        return;
+                    }
+
+                    if (this.eligibleSummaryMessageCount() < 2) {
+                        this.summary.available = false;
+                        this.summary.text = '';
+                        this.summary.sentiment = 'Neutral';
+                        this.summary.error = '';
+                        this.summary.info = 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.';
+                        return;
+                    }
+
+                    this.summaryRefreshTimer = setTimeout(() => {
+                        this.fetchConversationSummary();
+                    }, delay);
+                },
+
+                async fetchConversationSummary(force = false) {
+                    if (this.status !== 'closed') {
+                        return;
+                    }
+
+                    if (this.eligibleSummaryMessageCount() < 2) {
+                        this.summary.loading = false;
+                        this.summary.available = false;
+                        this.summary.text = '';
+                        this.summary.sentiment = 'Neutral';
+                        this.summary.error = '';
+                        this.summary.info = 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.';
+                        return;
+                    }
+
+                    const fingerprint = this.summaryFingerprint();
+                    if (!force && fingerprint === this.summary.lastFingerprint) {
+                        return;
+                    }
+
+                    const requestId = ++this.summaryRequestId;
+                    this.summary.loading = true;
+                    this.summary.error = '';
+
+                    try {
+                        const response = await fetch('{{ route('chat.summary', [], false) }}', {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' }
+                        });
+
+                        const data = await response.json();
+                        if (requestId !== this.summaryRequestId) return;
+                        if (!response.ok) throw new Error(data.error || 'Gagal memuat ringkasan AI.');
+
+                        this.summary.available = !!data.available;
+                        this.summary.text = data.summary || '';
+                        this.summary.sentiment = data.sentiment || 'Neutral';
+                        this.summary.info = data.message || '';
+                        this.summary.updatedAt = data.updated_at || null;
+                        this.summary.historyHash = data.history_hash || null;
+                        this.summary.lastFingerprint = fingerprint;
+                    } catch (error) {
+                        if (requestId !== this.summaryRequestId) return;
+
+                        this.summary.available = false;
+                        this.summary.text = '';
+                        this.summary.sentiment = 'Neutral';
+                        this.summary.error = error.message || 'Gagal memuat ringkasan AI.';
+                        this.summary.info = '';
+                    } finally {
+                        if (requestId === this.summaryRequestId) {
+                            this.summary.loading = false;
+                        }
+                    }
+                },
+
                 formatMessage(text) {
                     if (!text) return '';
                     
@@ -542,6 +822,7 @@
                                 if (data.messages) {
                                     this.messages = data.messages;
                                     this.scrollToBottom();
+                                    this.queueSummaryRefresh(300);
                                 }
                             })
                             .catch(e => console.warn('Reconnect sync failed:', e));
@@ -572,11 +853,16 @@
                                 created_at: new Date(e.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                             });
                             this.scrollToBottom();
+                            this.queueSummaryRefresh(600);
                         })
                         .listen('.conversation.status.changed', (e) => {
                             this.status = e.status;
                             if (e.bot_phase) this.botPhase = e.bot_phase;
                             this.feedbackPending = !!e.feedback_requested;
+                            if (this.feedbackPending) {
+                                this.summary.expanded = true;
+                                this.queueSummaryRefresh(250);
+                            }
                             
                             if (e.status === 'closed') {
                                 if (!this.feedbackPending) {
@@ -598,10 +884,14 @@
                         })
                         .listen('.message.updated', (e) => {
                             const msg = this.messages.find(m => m.id === e.id);
-                            if (msg) msg.content = e.content;
+                            if (msg) {
+                                msg.content = e.content;
+                                this.queueSummaryRefresh(400);
+                            }
                         })
                         .listen('.message.deleted', (e) => {
                             this.messages = this.messages.filter(m => m.id !== e.id);
+                            this.queueSummaryRefresh(400);
                         });
                 },
 
@@ -669,6 +959,8 @@
                                 if (data.bot_submenus) {
                                     this.botSubmenus = data.bot_submenus;
                                 }
+
+                                this.queueSummaryRefresh(800);
                             }
 
                         } catch (error) {
@@ -694,7 +986,10 @@
                             if (!response.ok) throw new Error(data.error || 'Gagal memperbarui pesan.');
 
                             const msg = this.messages.find(m => m.id === editId);
-                            if (msg) msg.content = content;
+                            if (msg) {
+                                msg.content = content;
+                                this.queueSummaryRefresh(400);
+                            }
                         } catch (error) {
                             alert(error.message);
                             this.newMessage = content;
@@ -800,6 +1095,7 @@
                         if (!response.ok) throw new Error(data.error || 'Gagal menghapus pesan.');
 
                         this.messages = this.messages.filter(m => m.id !== msgId);
+                        this.queueSummaryRefresh(400);
                     } catch (error) {
                         alert(error.message);
                     } finally {
@@ -854,6 +1150,7 @@
                             this.messages[msgIndex].message_type = data.message.message_type;
                             this.messages[msgIndex].content = data.message.content;
                             this.messages[msgIndex].created_at = data.message.created_at;
+                            this.queueSummaryRefresh(800);
                         }
                     } catch (error) {
                         this.messages = this.messages.filter(m => m.temp_id !== tempId);
@@ -934,7 +1231,8 @@
                         this.isSubmittingFeedback = false;
                     }
                 },
-@//-
+
+                // Sinkronkan indikator mengetik ke admin saat user sedang aktif menulis.
                 sendTypingEvent(isTyping = true) {
                     if (this.status !== 'active') return;
 

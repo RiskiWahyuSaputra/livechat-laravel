@@ -37,7 +37,7 @@ class GeminiService
             return $cachedResponse;
         }
 
-        if ($this->shouldUseOpenClaw()) {
+        if ($this->shouldUseOpenClaw('chat')) {
             $openClawResponse = $this->openClawService->ask($prompt, $fullInstruction);
 
             if ($this->isUsableResponse($openClawResponse)) {
@@ -46,7 +46,7 @@ class GeminiService
                 return $openClawResponse;
             }
 
-            Cache::put($this->openClawBackoffCacheKey(), true, $this->openClawBackoffSeconds);
+            Cache::put($this->openClawBackoffCacheKey('chat'), true, $this->openClawBackoffSeconds);
             Log::warning('OpenClaw tidak mengembalikan jawaban. Fallback ke Groq/Gemini API.', [
                 'backoff_seconds' => $this->openClawBackoffSeconds,
             ]);
@@ -64,7 +64,7 @@ class GeminiService
             Log::warning('Groq tidak mengembalikan jawaban. Fallback ke Gemini API.');
         }
 
-        $geminiResponse = $this->askGeminiApi($prompt, $fullInstruction);
+        $geminiResponse = $this->askGeminiApi($prompt, $fullInstruction, null, 'chat');
 
         if ($this->isUsableResponse($geminiResponse)) {
             Cache::put($cacheKey, $geminiResponse, $this->responseCacheSeconds);
@@ -94,7 +94,7 @@ class GeminiService
         RIWAYAT CHAT:
         $history";
 
-        if ($this->shouldUseOpenClaw()) {
+        if ($this->shouldUseOpenClaw('knowledge')) {
             $response = $this->openClawService->ask($prompt, 'Kamu adalah AI Knowledge Extractor.');
             $data = $this->decodeKnowledgePayload($response);
 
@@ -102,7 +102,7 @@ class GeminiService
                 return $data;
             }
 
-            Cache::put($this->openClawBackoffCacheKey(), true, $this->openClawBackoffSeconds);
+            Cache::put($this->openClawBackoffCacheKey('knowledge'), true, $this->openClawBackoffSeconds);
             Log::warning('OpenClaw tidak mengembalikan ringkasan knowledge. Fallback ke Groq/Gemini API.');
         }
 
@@ -121,7 +121,7 @@ class GeminiService
             $this->preferredModel,
             'gemma-4-26b-a4b-it',
             'gemini-2.0-flash-lite',
-        ]);
+        ], 'knowledge');
 
         if ($response) {
             $data = $this->decodeKnowledgePayload($response);
@@ -132,6 +132,58 @@ class GeminiService
         }
 
         return null;
+    }
+
+    public function summarizeConversationForCustomer(string $history): ?array
+    {
+        $prompt = "Berikut adalah riwayat percakapan pelanggan dengan tim support PT BEST CORPORATION SYARIAH.
+        TUGAS ANDA:
+        1. Buat ringkasan singkat dan mudah dipahami pelanggan.
+        2. Fokus pada tujuan pelanggan, jawaban yang sudah diberikan, dan status percakapan terakhir.
+        3. Abaikan basa-basi, salam, menu otomatis, dan pengulangan yang tidak penting.
+        4. Tentukan sentimen percakapan dengan salah satu nilai: Positive, Neutral, atau Negative.
+        5. Jika konteks belum cukup, tetap buat ringkasan singkat berdasarkan informasi yang ada.
+        6. Jawab HANYA dalam format JSON object asli tanpa markdown dengan struktur:
+           {
+             \"summary\": \"...\",
+             \"sentiment\": \"Positive|Neutral|Negative\"
+           }
+
+        RIWAYAT CHAT:
+        $history";
+
+        $instruction = 'Kamu adalah AI Conversation Summarizer untuk layanan pelanggan.';
+
+        if ($this->shouldUseOpenClaw('summary_customer')) {
+            $response = $this->openClawService->ask($prompt, $instruction);
+            $data = $this->decodeSummaryPayload($response);
+
+            if (is_array($data)) {
+                return $data;
+            }
+
+            Cache::put($this->openClawBackoffCacheKey('summary_customer'), true, $this->openClawBackoffSeconds);
+            Log::warning('OpenClaw tidak mengembalikan conversation summary. Fallback ke Groq/Gemini API.');
+        }
+
+        if ($this->shouldUseGroq()) {
+            $response = $this->askGroqApi($prompt, $instruction);
+            $data = $this->decodeSummaryPayload($response);
+
+            if (is_array($data)) {
+                return $data;
+            }
+
+            Log::warning('Groq tidak mengembalikan conversation summary. Fallback ke Gemini API.');
+        }
+
+        $response = $this->askGeminiApi($prompt, $instruction, [
+            $this->preferredModel,
+            'gemma-4-26b-a4b-it',
+            'gemini-2.0-flash-lite',
+        ], 'summary_customer');
+
+        return $this->decodeSummaryPayload($response);
     }
 
     public function isFallbackResponse(?string $response): bool
@@ -157,14 +209,14 @@ class GeminiService
         return false;
     }
 
-    private function askGeminiApi(string $prompt, string $fullInstruction, ?array $preferredModels = null): ?string
+    private function askGeminiApi(string $prompt, string $fullInstruction, ?array $preferredModels = null, string $context = 'chat'): ?string
     {
         if ($this->apiKey === '') {
             return null;
         }
 
-        foreach ($this->modelCandidates($preferredModels) as $model) {
-            $aiText = $this->executeRequest($model, $fullInstruction, $prompt);
+        foreach ($this->modelCandidates($preferredModels, $context) as $model) {
+            $aiText = $this->executeRequest($model, $fullInstruction, $prompt, $context);
 
             if ($this->isUsableResponse($aiText)) {
                 return $aiText;
@@ -174,7 +226,7 @@ class GeminiService
         return null;
     }
 
-    private function executeRequest(string $model, string $fullInstruction, string $prompt): ?string
+    private function executeRequest(string $model, string $fullInstruction, string $prompt, string $context = 'chat'): ?string
     {
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$this->apiKey}";
 
@@ -199,8 +251,9 @@ class GeminiService
                 ]);
 
             if (!$response->successful()) {
-                $this->markModelFailure($model, $response->status());
+                $this->markModelFailure($model, $response->status(), $context);
                 Log::warning("Gemini model {$model} API Error: {$response->status()}", [
+                    'context' => $context,
                     'body' => $response->json(),
                 ]);
 
@@ -220,23 +273,26 @@ class GeminiService
             $fullText = trim($fullText);
 
             if ($fullText !== '') {
-                Cache::forget($this->modelFailureCacheKey($model));
+                Cache::forget($this->modelFailureCacheKey($model, $context));
                 Log::info("Gemini berhasil menggunakan model: {$model}");
 
                 return $fullText;
             }
 
             Log::warning("Gemini model {$model} selesai tanpa teks.", [
+                'context' => $context,
                 'finish_reason' => $data['candidates'][0]['finishReason'] ?? 'UNKNOWN',
             ]);
         } catch (\Throwable $e) {
-            Log::error("Gemini Exception ({$model}): " . $e->getMessage());
+            Log::error("Gemini Exception ({$model}): " . $e->getMessage(), [
+                'context' => $context,
+            ]);
         }
 
         return null;
     }
 
-    private function modelCandidates(?array $preferredModels = null): array
+    private function modelCandidates(?array $preferredModels = null, string $context = 'chat'): array
     {
         $defaults = [
             $this->preferredModel,
@@ -246,7 +302,7 @@ class GeminiService
 
         return array_values(array_filter(
             array_unique(array_filter($preferredModels ?? $defaults, static fn ($model) => is_string($model) && trim($model) !== '')),
-            fn (string $model) => !$this->isModelInBackoffWindow($model)
+            fn (string $model) => !$this->isModelInBackoffWindow($model, $context)
         ));
     }
 
@@ -255,10 +311,10 @@ class GeminiService
         return 'Maaf, sistem BEST AI lagi mengalami kendala nih. Coba lagi beberapa saat ya, atau ketik AGENT untuk terhubung langsung dengan Customer Service kami.';
     }
 
-    private function shouldUseOpenClaw(): bool
+    private function shouldUseOpenClaw(string $context = 'chat'): bool
     {
         return $this->provider === 'openclaw'
-            && !$this->isOpenClawInBackoffWindow();
+            && !$this->isOpenClawInBackoffWindow($context);
     }
 
     private function shouldUseGroq(): bool
@@ -310,14 +366,14 @@ class GeminiService
         return null;
     }
 
-    private function isOpenClawInBackoffWindow(): bool
+    private function isOpenClawInBackoffWindow(string $context = 'chat'): bool
     {
-        return (bool) Cache::get($this->openClawBackoffCacheKey(), false);
+        return (bool) Cache::get($this->openClawBackoffCacheKey($context), false);
     }
 
-    private function openClawBackoffCacheKey(): string
+    private function openClawBackoffCacheKey(string $context = 'chat'): string
     {
-        return 'best_ai_openclaw_backoff';
+        return 'best_ai_openclaw_backoff_' . $context;
     }
 
     private function responseCacheKey(string $prompt, string $fullInstruction): string
@@ -339,17 +395,17 @@ class GeminiService
         return is_string($normalized) && $normalized !== '' ? $normalized : trim($prompt);
     }
 
-    private function isModelInBackoffWindow(string $model): bool
+    private function isModelInBackoffWindow(string $model, string $context = 'chat'): bool
     {
-        return (bool) Cache::get($this->modelFailureCacheKey($model), false);
+        return (bool) Cache::get($this->modelFailureCacheKey($model, $context), false);
     }
 
-    private function modelFailureCacheKey(string $model): string
+    private function modelFailureCacheKey(string $model, string $context = 'chat'): string
     {
-        return 'best_ai_model_backoff_' . sha1($model);
+        return 'best_ai_model_backoff_' . $context . '_' . sha1($model);
     }
 
-    private function markModelFailure(string $model, int $statusCode): void
+    private function markModelFailure(string $model, int $statusCode, string $context = 'chat'): void
     {
         $seconds = match ($statusCode) {
             404, 400 => 3600,
@@ -357,7 +413,7 @@ class GeminiService
             default => 300,
         };
 
-        Cache::put($this->modelFailureCacheKey($model), true, $seconds);
+        Cache::put($this->modelFailureCacheKey($model, $context), true, $seconds);
     }
 
     private function buildAssistantInstruction(string $additionalInstruction = ''): string
@@ -438,5 +494,35 @@ class GeminiService
         $data = json_decode(trim((string) $cleaned), true);
 
         return is_array($data) ? $data : null;
+    }
+
+    private function decodeSummaryPayload(?string $response): ?array
+    {
+        if (!$response) {
+            return null;
+        }
+
+        $cleaned = preg_replace('/```json|```/', '', $response);
+        $data = json_decode(trim((string) $cleaned), true);
+
+        if (!is_array($data)) {
+            return null;
+        }
+
+        $summary = trim((string) ($data['summary'] ?? ''));
+        $sentiment = ucfirst(strtolower(trim((string) ($data['sentiment'] ?? 'Neutral'))));
+
+        if ($summary === '') {
+            return null;
+        }
+
+        if (!in_array($sentiment, ['Positive', 'Neutral', 'Negative'], true)) {
+            $sentiment = 'Neutral';
+        }
+
+        return [
+            'summary' => $summary,
+            'sentiment' => $sentiment,
+        ];
     }
 }
