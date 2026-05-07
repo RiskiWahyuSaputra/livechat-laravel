@@ -511,15 +511,28 @@
                 </button>
                 <input type="file" x-ref="fileInput" style="display:none;" @change="uploadFile">
 
-                <div class="flex-1 flex flex-col">
+                <div class="flex-1 relative flex items-center">
                     <textarea x-model="newMessage" x-ref="messageInput"
-                              :placeholder="(!canReply) ? 'Menunggu chat diklaim...' : (messageType === 'whisper' ? '🔒 Tulis catatan internal...' : 'Ketik pesan...')"
+                              placeholder=""
                               @input="handleInput" @keydown="handleKeydown"
                               :disabled="!canReply"
                               class="msg-textarea" :class="messageType === 'whisper' ? 'whisper-mode' : ''"
+                              style="width: 100%;"
                               rows="1"></textarea>
-                    <div x-show="canReply && messageType === 'text'" class="text-[10px] text-slate-400 mt-0.5 mb-1 px-1" x-cloak>
-                        Type <span class="font-bold">"shift + enter"</span> to add a new line. Type <span class="font-bold">"/"</span> to use quick reply
+                    <div x-show="!newMessage && canReply && messageType === 'text'" 
+                         class="absolute inset-0 flex items-center justify-start ps-2 pointer-events-none text-[11px] text-slate-400" 
+                         x-cloak>
+                        Type "shift + enter" to add a new line. Type "/" to use quick reply
+                    </div>
+                    <div x-show="!newMessage && canReply && messageType === 'whisper'" 
+                         class="absolute inset-0 flex items-center justify-start ps-2 pointer-events-none text-[11px] text-amber-500/60" 
+                         x-cloak>
+                        🔒 Tulis catatan internal...
+                    </div>
+                    <div x-show="!canReply" 
+                         class="absolute inset-0 flex items-center justify-start ps-2 pointer-events-none text-[11px] text-slate-400" 
+                         x-cloak>
+                        Menunggu chat diklaim...
                     </div>
                 </div>
 
