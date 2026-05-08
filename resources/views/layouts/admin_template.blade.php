@@ -577,6 +577,9 @@
                             <li class="{{ request()->routeIs('admin.bot-menus.*') ? 'active' : '' }}">
                                 <a href="{{ route('admin.bot-menus.index') }}"><i class="fe fe-list"></i> <span>Alur Chat</span></a>
                             </li>
+                            <li class="{{ request()->routeIs('admin.settings.operational_hours') ? 'active' : '' }}">
+                                <a href="{{ route('admin.settings.operational_hours') }}"><i class="fe fe-clock"></i> <span>Jam Operasional</span></a>
+                            </li>
                         @endif
 
                         <li class="menu-title">
