@@ -37,7 +37,10 @@ class GeminiService
             return $cachedResponse;
         }
 
+        Log::info("AI Request - Provider: {$this->provider}");
+
         if ($this->shouldUseOpenClaw('chat')) {
+            Log::info('Trying OpenClaw...');
             $openClawResponse = $this->openClawService->ask($prompt, $fullInstruction);
 
             if ($this->isUsableResponse($openClawResponse)) {
@@ -53,6 +56,7 @@ class GeminiService
         }
 
         if ($this->shouldUseGroq()) {
+            Log::info('Trying Groq with model: ' . $this->groqModel);
             $groqResponse = $this->askGroqApi($prompt, $fullInstruction);
 
             if ($this->isUsableResponse($groqResponse)) {
@@ -64,6 +68,7 @@ class GeminiService
             Log::warning('Groq tidak mengembalikan jawaban. Fallback ke Gemini API.');
         }
 
+        Log::info('Trying Gemini API...');
         $geminiResponse = $this->askGeminiApi($prompt, $fullInstruction, null, 'chat');
 
         if ($this->isUsableResponse($geminiResponse)) {
@@ -72,6 +77,7 @@ class GeminiService
             return $geminiResponse;
         }
 
+        Log::error('All AI providers failed. Returning fallback message.');
         return $this->fallbackMessage();
     }
 
