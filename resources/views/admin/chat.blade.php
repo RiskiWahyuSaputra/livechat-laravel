@@ -1623,9 +1623,13 @@
                         title: 'Percakapan diselesaikan'
                     });
 
-                    // Reset selection and refresh list
-                    this.selectedChat = null;
+                    // Stay in the conversation so admin can see the summary
+                    this.selectedChat.status = 'closed';
+                    this.statusFilter = 'closed';
                     await this.fetchChats();
+                    // Re-select the closed chat so the iframe stays open
+                    const closed = this.chats.find(c => c.id === this.selectedChat.id);
+                    if (closed) this.selectedChat = closed;
                 } catch (e) {
                     Toast.fire({
                         icon: 'error',

@@ -5,14 +5,14 @@
 @push('styles')
 <style>
     :root {
-        --lp-primary: #4f46e5; --lp-primary-light: #ede9fe;
+        --lp-primary: #334155; --lp-primary-light: #f1f5f9;
         --lp-success: #10b981; --lp-success-light: #d1fae5;
         --lp-warning: #f59e0b; --lp-warning-light: #fef3c7;
         --lp-danger: #ef4444;  --lp-danger-light: #fee2e2;
-        --lp-info: #06b6d4;    --lp-info-light: #cffafe;
-        --lp-dark: #1f2937;    --lp-gray-50: #f9fafb;
-        --lp-gray-100: #f3f4f6; --lp-gray-200: #e5e7eb;
-        --lp-gray-500: #6b7280; --lp-gray-700: #374151;
+        --lp-info: #64748b;    --lp-info-light: #f1f5f9;
+        --lp-dark: #0f172a;    --lp-gray-50: #f8fafc;
+        --lp-gray-100: #f1f5f9; --lp-gray-200: #e2e8f0;
+        --lp-gray-500: #64748b; --lp-gray-700: #334155;
         --lp-white: #ffffff;
     }
     .laporan-page { background: var(--lp-gray-100); min-height: 100vh; padding: 24px; }
@@ -60,14 +60,14 @@
     .agent-table tr:hover td { background: var(--lp-gray-50); }
 
     /* Agent avatar */
-    .ag-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+    .ag-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; background: var(--lp-gray-700); }
     .ag-info { display: flex; align-items: center; gap: 12px; }
 
     /* Rank badges */
     .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; font-size: 11px; font-weight: 700; }
-    .rank-1 { background: linear-gradient(135deg,#fbbf24,#d97706); color:#fff; }
-    .rank-2 { background: linear-gradient(135deg,#9ca3af,#6b7280); color:#fff; }
-    .rank-3 { background: linear-gradient(135deg,#d97706,#b45309); color:#fff; }
+    .rank-1 { background: #fbbf24; color:#fff; }
+    .rank-2 { background: #9ca3af; color:#fff; }
+    .rank-3 { background: #d97706; color:#fff; }
     .rank-other { background: var(--lp-gray-200); color: var(--lp-gray-500); }
 
     /* Status pill */
@@ -84,19 +84,16 @@
 
     /* Progress */
     .prog-bar { height: 20px; background: var(--lp-gray-100); border-radius: 6px; overflow: hidden; }
-    .prog-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: #fff; }
+    .prog-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: #fff; background: var(--lp-gray-700); }
 
     /* Top 3 podium */
-    .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
-    .podium-card { background: var(--lp-white); border-radius: 14px; border: 2px solid var(--lp-gray-200); padding: 20px 16px; text-align: center; transition: transform 0.2s; }
-    .podium-card:hover { transform: translateY(-4px); }
-    .podium-card.gold   { border-color: #fbbf24; background: linear-gradient(135deg, #fffbeb, #fef9c3); }
-    .podium-card.silver { border-color: #9ca3af; background: linear-gradient(135deg, #f9fafb, #f3f4f6); }
-    .podium-card.bronze { border-color: #d97706; background: linear-gradient(135deg, #fef3c7, #fde68a22); }
-    .podium-avatar { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #fff; margin: 0 auto 10px; background: linear-gradient(135deg,#4f46e5,#7c3aed); }
-    .podium-name { font-weight: 700; font-size: 14px; color: var(--lp-dark); }
-    .podium-score { font-size: 22px; font-weight: 800; color: var(--lp-primary); margin: 4px 0; }
-    .podium-meta { font-size: 11px; color: var(--lp-gray-500); }
+    .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .podium-card { background: var(--lp-white); border-radius: 10px; border: 1px solid var(--lp-gray-200); padding: 12px; text-align: center; transition: transform 0.2s; }
+    .podium-card:hover { transform: translateY(-2px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .podium-avatar { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; margin: 0 auto 8px; background: var(--lp-gray-700); }
+    .podium-name { font-weight: 600; font-size: 13px; color: var(--lp-dark); margin-bottom: 4px; }
+    .podium-score { font-size: 18px; font-weight: 700; color: var(--lp-dark); margin-bottom: 4px; }
+    .podium-meta { font-size: 10px; color: var(--lp-gray-500); }
 
     .chart-wrap { height: 250px; position: relative; }
     .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
@@ -120,11 +117,11 @@
     {{-- Stats --}}
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon" style="background:var(--lp-primary-light);color:var(--lp-primary);">
+            <div class="stat-icon" style="background:var(--lp-gray-100);color:var(--lp-gray-700);">
                 <i class="fe fe-users"></i>
             </div>
             <div class="stat-body">
-                <div class="stat-value">{{ count($agentPerformance) }}</div>
+                <div class="stat-value">{{ count($topPerformers['all']) }}</div>
                 <div class="stat-label">Total Agen</div>
             </div>
         </div>
@@ -138,20 +135,20 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="background:var(--lp-warning-light);color:var(--lp-warning);">
+            <div class="stat-icon" style="background:var(--lp-gray-100);color:var(--lp-gray-700);">
                 <i class="fe fe-check-square"></i>
             </div>
             <div class="stat-body">
-                <div class="stat-value">{{ collect($agentPerformance)->sum('closed_chats') }}</div>
+                <div class="stat-value">{{ collect($topPerformers['all'])->sum('closed_chats') }}</div>
                 <div class="stat-label">Total Chat Diselesaikan</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="background:var(--lp-info-light);color:var(--lp-info);">
+            <div class="stat-icon" style="background:var(--lp-gray-100);color:var(--lp-gray-700);">
                 <i class="fe fe-star"></i>
             </div>
             <div class="stat-body">
-                @php $ratedAgents = collect($agentPerformance)->where('total_ratings', '>', 0); @endphp
+                @php $ratedAgents = collect($topPerformers['all'])->where('total_ratings', '>', 0); @endphp
                 <div class="stat-value">{{ $ratedAgents->count() > 0 ? number_format($ratedAgents->avg('avg_rating'), 1) : 'N/A' }}</div>
                 <div class="stat-label">Rata-rata Rating</div>
             </div>
@@ -166,19 +163,17 @@
         </div>
         <div class="podium">
             @foreach($topPerformers['top'] as $i => $agent)
-            @php $classes = ['gold','silver','bronze']; @endphp
-            <div class="podium-card {{ $classes[$i] ?? '' }}">
+            @php 
+                $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                $ratingIndex = $agent['avg_rating'] > 0 ? max(0, min(4, round($agent['avg_rating']) - 1)) : null;
+                $medals = ['🥇','🥈','🥉'];
+            @endphp
+            <div class="podium-card">
+                <div style="font-size:20px;margin-bottom:4px;">{{ $medals[$i] }}</div>
                 <div class="podium-avatar">{{ strtoupper(substr($agent['username'], 0, 2)) }}</div>
                 <div class="podium-name">{{ $agent['username'] }}</div>
                 <div class="podium-score">{{ $agent['score'] }} pts</div>
-                <div class="podium-meta">{{ $agent['closed_chats'] }} chat • Rating {{ $agent['avg_rating'] > 0 ? number_format($agent['avg_rating'],1).'★' : 'N/A' }}</div>
-                @if($i === 0)
-                    <div style="margin-top:8px;font-size:18px;">🥇</div>
-                @elseif($i === 1)
-                    <div style="margin-top:8px;font-size:18px;">🥈</div>
-                @else
-                    <div style="margin-top:8px;font-size:18px;">🥉</div>
-                @endif
+                <div class="podium-meta">{{ $agent['closed_chats'] }} chat • {{ $ratingIndex !== null ? $ratingEmoji[$ratingIndex].' '.number_format($agent['avg_rating'],1) : 'N/A' }}</div>
             </div>
             @endforeach
         </div>
@@ -206,16 +201,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($topPerformers['all'] as $i => $agent)
+                        @forelse($agentsPaginated as $i => $agent)
+                        @php $globalIndex = ($agentsPaginated->currentPage() - 1) * $agentsPaginated->perPage() + $i; @endphp
                         <tr>
                             <td>
-                                <span class="rank-badge @if($i==0) rank-1 @elseif($i==1) rank-2 @elseif($i==2) rank-3 @else rank-other @endif">
-                                    {{ $i + 1 }}
+                                <span class="rank-badge @if($globalIndex==0) rank-1 @elseif($globalIndex==1) rank-2 @elseif($globalIndex==2) rank-3 @else rank-other @endif">
+                                    {{ $globalIndex + 1 }}
                                 </span>
                             </td>
                             <td>
                                 <div class="ag-info">
-                                    <div class="ag-avatar">{{ strtoupper(substr($agent['username'], 0, 2)) }}</div>
+                                    <div class="ag-avatar" style="background:var(--lp-gray-700);">{{ strtoupper(substr($agent['username'], 0, 2)) }}</div>
                                     <span style="font-weight:600;">{{ $agent['username'] }}</span>
                                 </div>
                             </td>
@@ -232,8 +228,14 @@
                             </td>
                             <td class="text-center">
                                 @if($agent['total_ratings'] > 0)
-                                    <span style="font-weight:600;color:#f59e0b;">{{ number_format($agent['avg_rating'],1) }} ★</span>
-                                @else <span style="color:var(--lp-gray-500);">N/A</span> @endif
+                                    @php
+                                        $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                                        $ratingIndex = max(0, min(4, round($agent['avg_rating']) - 1));
+                                    @endphp
+                                    <div style="font-size:20px;line-height:1;">{{ $ratingEmoji[$ratingIndex] }}</div>
+                                    <div style="font-weight:600;color:var(--lp-dark);font-size:13px;margin-top:4px;">{{ number_format($agent['avg_rating'],1) }}</div>
+                                    <div style="font-size:10px;color:var(--lp-gray-400);">({{ $agent['total_ratings'] }} ulasan)</div>
+                                @else <span style="color:var(--lp-gray-400);">N/A</span> @endif
                             </td>
                             <td class="text-center">
                                 <span class="score-box @if($agent['score']>=100) score-high @elseif($agent['score']>=50) score-mid @else score-low @endif">
@@ -247,6 +249,11 @@
                     </tbody>
                 </table>
             </div>
+            @if($agentsPaginated->hasPages())
+            <div style="padding:16px 20px;border-top:1px solid var(--lp-gray-200);">
+                {{ $agentsPaginated->links() }}
+            </div>
+            @endif
         </div>
 
         {{-- Workload --}}
@@ -277,7 +284,7 @@
                             <td class="text-center"><strong>{{ $agent['handled_chats'] }}</strong></td>
                             <td style="min-width:100px;">
                                 <div class="prog-bar">
-                                    <div class="prog-fill" style="width:{{ max(5,$agent['workload_percentage']) }}%;background:linear-gradient(90deg,#4f46e5,#7c3aed);">
+                                    <div class="prog-fill" style="width:{{ max(5,$agent['workload_percentage']) }}%;">
                                         {{ $agent['workload_percentage'] }}%
                                     </div>
                                 </div>
@@ -289,6 +296,11 @@
                     </tbody>
                 </table>
             </div>
+            @if($agentWorkload->hasPages())
+            <div style="padding:16px 20px;border-top:1px solid var(--lp-gray-200);">
+                {{ $agentWorkload->links() }}
+            </div>
+            @endif
         </div>
     </div>
 

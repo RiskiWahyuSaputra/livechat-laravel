@@ -484,19 +484,18 @@
                     </section>
 
                     <div class="text-center mb-4">
-                        <h3 class="text-sm md:text-base font-black text-slate-800">Bagaimana pengalaman Anda dengan agen kami?</h3>
-                        <p class="text-[11px] md:text-xs text-slate-500 mt-1">Pilih rating bintang 1 sampai 5 untuk membantu evaluasi performa agen.</p>
+                        <h3 class="text-sm md:text-base font-black text-slate-800">Seberapa puas Anda dengan layanan kami?</h3>
+                        <p class="text-[11px] md:text-xs text-slate-500 mt-1">Pilih salah satu untuk membantu evaluasi performa agen.</p>
                     </div>
 
-                    <div class="flex items-center justify-center gap-2 md:gap-3 mb-4">
-                        <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
+                    <div class="flex items-stretch justify-center gap-2 mb-4">
+                        <template x-for="opt in [{v:1,emoji:'😡',label:'Sangat\nTidak Puas'},{v:2,emoji:'😞',label:'Tidak\nPuas'},{v:3,emoji:'😐',label:'Cukup\nPuas'},{v:4,emoji:'😊',label:'Puas'},{v:5,emoji:'😍',label:'Sangat\nPuas'}]" :key="opt.v">
                             <button type="button"
-                                    @click="selectedRating = star"
-                                    @mouseenter="hoverRating = star"
-                                    @mouseleave="hoverRating = 0"
-                                    class="transition-transform hover:scale-110 active:scale-95">
-                                <i class="fas fa-star text-2xl md:text-3xl"
-                                   :class="(hoverRating || selectedRating) >= star ? 'text-blue-500' : 'text-slate-300'"></i>
+                                    @click="selectedRating = opt.v"
+                                    class="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl border-2 transition-all flex-1 min-w-0"
+                                    :class="selectedRating === opt.v ? 'border-blue-500 bg-blue-50 shadow-md scale-105' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'">
+                                <span class="text-2xl md:text-3xl leading-none" x-text="opt.emoji"></span>
+                                <span class="text-[9px] md:text-[10px] font-semibold text-slate-600 text-center leading-tight whitespace-pre-line" x-text="opt.label"></span>
                             </button>
                         </template>
                     </div>
@@ -591,7 +590,7 @@
                 summary: {
                     loading: false,
                     available: false,
-                    expanded: true,
+                    expanded: false,
                     text: '',
                     sentiment: 'Neutral',
                     info: 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.',
@@ -681,7 +680,11 @@
                 },
 
                 shouldRenderInlineConversationSummary() {
-                    return false;
+                    return this.status === 'active' && (
+                        this.summary.loading
+                        || this.summary.available
+                        || this.summary.error !== ''
+                    );
                 },
 
                 shouldRenderFeedbackConversationSummary() {
@@ -709,7 +712,7 @@
                 queueSummaryRefresh(delay = 900) {
                     clearTimeout(this.summaryRefreshTimer);
 
-                    if (this.status !== 'closed') {
+                    if (!['active', 'closed'].includes(this.status)) {
                         return;
                     }
 
@@ -728,7 +731,7 @@
                 },
 
                 async fetchConversationSummary(force = false) {
-                    if (this.status !== 'closed') {
+                    if (!['active', 'closed'].includes(this.status)) {
                         return;
                     }
 
@@ -861,7 +864,9 @@
                             this.feedbackPending = !!e.feedback_requested;
                             if (this.feedbackPending) {
                                 this.summary.expanded = true;
-                                this.queueSummaryRefresh(250);
+                            }
+                            if (['active', 'closed'].includes(e.status)) {
+                                this.queueSummaryRefresh(500);
                             }
                             
                             if (e.status === 'closed') {

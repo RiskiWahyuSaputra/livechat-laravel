@@ -266,24 +266,28 @@
             </div>
             <div class="lp-card-body" style="text-align:center;">
                 @if($customerSatisfaction['has_data'])
-                    <div class="rating-big">{{ $customerSatisfaction['average_rating'] }}</div>
-                    <div style="display:flex;justify-content:center;gap:4px;margin:8px 0;">
-                        @for($i=1;$i<=5;$i++)
-                            <i class="fe fe-star {{ $i <= floor($customerSatisfaction['average_rating']) ? 'star-filled' : 'star-empty' }}" style="font-size:20px;"></i>
-                        @endfor
-                    </div>
-                    <p style="color:var(--lp-gray-500);font-size:13px;">{{ $customerSatisfaction['total_ratings'] }} ulasan</p>
-                    <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
-                        @foreach([5,4,3,2,1] as $star)
-                        <div style="text-align:center;">
-                            <div style="font-weight:700;color:var(--lp-dark);">{{ $customerSatisfaction['distribution'][$star] ?? 0 }}</div>
-                            <small style="color:#fbbf24;">{{ str_repeat('★', $star) }}</small>
+                    @php
+                        $avgRating = $customerSatisfaction['average_rating'];
+                        $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                        $ratingLabel = ['Sangat Tidak Puas','Tidak Puas','Cukup Puas','Puas','Sangat Puas'];
+                        $ratingIndex = max(0, min(4, round($avgRating) - 1));
+                    @endphp
+                    <div style="font-size:64px;line-height:1;margin-bottom:8px;">{{ $ratingEmoji[$ratingIndex] }}</div>
+                    <div class="rating-big" style="font-size:32px;">{{ number_format($avgRating, 1) }}</div>
+                    <div style="font-size:15px;font-weight:600;color:var(--lp-gray-700);margin-top:4px;">{{ $ratingLabel[$ratingIndex] }}</div>
+                    <p style="color:var(--lp-gray-500);font-size:13px;margin-top:8px;">Dari {{ $customerSatisfaction['total_ratings'] }} ulasan</p>
+                    <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap;">
+                        @foreach([5,4,3,2,1] as $i => $rating)
+                        <div style="text-align:center;padding:8px 12px;background:var(--lp-gray-50);border-radius:8px;border:1px solid var(--lp-gray-200);min-width:70px;">
+                            <div style="font-size:24px;line-height:1;">{{ $ratingEmoji[$rating-1] }}</div>
+                            <div style="font-weight:700;color:var(--lp-dark);margin-top:4px;">{{ $customerSatisfaction['distribution'][$rating] ?? 0 }}</div>
+                            <small style="color:var(--lp-gray-500);font-size:10px;">{{ explode(' ', $ratingLabel[$rating-1])[0] }}</small>
                         </div>
                         @endforeach
                     </div>
                 @else
                     <div style="padding:40px 0;color:var(--lp-gray-500);">
-                        <i class="fe fe-star" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i>
+                        <div style="font-size:48px;opacity:0.3;margin-bottom:12px;">😐</div>
                         Belum ada data rating
                     </div>
                 @endif

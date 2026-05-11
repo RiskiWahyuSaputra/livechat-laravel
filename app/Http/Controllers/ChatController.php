@@ -836,10 +836,7 @@ class ChatController extends Controller
             ->first();
 
         if ($latestConversation && $latestConversation->status !== 'closed') {
-            return response()->json([
-                'available' => false,
-                'message' => 'Ringkasan AI baru tersedia setelah percakapan selesai.',
-            ]);
+            // Allow summary for active conversations too — just use the latest conversation
         }
 
         $summarySource = $this->buildConversationSummarySource(

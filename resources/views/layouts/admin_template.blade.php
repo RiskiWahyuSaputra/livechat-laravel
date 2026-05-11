@@ -801,10 +801,14 @@
             // Klik overlay untuk menutup sidebar
             overlay.addEventListener('click', closeSidebar);
 
-            // Tutup sidebar saat menu diklik
+            // Tutup sidebar saat menu diklik (kecuali menu dengan submenu)
             const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
             sidebarLinks.forEach(link => {
                 link.addEventListener('click', () => {
+                    // Jangan tutup sidebar jika ini adalah parent link dengan submenu
+                    if (link.classList.contains('lap-parent-link')) {
+                        return;
+                    }
                     if (window.innerWidth < 992) closeSidebar();
                 });
             });

@@ -80,7 +80,7 @@ class OpenClawWhatsappService
             $primaryText = "Boleh bantu beri rating untuk layanan agen kami?";
         }
 
-        $fullText = $primaryText . "\n\n[1] 1\n[2] 2\n[3] 3\n[4] 4\n[5] 5\n[6] LEWATI\n\nBalas dengan angka 1-5, atau pilih LEWATI jika tidak ingin memberi rating.";
+        $fullText = $primaryText . "\n\n[1] 😡 Sangat Tidak Puas\n[2] 😞 Tidak Puas\n[3] 😐 Cukup Puas\n[4] 😊 Puas\n[5] 😍 Sangat Puas\n[6] LEWATI\n\nBalas dengan angka 1-5, atau pilih LEWATI jika tidak ingin memberi rating.";
 
         return $this->sendText($user, $fullText, $this->feedbackButtons());
     }
@@ -207,8 +207,8 @@ class OpenClawWhatsappService
     private function feedbackButtons(): array
     {
         return [
-            ['type' => 'reply', 'reply' => ['id' => 'feedback_4', 'title' => '4']],
-            ['type' => 'reply', 'reply' => ['id' => 'feedback_5', 'title' => '5']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_4', 'title' => '😊 Puas']],
+            ['type' => 'reply', 'reply' => ['id' => 'feedback_5', 'title' => '😍 Sangat Puas']],
             ['type' => 'reply', 'reply' => ['id' => 'feedback_skip', 'title' => 'LEWATI']],
         ];
     }

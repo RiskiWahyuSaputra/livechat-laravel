@@ -598,19 +598,18 @@
                 </section>
 
                 <div class="text-center mb-3">
-                    <div class="text-sm font-bold text-slate-800">Beri rating untuk agen</div>
-                    <div class="text-[11px] text-slate-500 mt-1">Pilih bintang 1 sampai 5.</div>
+                    <div class="text-sm font-bold text-slate-800">Seberapa puas Anda dengan layanan kami?</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Pilih salah satu untuk membantu evaluasi performa agen.</div>
                 </div>
 
-                <div class="d-flex justify-content-center gap-2 mb-3">
-                    <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
-                            <button type="button"
-                                @click="selectedRating = star"
-                                @mouseenter="hoverRating = star"
-                                @mouseleave="hoverRating = 0"
-                                class="bg-transparent border-0 p-0">
-                            <i class="fas fa-star text-2xl"
-                               :class="(hoverRating || selectedRating) >= star ? 'text-blue-500' : 'text-slate-300'"></i>
+                <div class="flex items-stretch justify-center gap-1.5 mb-3">
+                    <template x-for="opt in [{v:1,emoji:'😡',label:'Sangat\nTidak Puas'},{v:2,emoji:'😞',label:'Tidak\nPuas'},{v:3,emoji:'😐',label:'Cukup\nPuas'},{v:4,emoji:'😊',label:'Puas'},{v:5,emoji:'😍',label:'Sangat\nPuas'}]" :key="opt.v">
+                        <button type="button"
+                                @click="selectedRating = opt.v"
+                                class="flex flex-col items-center gap-1 px-1.5 py-2 rounded-xl border-2 transition-all flex-1 min-w-0"
+                                :class="selectedRating === opt.v ? 'border-blue-500 bg-blue-50 shadow scale-105' : 'border-slate-200 bg-white hover:border-blue-300'">
+                            <span class="text-xl leading-none" x-text="opt.emoji"></span>
+                            <span class="text-[8px] font-semibold text-slate-600 text-center leading-tight whitespace-pre-line" x-text="opt.label"></span>
                         </button>
                     </template>
                 </div>

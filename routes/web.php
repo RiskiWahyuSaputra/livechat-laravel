@@ -77,6 +77,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/conversation/{conversation}/escalate', [DashboardController::class , 'escalateConversation'])->name('conversation.escalate');
                 Route::post('/conversation/{conversation}/close', [DashboardController::class , 'closeConversation'])->name('conversation.close');
                 Route::post('/conversation/{conversation}/block', [DashboardController::class , 'blockUser'])->name('conversation.block');
+                Route::get('/conversation/{conversation}/summary', [DashboardController::class, 'conversationSummary'])->name('conversation.summary');
             });
 
             // --- Menu: Agent Chat ---
