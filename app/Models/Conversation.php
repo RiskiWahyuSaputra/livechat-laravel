@@ -16,6 +16,7 @@ class Conversation extends Model
         'bot_phase',
         'queue_position',
         'problem_category',
+        'summary',
         'feedback_status',
         'feedback_requested_at',
         'last_message_at',

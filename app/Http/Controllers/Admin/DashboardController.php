@@ -820,6 +820,9 @@ class DashboardController extends Controller
             ]);
         }
 
+        // Simpan summary ke database
+        $conversation->update(['summary' => $summary['summary']]);
+
         return response()->json([
             'available'  => true,
             'summary'    => $summary['summary'],
@@ -833,12 +836,23 @@ class DashboardController extends Controller
      */
     private function reorderQueue(): void
     {
-        $queued = Conversation::where('status', 'queued')
+        $queued = Conversation::whereIn('status', ['pending', 'queued'])
             ->orderBy('created_at')
             ->get();
 
         foreach ($queued as $i => $conv) {
             $conv->update(['queue_position' => $i + 1]);
         }
+    }
+
+    /**
+     * Hitung posisi antrian untuk conversation tertentu
+     */
+    public static function calculateQueuePosition(Conversation $conversation): int
+    {
+        return Conversation::whereIn('status', ['pending', 'queued'])
+            ->where('created_at', '<=', $conversation->created_at)
+            ->where('id', '<=', $conversation->id)
+            ->count();
     }
 }

@@ -40,6 +40,48 @@
                     </div>
                 </div>
 
+                <!-- AI Summary -->
+                @if($conversation->summary)
+                <div class="mb-4">
+                    <div class="rounded-2xl border border-blue-100 bg-blue-50 overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-2.5">
+                            <span class="text-blue-600 text-sm">✨</span>
+                            <span class="text-sm font-semibold text-slate-700">AI Conversation Summary</span>
+                        </div>
+                        <div class="border-t border-blue-100 px-4 py-3 bg-white">
+                            <p class="text-sm text-slate-700 leading-relaxed">{{ $conversation->summary }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Rating -->
+                @if($conversation->rating)
+                <div class="mb-4">
+                    <div class="p-3 bg-light rounded">
+                        <h6 class="font-weight-bold mb-3">Rating Pelanggan</h6>
+                        @php
+                            $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                            $ratingLabels = ['Sangat Tidak Puas','Tidak Puas','Cukup Puas','Puas','Sangat Puas'];
+                            $ratingIndex = max(0, min(4, $conversation->rating->rating - 1));
+                        @endphp
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="font-size:48px;line-height:1;">{{ $ratingEmoji[$ratingIndex] }}</div>
+                            <div>
+                                <div class="font-weight-bold">{{ $ratingLabels[$ratingIndex] }}</div>
+                                <small class="text-muted">Rating: {{ $conversation->rating->rating }}/5</small>
+                            </div>
+                        </div>
+                        @if($conversation->rating->comment)
+                        <div class="mt-3 p-2 bg-white rounded border">
+                            <small class="text-muted d-block mb-1"><strong>Komentar:</strong></small>
+                            <p class="mb-0">{{ $conversation->rating->comment }}</p>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
                 <!-- Chat History -->
                 <div class="chat-history-container p-3 border rounded bg-white" style="max-height: 600px; overflow-y: auto;">
                     @forelse($conversation->messages as $msg)
