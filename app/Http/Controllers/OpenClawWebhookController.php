@@ -746,12 +746,15 @@ class OpenClawWebhookController extends Controller
             'sender_id' => 0,
             'sender_type' => 'system',
             'message_type' => 'text',
-            'content' => 'Pelanggan memberikan rating WhatsApp ' . $rating . '/5' . ($comment ? ': ' . $comment : '.'),
+            'content' => 'Pelanggan memberikan rating WhatsApp ' . ['😡','😞','😐','😊','😍'][$rating-1] . ' ' . $rating . '/5' . ($comment ? ': ' . $comment : '.'),
         ]);
 
+        $ratingLabels = ['Sangat Tidak Puas','Tidak Puas','Cukup Puas','Puas','Sangat Puas'];
+        $ratingEmoji = ['😡','😞','😐','😊','😍'];
+        
         $this->openClawWhatsappService->sendText(
             $user,
-            "Terima kasih, rating {$rating}/5 sudah kami terima."
+            "Terima kasih, rating {$ratingEmoji[$rating-1]} {$ratingLabels[$rating-1]} ({$rating}/5) sudah kami terima."
         );
 
         return [
