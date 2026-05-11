@@ -474,6 +474,11 @@ class GeminiService
 
         $knowledgeRows = Cache::remember('best_ai_quick_reply_knowledge', 300, function () {
             return QuickReply::query()
+                ->where(function ($query) {
+                    $query->whereNull('command')
+                          ->orWhere('command', '')
+                          ->orWhereRaw('title NOT LIKE "/%"');
+                })
                 ->get(['title', 'content'])
                 ->map(fn ($quickReply) => [
                     'title' => $quickReply->title,
