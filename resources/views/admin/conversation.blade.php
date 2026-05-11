@@ -781,10 +781,16 @@
                 },
 
                 applySlashReply(reply) {
+                    if (!this.canReply) return;
                     this.newMessage = reply.content;
                     this.showSlash = false;
                     this.$nextTick(() => {
-                        this.sendMessage();
+                        if (this.$refs.messageInput) {
+                            this.$refs.messageInput.focus();
+                            const len = this.$refs.messageInput.value.length;
+                            this.$refs.messageInput.setSelectionRange(len, len);
+                            this.resizeComposer();
+                        }
                     });
                 },
 
