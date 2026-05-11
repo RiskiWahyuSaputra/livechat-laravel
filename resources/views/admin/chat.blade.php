@@ -809,7 +809,7 @@
                 </template>
 
                 <template x-if="isGlobalSearchMode">
-                    <div>
+                    <div style="overflow-y: auto; flex: 1; height: 100%;">
                         <div class="search-category">
                             <h6 class="mb-2">Kontak</h6>
                             <template x-for="contact in searchResults.contacts" :key="`contact-${contact.id}`">
