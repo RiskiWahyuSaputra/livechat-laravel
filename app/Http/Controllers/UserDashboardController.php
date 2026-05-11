@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Conversation; // Assuming Conversation model exists
 
 use App\Models\User;
+use App\Models\Category;
 
 class UserDashboardController extends Controller
 {
@@ -22,7 +23,9 @@ class UserDashboardController extends Controller
             }
         }
 
-        return view('user.dashboard', compact('isAuthenticated'));
+        $featuredCategories = Category::where('is_featured', true)->get();
+
+        return view('user.dashboard', compact('isAuthenticated', 'featuredCategories'));
     }
 
     public function about(Request $request)
