@@ -53,10 +53,7 @@
             <span class="font-bold text-sm hidden lg:block">Balasan Cepat</span>
         </a>
 
-        <a href="{{ route('admin.settings.operational_hours') }}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group {{ request()->routeIs('admin.settings.operational_hours') ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }}">
-            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span class="font-bold text-sm hidden lg:block">Jam Operasional</span>
-        </a>
+
         @endif
 
         @if(auth('admin')->user()->hasPermission('manage_customers'))
