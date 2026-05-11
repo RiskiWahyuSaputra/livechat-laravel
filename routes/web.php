@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\UserDashboardController; // Changed from UserHomeController
+use App\Http\Controllers\UserProductController;
 
 // Halaman utama → redirect ke user home
 Route::get('/', function () {
@@ -16,6 +17,7 @@ Route::get('/', function () {
 
 // Home page dapat diakses publik
 Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home');
+Route::get('/category/{slug}', [UserProductController::class, 'showCategoryProducts'])->name('user.category.products');
 Route::get('/about', [UserDashboardController::class, 'about'])->name('user.about');
 Route::get('/contact', [UserDashboardController::class, 'contact'])->name('user.contact');
 

@@ -614,58 +614,21 @@
 					</div>
 				</div>
 				<div class="row">
+					@foreach($featuredCategories as $index => $category)
 					<div class="col-md-6 col-lg-3">
-						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
+						<a href="{{ route('user.category.products', $category->slug) }}" class="feature-box aos" data-aos="fade-up">
 							<div class="feature-icon">
 								<span>
-									<img src="{{ asset('template/assets/img/icons/feature-icon-01.svg') }}" alt="img">
+									<img src="{{ asset('template/assets/img/icons/feature-icon-0' . ($index % 4 + 1) . '.svg') }}" alt="img">
 								</span>
 							</div>
-							<h5>Pertanian</h5>
+							<h5>{{ $category->name }}</h5>
 							<div class="feature-overlay">
-								<img src="{{ asset('images/produk-pertanian.png') }}" alt="img">
+								<img src="{{ asset($category->icon_image) ?? asset('images/produk-' . strtolower($category->name) . '.png') }}" alt="img">
 							</div>
 						</a>
 					</div>
-					<div class="col-md-6 col-lg-3">
-						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
-							<div class="feature-icon">
-								<span>
-									<img src="{{ asset('template/assets/img/icons/feature-icon-02.svg') }}" alt="img">
-								</span>
-							</div>
-							<h5>Otomotif</h5>
-							<div class="feature-overlay">
-								<img src="{{ asset('images/produk-otomotif.png') }}" alt="img">
-							</div>
-						</a>
-					</div>
-					<div class="col-md-6 col-lg-3">
-						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
-							<div class="feature-icon">
-								<span>
-									<img src="{{ asset('template/assets/img/icons/feature-icon-03.svg') }}" alt="img">
-								</span>
-							</div>
-							<h5>Kesehatan</h5>
-							<div class="feature-overlay">
-								<img src="{{ asset('images/produk-kesehatan.png') }}" alt="img">
-							</div>
-						</a>
-					</div>
-					<div class="col-md-6 col-lg-3">
-						<a href="javascript:void(0);" class="feature-box aos" data-aos="fade-up">
-							<div class="feature-icon">
-								<span>
-									<img src="{{ asset('template/assets/img/icons/feature-icon-04.svg') }}" alt="img">
-								</span>
-							</div>
-							<h5>Kecantikan</h5>
-							<div class="feature-overlay">
-								<img src="{{ asset('images/produk-kecantikan.png') }}" alt="img">
-							</div>
-						</a>
-					</div>
+					@endforeach
 				</div>
 			</div>
 		</section>
