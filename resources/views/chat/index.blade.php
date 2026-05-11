@@ -591,7 +591,7 @@
                 summary: {
                     loading: false,
                     available: false,
-                    expanded: true,
+                    expanded: false,
                     text: '',
                     sentiment: 'Neutral',
                     info: 'Ringkasan AI akan muncul setelah percakapan punya konteks yang cukup.',
@@ -681,7 +681,11 @@
                 },
 
                 shouldRenderInlineConversationSummary() {
-                    return false;
+                    return this.status === 'active' && (
+                        this.summary.loading
+                        || this.summary.available
+                        || this.summary.error !== ''
+                    );
                 },
 
                 shouldRenderFeedbackConversationSummary() {
@@ -709,7 +713,7 @@
                 queueSummaryRefresh(delay = 900) {
                     clearTimeout(this.summaryRefreshTimer);
 
-                    if (this.status !== 'closed') {
+                    if (!['active', 'closed'].includes(this.status)) {
                         return;
                     }
 
@@ -728,7 +732,7 @@
                 },
 
                 async fetchConversationSummary(force = false) {
-                    if (this.status !== 'closed') {
+                    if (!['active', 'closed'].includes(this.status)) {
                         return;
                     }
 
@@ -861,7 +865,9 @@
                             this.feedbackPending = !!e.feedback_requested;
                             if (this.feedbackPending) {
                                 this.summary.expanded = true;
-                                this.queueSummaryRefresh(250);
+                            }
+                            if (['active', 'closed'].includes(e.status)) {
+                                this.queueSummaryRefresh(500);
                             }
                             
                             if (e.status === 'closed') {

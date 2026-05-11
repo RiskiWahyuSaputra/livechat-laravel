@@ -507,6 +507,53 @@
         <div id="scroll-anchor" style="height:4px;"></div>
     </main>
 
+    <!-- AI CONVERSATION SUMMARY -->
+    <div x-show="summary.loading || summary.available || summary.error" x-cloak
+         class="border-t border-slate-100 bg-white px-4 py-3 flex-shrink-0">
+        <div class="rounded-2xl border border-blue-100 bg-blue-50 overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-4 py-2.5 cursor-pointer"
+                 @click="summary.expanded = !summary.expanded">
+                <div class="flex items-center gap-2">
+                    <span class="text-blue-600 text-sm">✨</span>
+                    <span class="text-sm font-semibold text-slate-700">AI Conversation Summary</span>
+                    <span x-show="summary.sentiment && summary.available" x-cloak
+                          class="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          :class="summary.sentiment === 'Positive' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : summary.sentiment === 'Negative' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'"
+                          x-text="summary.sentiment"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                            @click.stop="fetchConversationSummary(true)"
+                            :disabled="summary.loading"
+                            class="text-blue-400 hover:text-blue-600 disabled:opacity-40 transition-colors"
+                            title="Refresh summary">
+                        <svg class="w-3.5 h-3.5" :class="summary.loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+                    <svg class="w-4 h-4 text-slate-400 transition-transform" :class="summary.expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
+            <!-- Body -->
+            <div x-show="summary.expanded" x-cloak class="border-t border-blue-100 px-4 py-3">
+                <!-- Loading skeleton -->
+                <div x-show="summary.loading" class="space-y-2">
+                    <div class="h-3 bg-blue-100 rounded animate-pulse w-full"></div>
+                    <div class="h-3 bg-blue-100 rounded animate-pulse w-5/6"></div>
+                    <div class="h-3 bg-blue-100 rounded animate-pulse w-4/6"></div>
+                </div>
+                <!-- Summary text -->
+                <div x-show="!summary.loading && summary.available" x-cloak>
+                    <p class="text-sm text-slate-700 leading-relaxed" x-text="summary.text"></p>
+                    <p x-show="summary.updatedAt" class="mt-2 text-[11px] text-slate-400" x-text="`Diperbarui ${summary.updatedAt}`"></p>
+                </div>
+                <!-- Error -->
+                <div x-show="!summary.loading && summary.error" x-cloak
+                     class="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"
+                     x-text="summary.error"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- STICKY FOOTER -->
     <div class="chat-footer">
 
@@ -656,6 +703,18 @@
                 reminderSentCount: 0,
                 inactivityTimeout: 30 * 60 * 1000,
                 editingMsgId: null,
+
+                // AI Summary State
+                summary: {
+                    loading: false,
+                    available: false,
+                    expanded: false,
+                    text: '',
+                    sentiment: 'Neutral',
+                    error: '',
+                    updatedAt: null,
+                },
+                summaryRequestId: 0,
 
                 // Message Menu State
                 menu: {
@@ -843,6 +902,7 @@
                 init() {
                     this.scrollToBottom();
                     this.listenForEvents();
+                    this.fetchConversationSummary();
 
                     // Inactivity Timer
                     setInterval(() => {
@@ -995,6 +1055,7 @@
                                 .listen('.conversation.status.changed', (e) => {
                                     this.status = e.status;
                                     this.sessionAdminId = e.admin_id;
+                                    this.fetchConversationSummary(true);
                                 })
                                 .listen('.typing', (e) => {
                                     if (e.sender_type === 'user') {
@@ -1235,6 +1296,37 @@
                             is_typing: isTyping ? this.newMessage.length > 0 : false
                         })
                     });
+                },
+
+                async fetchConversationSummary(force = false) {
+                    if (!force && this.summary.available) return;
+
+                    const requestId = ++this.summaryRequestId;
+                    this.summary.loading = true;
+                    this.summary.error = '';
+
+                    try {
+                        const response = await fetch(`/admin/conversation/{{ $conversation->id }}/summary`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const data = await response.json();
+                        if (requestId !== this.summaryRequestId) return;
+                        if (!response.ok) throw new Error(data.error || data.message || 'Gagal memuat ringkasan AI.');
+
+                        this.summary.available = !!data.available;
+                        this.summary.text = data.summary || '';
+                        this.summary.sentiment = data.sentiment || 'Neutral';
+                        this.summary.error = '';
+                        this.summary.updatedAt = data.updated_at || null;
+                    } catch (error) {
+                        if (requestId !== this.summaryRequestId) return;
+                        this.summary.available = false;
+                        this.summary.error = error.message || 'Gagal memuat ringkasan AI.';
+                    } finally {
+                        if (requestId === this.summaryRequestId) {
+                            this.summary.loading = false;
+                        }
+                    }
                 },
 
                 scrollToBottom() {

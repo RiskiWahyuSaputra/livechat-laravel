@@ -175,7 +175,7 @@ class DashboardController extends Controller
         $tagIds = array_values(array_filter(explode(',', (string) $request->get('tag_ids', ''))));
         $unreadOnly = $request->boolean('unread_only');
 
-        $mainQuery = Conversation::with(['customer', 'admin', 'tags', 'messages' => function ($query) {
+        $mainQuery = Conversation::withTrashed()->with(['customer', 'admin', 'tags', 'messages' => function ($query) {
                 $query->latest()->limit(1);
             }])
             ->whereIn('status', ['pending', 'queued', 'active', 'closed'])
@@ -799,6 +799,29 @@ class DashboardController extends Controller
             'status' => 'expired_or_not_found',
             'message' => 'Cookie agent_session tidak ditemukan atau sudah kadaluarsa.'
         ], 404);
+    }
+
+    /**
+     * AI Conversation Summary untuk admin.
+     */
+    public function conversationSummary(Request $request, $id)
+    {
+        $conversation = Conversation::withTrashed()->findOrFail($id);
+        $summary = $this->conversationSummaryService->summarizeConversation($conversation);
+
+        if (!$summary) {
+            return response()->json([
+                'available' => false,
+                'message'   => 'Ringkasan AI belum tersedia. Percakapan perlu memiliki cukup pesan dari pelanggan dan agen.',
+            ]);
+        }
+
+        return response()->json([
+            'available'  => true,
+            'summary'    => $summary['summary'],
+            'sentiment'  => $summary['sentiment'],
+            'updated_at' => now()->format('H:i'),
+        ]);
     }
 
     /**
