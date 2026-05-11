@@ -820,6 +820,9 @@ class DashboardController extends Controller
             ]);
         }
 
+        // Simpan summary ke database
+        $conversation->update(['summary' => $summary['summary']]);
+
         return response()->json([
             'available'  => true,
             'summary'    => $summary['summary'],
