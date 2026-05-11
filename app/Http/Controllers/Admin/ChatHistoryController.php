@@ -74,6 +74,7 @@ class ChatHistoryController extends Controller
             ->with([
                 'customer',
                 'admin',
+                'rating',
                 'messages' => fn ($query) => $query->orderBy('created_at'),
             ])
             ->findOrFail($id);
