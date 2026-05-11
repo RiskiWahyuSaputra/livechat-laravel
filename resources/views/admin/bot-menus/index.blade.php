@@ -223,20 +223,24 @@
 </style>
 
     <div x-data="{
-    activeFlow: 'office_hour',
+    activeFlow: '{{ session('active_flow', 'office_hour') }}',
     showModal: false,
     showGreetingModal: false,
     isEdit: false,
-    currentFlowType: 'office_hour',
-    form: { id: '', parent_id: '', label: '', message_response: '', action_type: 'submenu', action_value: '', flow_type: 'office_hour' },
-    greetingForm: { flow_type: 'office_hour', message: '' },
+    currentFlowType: '{{ session('active_flow', 'office_hour') }}',
+    form: { id: '', parent_id: '', label: '', message_response: '', action_type: 'submenu', action_value: '', flow_type: '{{ session('active_flow', 'office_hour') }}' },
+    greetingForm: { flow_type: '{{ session('active_flow', 'office_hour') }}', message: '' },
     greetings: {
         office_hour: `{!! addslashes($greetings['office_hour']) !!}`,
         outside_office_hour: `{!! addslashes($greetings['outside_office_hour']) !!}`,
         closed: `{!! addslashes($greetings['closed']) !!}`
     },
     switchFlow(flow) {
-        // Disabled mode switching
+        this.activeFlow = flow;
+        this.currentFlowType = flow;
+        this.form.flow_type = flow;
+        this.greetingForm.flow_type = flow;
+        this.greetingForm.message = this.greetings[flow];
     },
     openCreate(parentId = null) {
         this.isEdit = false;
@@ -280,11 +284,23 @@
                 <div class="alert alert-success border-0 shadow-sm"><i class="feather-check-circle me-1"></i> {{ session('success') }}</div>
             @endif
 
-            {{-- MODE HEADER --}}
+            {{-- MODE TABS --}}
             <div class="d-flex gap-2 mb-0 mt-2">
-                <div class="mode-tab-badge active-office">
-                    <span class="tab-dot"></span> Alur Chat Utama (Jam Kerja)
-                </div>
+                <button type="button"
+                    @click="switchFlow('office_hour')"
+                    :class="activeFlow === 'office_hour' ? 'mode-tab-badge active-office' : 'mode-tab-badge'">
+                    <span class="tab-dot"></span> Jam Kerja
+                </button>
+                <button type="button"
+                    @click="switchFlow('outside_office_hour')"
+                    :class="activeFlow === 'outside_office_hour' ? 'mode-tab-badge active-outside' : 'mode-tab-badge'">
+                    <span class="tab-dot"></span> Di Luar Jam Kerja
+                </button>
+                <button type="button"
+                    @click="switchFlow('closed')"
+                    :class="activeFlow === 'closed' ? 'mode-tab-badge active-closed' : 'mode-tab-badge'">
+                    <span class="tab-dot"></span> Tutup
+                </button>
             </div>
 
             <div class="card shadow rounded-3 border-0 overflow-hidden" style="border-radius: 0 8px 8px 8px !important;">

@@ -2,195 +2,456 @@
 
 @section('title', 'Jam Operasional')
 
+@push('styles')
+    <style>
+        .settings-page {
+            padding: 24px;
+            max-width: 100%;
+        }
+
+        .settings-header {
+            margin-bottom: 28px;
+        }
+
+        .settings-header h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 4px;
+        }
+
+        .settings-header p {
+            color: #64748b;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .settings-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .settings-card-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        .settings-card-header h5 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .settings-card-header i {
+            font-size: 16px;
+        }
+
+        .settings-card-body {
+            padding: 20px 24px;
+        }
+
+        .field-group {
+            margin-bottom: 18px;
+        }
+
+        .field-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1e293b;
+            background: #f8fafc;
+            transition: border-color 0.15s;
+        }
+
+        .field-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+        }
+
+        .field-hint {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .field-divider {
+            border: none;
+            border-top: 1px solid #f1f5f9;
+            margin: 20px 0;
+        }
+
+        /* Mode selector */
+        .mode-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .mode-option {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        .mode-option input[type=radio] {
+            display: none;
+        }
+
+        .mode-option.active-green {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .mode-option.active-yellow {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .mode-option.active-red {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .mode-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .mode-desc {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* Day rows */
+        .day-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .day-row:last-child {
+            border-bottom: none;
+        }
+
+        .day-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .day-toggle label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .time-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .time-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 10px;
+        }
+
+        .time-input-wrap span {
+            font-size: 11px;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+
+        .time-input-wrap input[type=time] {
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            color: #1e293b;
+            outline: none;
+            width: 90px;
+        }
+
+        .day-closed {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        /* Save button */
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            background: #6366f1;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-save:hover {
+            background: #4f46e5;
+        }
+
+        body.dark-mode .settings-card {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+
+        body.dark-mode .settings-card-header {
+            background: #252525;
+            border-color: #333;
+        }
+
+        body.dark-mode .settings-card-header h5 {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .field-label {
+            color: #94a3b8;
+        }
+
+        body.dark-mode .field-input {
+            background: #252525;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .field-input:focus {
+            background: #2a2a2a;
+        }
+
+        body.dark-mode .mode-option {
+            background: #252525;
+            border-color: #444;
+        }
+
+        body.dark-mode .mode-label {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .day-row {
+            border-color: #333;
+        }
+
+        body.dark-mode .day-toggle label {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .time-input-wrap {
+            background: #252525;
+            border-color: #444;
+        }
+
+        body.dark-mode .time-input-wrap input[type=time] {
+            color: #e0e0e0;
+        }
+    </style>
+@endpush
+
 @section('content')
-    <div class="row justify-content-center mb-5">
-        <div class="col-md-10 col-lg-8 pe-lg-4 ps-lg-4">
-            <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-                <div>
-                    <h3 class="fw-bolder mb-0 text-dark">Jam Operasional</h3>
-                    <p class="text-muted">Kendalikan alur percakapan customer berdasarkan kondisi operasional dan jam kerja.
-                    </p>
+    <div class="settings-page">
+
+        <div class="settings-header">
+            <h3><i class="fe fe-clock" style="color:#6366f1;margin-right:8px;"></i>Jam Operasional</h3>
+            <p>Kendalikan alur percakapan customer berdasarkan kondisi operasional dan jam kerja.</p>
+        </div>
+
+        <form action="{{ route('admin.settings.update') }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            {{-- ── Mode Operasional ── --}}
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <i class="fe fe-activity" style="color:#10b981;"></i>
+                    <h5>Mode Operasional Chat</h5>
+                </div>
+                <div class="settings-card-body">
+
+                    @php $currentMode = $settings['system_mode'] ?? 'office_hour'; @endphp
+                    <div class="field-group">
+                        <label class="field-label">Mode Aktif Saat Ini</label>
+                        <div class="mode-options">
+                            <label class="mode-option {{ $currentMode === 'office_hour' ? 'active-green' : '' }}">
+                                <input type="radio" name="system_mode" value="office_hour"
+                                    {{ $currentMode === 'office_hour' ? 'checked' : '' }}>
+                                <div>
+                                    <div class="mode-label">🟢 Jam Kerja</div>
+                                    <div class="mode-desc">Customer bisa chat & antri ke Agent</div>
+                                </div>
+                            </label>
+                            <label class="mode-option {{ $currentMode === 'outside_office_hour' ? 'active-yellow' : '' }}">
+                                <input type="radio" name="system_mode" value="outside_office_hour"
+                                    {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }}>
+                                <div>
+                                    <div class="mode-label">🟡 Di Luar Jam Kerja</div>
+                                    <div class="mode-desc">Hanya dilayani AI</div>
+                                </div>
+                            </label>
+                            <label class="mode-option {{ $currentMode === 'closed' ? 'active-red' : '' }}">
+                                <input type="radio" name="system_mode" value="closed"
+                                    {{ $currentMode === 'closed' ? 'checked' : '' }}>
+                                <div>
+                                    <div class="mode-label">🔴 Tutup</div>
+                                    <div class="mode-desc">Chat ditolak sepenuhnya</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr class="field-divider">
+
+                    <div class="field-group">
+                        <label class="field-label">Zona Waktu Sistem</label>
+                        <select name="office_hours_timezone" class="field-input" style="max-width:280px;">
+                            @foreach (['Asia/Jakarta' => 'WIB (Asia/Jakarta)', 'Asia/Makassar' => 'WITA (Asia/Makassar)', 'Asia/Jayapura' => 'WIT (Asia/Jayapura)', 'UTC' => 'UTC'] as $tz => $tzLabel)
+                                <option value="{{ $tz }}"
+                                    {{ ($settings['office_hours_timezone'] ?? 'Asia/Jakarta') == $tz ? 'selected' : '' }}>
+                                    {{ $tzLabel }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">Detail Jam Operasional Per Hari</label>
+                        @foreach (['monday' => 'Senin', 'tuesday' => 'Selasa', 'wednesday' => 'Rabu', 'thursday' => 'Kamis', 'friday' => 'Jumat', 'saturday' => 'Sabtu', 'sunday' => 'Minggu'] as $day => $dayLabel)
+                            @php
+                                $isWeekend = in_array($day, ['saturday', 'sunday']);
+                                $isActive =
+                                    ($settings["office_hours_{$day}_active"] ?? ($isWeekend ? '0' : '1')) == '1';
+                            @endphp
+                            <div class="day-row" id="container_{{ $day }}">
+                                <div class="day-toggle">
+                                    <div class="form-check form-switch mb-0">
+                                        <input type="checkbox" name="office_hours_{{ $day }}_active"
+                                            value="1" class="form-check-input" id="check_{{ $day }}"
+                                            {{ $isActive ? 'checked' : '' }}
+                                            onchange="toggleDayInputs('{{ $day }}')">
+                                        <label class="form-check-label"
+                                            for="check_{{ $day }}">{{ $dayLabel }}</label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div id="inputs_{{ $day }}"
+                                        class="time-inputs {{ $isActive ? '' : 'd-none' }}">
+                                        <div class="time-input-wrap">
+                                            <span>Mulai</span>
+                                            <input type="time" name="office_hours_{{ $day }}_start"
+                                                value="{{ $settings["office_hours_{$day}_start"] ?? '08:00' }}">
+                                        </div>
+                                        <span style="color:#94a3b8;font-size:12px;">–</span>
+                                        <div class="time-input-wrap">
+                                            <span>Selesai</span>
+                                            <input type="time" name="office_hours_{{ $day }}_end"
+                                                value="{{ $settings["office_hours_{$day}_end"] ?? '17:00' }}">
+                                        </div>
+                                    </div>
+                                    <div id="closed_text_{{ $day }}"
+                                        class="day-closed {{ $isActive ? 'd-none' : '' }}">
+                                        Libur / Tutup
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="field-hint mt-2">
+                        Pesan otomatis tiap mode diatur di <a href="{{ route('admin.bot-menus.index') }}"
+                            style="color:#6366f1;font-weight:600;">Alur Chat → Edit Sapaan</a>.
+                    </div>
+
                 </div>
             </div>
 
-            <form action="{{ route('admin.settings.update') }}" method="POST">
-                @csrf
-                @method('PUT')
+            {{-- ── Save ── --}}
+            <div style="margin-top:8px; margin-bottom:32px;">
+                <button type="submit" class="btn-save">
+                    <i class="fe fe-save me-2"></i>Simpan Jam Operasional
+                </button>
+            </div>
 
-                <!-- Operational Mode Card -->
-                <div class="card shadow-sm border-0 rounded-4 mb-4">
-                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                        <h5 class="fw-bold mb-0 text-success"><i class="fe fe-activity me-2"></i> Mode Operasional Chat</h5>
-                        <p class="text-muted small mt-1 mb-0">Kendalikan alur percakapan customer berdasarkan kondisi
-                            operasional.</p>
-                    </div>
-                    <div class="card-body pt-3 pb-4">
-                        {{-- System Mode --}}
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Mode Aktif Saat Ini</label>
-                            @php $currentMode = $settings['system_mode'] ?? 'office_hour'; @endphp
-                            <div class="d-flex gap-3 flex-wrap mt-1">
-                                <label
-                                    class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'office_hour' ? 'border-success bg-success bg-opacity-10' : 'border-light bg-light' }}"
-                                    style="cursor:pointer">
-                                    <input type="radio" name="system_mode" value="office_hour"
-                                        {{ $currentMode === 'office_hour' ? 'checked' : '' }} class="form-check-input mt-0">
-                                    <div>
-                                        <div class="fw-bold text-success">🟢 Jam Kerja</div>
-                                        <div class="text-muted small">Customer bisa chat & antri ke Agent</div>
-                                    </div>
-                                </label>
-                                <label
-                                    class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'outside_office_hour' ? 'border-warning bg-warning bg-opacity-10' : 'border-light bg-light' }}"
-                                    style="cursor:pointer">
-                                    <input type="radio" name="system_mode" value="outside_office_hour"
-                                        {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }}
-                                        class="form-check-input mt-0">
-                                    <div>
-                                        <div class="fw-bold text-warning">🟡 Di Luar Jam Kerja</div>
-                                        <div class="text-muted small">Hanya dilayani AI, tidak ada Agent</div>
-                                    </div>
-                                </label>
-                                <label
-                                    class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'closed' ? 'border-danger bg-danger bg-opacity-10' : 'border-light bg-light' }}"
-                                    style="cursor:pointer">
-                                    <input type="radio" name="system_mode" value="closed"
-                                        {{ $currentMode === 'closed' ? 'checked' : '' }} class="form-check-input mt-0">
-                                    <div>
-                                        <div class="fw-bold text-danger">🔴 Tutup</div>
-                                        <div class="text-muted small">Chat ditolak sepenuhnya</div>
-                                    </div>
-                                </label>
-                            </div>
-                            @error('system_mode')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        {{-- Office Hours --}}
-                        <div class="mt-4 pt-3 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold mb-0 text-dark"><i class="fe fe-clock me-2 text-primary"></i> Detail Jam
-                                    Operasional Per Hari</h6>
-                            </div>
-
-                            <div class="form-group mb-4">
-                                <label class="form-label fw-bold small text-uppercase opacity-75">Zona Waktu Sistem</label>
-                                <select name="office_hours_timezone" class="form-select form-select-lg bg-light border-0">
-                                    <option value="Asia/Jakarta"
-                                        {{ ($settings['office_hours_timezone'] ?? 'Asia/Jakarta') == 'Asia/Jakarta' ? 'selected' : '' }}>
-                                        WIB (Asia/Jakarta)</option>
-                                    <option value="Asia/Makassar"
-                                        {{ ($settings['office_hours_timezone'] ?? '') == 'Asia/Makassar' ? 'selected' : '' }}>
-                                        WITA (Asia/Makassar)</option>
-                                    <option value="Asia/Jayapura"
-                                        {{ ($settings['office_hours_timezone'] ?? '') == 'Asia/Jayapura' ? 'selected' : '' }}>
-                                        WIT (Asia/Jayapura)</option>
-                                    <option value="UTC"
-                                        {{ ($settings['office_hours_timezone'] ?? '') == 'UTC' ? 'selected' : '' }}>UTC
-                                    </option>
-                                </select>
-                                <small class="text-muted mt-1 d-block">Pilih zona waktu yang akan digunakan sebagai acuan
-                                    jam operasional.</small>
-                            </div>
-
-                            <div class="row g-3">
-                                @foreach (['monday' => 'Senin', 'tuesday' => 'Selasa', 'wednesday' => 'Rabu', 'thursday' => 'Kamis', 'friday' => 'Jumat', 'saturday' => 'Sabtu', 'sunday' => 'Minggu'] as $day => $label)
-                                    @php
-                                        $isWeekend = in_array($day, ['saturday', 'sunday']);
-                                        $isActive =
-                                            ($settings["office_hours_{$day}_active"] ?? ($isWeekend ? '0' : '1')) ==
-                                            '1';
-                                    @endphp
-                                    <div class="col-12">
-                                        <div class="p-3 rounded-3 border {{ $isActive ? 'bg-white border-primary border-opacity-25' : 'bg-light border-dashed' }}"
-                                            id="container_{{ $day }}">
-                                            <div class="row align-items-center">
-                                                <div class="col-md-3">
-                                                    <div class="form-check form-switch mb-0">
-                                                        <input type="checkbox"
-                                                            name="office_hours_{{ $day }}_active" value="1"
-                                                            class="form-check-input" id="check_{{ $day }}"
-                                                            {{ $isActive ? 'checked' : '' }}
-                                                            onchange="toggleDayInputs('{{ $day }}')">
-                                                        <label class="form-check-label fw-bold ms-1"
-                                                            for="check_{{ $day }}">{{ $label }}</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-9">
-                                                    <div id="inputs_{{ $day }}"
-                                                        class="row g-2 {{ $isActive ? '' : 'd-none' }}">
-                                                        <div class="col-6">
-                                                            <div
-                                                                class="input-group input-group-sm border rounded-2 bg-light overflow-hidden">
-                                                                <span
-                                                                    class="input-group-text bg-white border-0 small text-muted px-2">Mulai</span>
-                                                                <input type="time"
-                                                                    name="office_hours_{{ $day }}_start"
-                                                                    class="form-control border-0 bg-transparent"
-                                                                    value="{{ $settings["office_hours_{$day}_start"] ?? '08:00' }}">
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <div
-                                                                class="input-group input-group-sm border rounded-2 bg-light overflow-hidden">
-                                                                <span
-                                                                    class="input-group-text bg-white border-0 small text-muted px-2">Selesai</span>
-                                                                <input type="time"
-                                                                    name="office_hours_{{ $day }}_end"
-                                                                    class="form-control border-0 bg-transparent"
-                                                                    value="{{ $settings["office_hours_{$day}_end"] ?? '17:00' }}">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div id="closed_text_{{ $day }}"
-                                                        class="text-muted small {{ $isActive ? 'd-none' : '' }}">
-                                                        <i class="fe fe-slash me-1"></i> Tutup (Libur)
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-3">Pesan otomatis untuk setiap mode diatur di menu <a
-                                href="{{ route('admin.bot-menus.index') }}" class="text-primary fw-bold">Alur Chat</a> →
-                            Edit Sapaan.</small>
-                    </div>
-                </div>
-
-                <!-- Big Save Button Area -->
-                <div class="text-center mt-5 mb-3 px-2">
-                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fs-5 py-3 shadow-sm fw-bolder"
-                        style="letter-spacing: 0.5px;">
-                        <i class="fe fe-save me-2"></i> SIMPAN JAM OPERASIONAL
-                    </button>
-                </div>
-            </form>
-        </div>
+        </form>
     </div>
-@endsection
 
-@push('scripts')
-    <script>
-        function toggleDayInputs(day) {
-            const checkbox = document.getElementById('check_' + day);
-            const inputs = document.getElementById('inputs_' + day);
-            const closedText = document.getElementById('closed_text_' + day);
-            const container = document.getElementById('container_' + day);
-
-            if (checkbox.checked) {
-                inputs.classList.remove('d-none');
-                closedText.classList.add('d-none');
-                container.classList.remove('bg-light', 'border-dashed');
-                container.classList.add('bg-white', 'border-primary', 'border-opacity-25');
-            } else {
-                inputs.classList.add('d-none');
-                closedText.classList.remove('d-none');
-                container.classList.add('bg-light', 'border-dashed');
-                container.classList.remove('bg-white', 'border-primary', 'border-opacity-25');
+    @push('scripts')
+        <script>
+            function toggleDayInputs(day) {
+                const cb = document.getElementById('check_' + day);
+                const inputs = document.getElementById('inputs_' + day);
+                const closed = document.getElementById('closed_text_' + day);
+                if (cb.checked) {
+                    inputs.classList.remove('d-none');
+                    closed.classList.add('d-none');
+                } else {
+                    inputs.classList.add('d-none');
+                    closed.classList.remove('d-none');
+                }
             }
-        }
-    </script>
-@endpush
+
+            // Mode option visual toggle
+            document.querySelectorAll('.mode-option input[type=radio]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    document.querySelectorAll('.mode-option').forEach(opt => {
+                        opt.classList.remove('active-green', 'active-yellow', 'active-red');
+                    });
+                    const label = radio.closest('.mode-option');
+                    if (radio.value === 'office_hour') label.classList.add('active-green');
+                    else if (radio.value === 'outside_office_hour') label.classList.add('active-yellow');
+                    else label.classList.add('active-red');
+                });
+            });
+        </script>
+    @endpush
+
+@endsection

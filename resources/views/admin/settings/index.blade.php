@@ -447,31 +447,7 @@
 
 @push('scripts')
 <script>
-    function toggleDayInputs(day) {
-        const cb = document.getElementById('check_' + day);
-        const inputs = document.getElementById('inputs_' + day);
-        const closed = document.getElementById('closed_text_' + day);
-        if (cb.checked) {
-            inputs.classList.remove('d-none');
-            closed.classList.add('d-none');
-        } else {
-            inputs.classList.add('d-none');
-            closed.classList.remove('d-none');
-        }
-    }
-
-    // Mode option visual toggle
-    document.querySelectorAll('.mode-option input[type=radio]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            document.querySelectorAll('.mode-option').forEach(opt => {
-                opt.classList.remove('active-green', 'active-yellow', 'active-red');
-            });
-            const label = radio.closest('.mode-option');
-            if (radio.value === 'office_hour') label.classList.add('active-green');
-            else if (radio.value === 'outside_office_hour') label.classList.add('active-yellow');
-            else label.classList.add('active-red');
-        });
-    });
+    // Integration logic or other scripts can stay if any
 </script>
 @endpush
 
