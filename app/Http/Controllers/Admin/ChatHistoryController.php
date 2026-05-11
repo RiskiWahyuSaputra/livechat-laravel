@@ -12,7 +12,7 @@ class ChatHistoryController extends Controller
     public function index(Request $request)
     {
         $archivesQuery = Conversation::onlyTrashed()
-            ->with(['customer', 'admin', 'tags'])
+            ->with(['customer', 'admin', 'tags', 'rating'])
             ->latest('deleted_at');
 
         if ($request->filled('search')) {

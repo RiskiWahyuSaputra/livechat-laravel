@@ -51,6 +51,8 @@
                                 <th>Pelanggan</th>
                                 <th>Agen</th>
                                 <th>Kategori</th>
+                                <th>Rating</th>
+                                <th>Summary</th>
                                 <th>Selesai Pada</th>
                                 <th class="text-end">Aksi</th>
                             </tr>
@@ -90,6 +92,33 @@
                                     </div>
                                 </td>
                                 <td>
+                                    @if($chat->rating)
+                                        @php
+                                            $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                                            $ratingLabels = ['Sangat Tidak Puas','Tidak Puas','Cukup Puas','Puas','Sangat Puas'];
+                                            $ratingIndex = max(0, min(4, $chat->rating->rating - 1));
+                                        @endphp
+                                        <div style="text-align:center;">
+                                            <div style="font-size:24px;line-height:1;">{{ $ratingEmoji[$ratingIndex] }}</div>
+                                            <div style="font-size:11px;color:#6c757d;margin-top:2px;">{{ $ratingLabels[$ratingIndex] }}</div>
+                                            @if($chat->rating->comment)
+                                                <small class="text-muted" title="{{ $chat->rating->comment }}">💬</small>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td style="max-width:200px;">
+                                    @if($chat->summary)
+                                        <small class="text-muted" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                                            {{ $chat->summary }}
+                                        </small>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
                                     {{ $chat->deleted_at->timezone('Asia/Jakarta')->translatedFormat('d F Y') }}
                                     <br><small class="text-muted">{{ $chat->deleted_at->timezone('Asia/Jakarta')->translatedFormat('H:i') }}</small>
                                 </td>
@@ -101,7 +130,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="text-center p-5 text-muted">Belum ada riwayat percakapan.</td>
+                                <td colspan="7" class="text-center p-5 text-muted">Belum ada riwayat percakapan.</td>
                             </tr>
                             @endforelse
                         </tbody>
