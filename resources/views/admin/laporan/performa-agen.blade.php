@@ -469,7 +469,11 @@
             <div class="top-avatar">{{ strtoupper(substr($agent['username'], 0, 2)) }}</div>
             <div class="top-info">
                 <div class="top-name">{{ $agent['username'] }}</div>
-                <div class="top-meta">{{ $agent['closed_chats'] }} chat · Rating {{ $agent['avg_rating'] > 0 ? number_format($agent['avg_rating'],1).'★' : 'N/A' }}</div>
+                @php
+                    $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                    $ratingIndex = $agent['avg_rating'] > 0 ? max(0, min(4, round($agent['avg_rating']) - 1)) : null;
+                @endphp
+                <div class="top-meta">{{ $agent['closed_chats'] }} chat · Rating {{ $ratingIndex !== null ? $ratingEmoji[$ratingIndex].' '.number_format($agent['avg_rating'],1) : 'N/A' }}</div>
             </div>
             <div class="top-score">
                 <div class="top-score-value">{{ $agent['score'] }}</div>
@@ -527,7 +531,13 @@
                             </td>
                             <td class="text-center">
                                 @if($agent['total_ratings'] > 0)
-                                    <span style="font-weight:600;color:var(--lp-warning);">{{ number_format($agent['avg_rating'],1) }} ★</span>
+                                    @php
+                                        $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                                        $ratingIndex = max(0, min(4, round($agent['avg_rating']) - 1));
+                                    @endphp
+                                    <div style="font-size:20px;line-height:1;">{{ $ratingEmoji[$ratingIndex] }}</div>
+                                    <div style="font-weight:600;color:var(--lp-dark);font-size:13px;margin-top:4px;">{{ number_format($agent['avg_rating'],1) }}</div>
+                                    <div style="font-size:10px;color:var(--lp-gray-400);">({{ $agent['total_ratings'] }} ulasan)</div>
                                 @else <span style="color:var(--lp-gray-400);">N/A</span> @endif
                             </td>
                             <td class="text-center">

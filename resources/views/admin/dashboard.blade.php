@@ -642,8 +642,13 @@
                     </td>
                     <td style="padding: 16px; vertical-align: middle; text-align: center;">
                         @if($agent['total_ratings'] > 0)
+                            @php
+                                $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                                $ratingIndex = max(0, min(4, round($agent['avg_rating']) - 1));
+                            @endphp
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                                <span style="font-weight: 700; font-size: 14px; color: #f59e0b;">{{ number_format($agent['avg_rating'], 1) }} ★</span>
+                                <div style="font-size: 24px; line-height: 1;">{{ $ratingEmoji[$ratingIndex] }}</div>
+                                <span style="font-weight: 700; font-size: 14px; color: #1e293b;">{{ number_format($agent['avg_rating'], 1) }}</span>
                                 <span style="font-size: 11px; color: #94a3b8;">{{ $agent['total_ratings'] }} ulasan</span>
                             </div>
                         @else
