@@ -1411,6 +1411,16 @@ class ChatController extends Controller
     private function createAiReplyMessages(Conversation $conversation, string $userMessage, string $aiResponse): array
     {
         $messages = [];
+        
+        // Jangan kirim response jika AI error
+        if ($this->geminiService->isFallbackResponse($aiResponse)) {
+            \Log::error('AI returned fallback/error message, not sending to user', [
+                'conversation_id' => $conversation->id,
+                'response' => $aiResponse
+            ]);
+            return $messages;
+        }
+        
         $productImage = $this->detectProductImageForMessage($userMessage);
         $aiResponse = $this->sanitizeAiResponse($aiResponse);
 
