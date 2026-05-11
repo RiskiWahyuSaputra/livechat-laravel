@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Customer;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -44,13 +44,13 @@ class ContactReportService
     }
 
     /**
-     * Mengembalikan daftar nilai origin unik dari tabel customers (non-null, non-empty).
+     * Mengembalikan daftar nilai origin unik dari tabel users (non-null, non-empty).
      *
      * Requirements: 2.5
      */
     public function getAvailableChannels(): array
     {
-        return Customer::select('origin')
+        return User::select('origin')
             ->whereNotNull('origin')
             ->where('origin', '!=', '')
             ->distinct()
@@ -136,7 +136,10 @@ class ContactReportService
         string $timezone,
         ?string $channel
     ): int {
-        $query = Customer::query();
+        $query = User::whereNot(function ($q) {
+            $q->where('email', 'like', 'anon_%@livechat.best')
+              ->where('name', 'Guest');
+        });
 
         if ($channel !== null) {
             $query->where('origin', $channel);
@@ -229,7 +232,10 @@ class ContactReportService
             $convertTzAvailable = false;
         }
 
-        $query = Customer::query();
+        $query = User::whereNot(function ($q) {
+            $q->where('email', 'like', 'anon_%@livechat.best')
+              ->where('name', 'Guest');
+        });
         if ($channel !== null) {
             $query->where('origin', $channel);
         }
@@ -245,8 +251,9 @@ class ContactReportService
                 SELECT grp.date AS date, COUNT(*) AS count
                 FROM (
                     SELECT DATE(CONVERT_TZ(created_at, '+00:00', ?)) AS date
-                    FROM customers
+                    FROM users
                     WHERE DATE(CONVERT_TZ(created_at, '+00:00', ?)) BETWEEN ? AND ?
+                    AND NOT (email LIKE 'anon_%@livechat.best' AND name = 'Guest')
                     {$channelWhere}
                 ) AS grp
                 GROUP BY grp.date
@@ -327,7 +334,10 @@ class ContactReportService
             $convertTzAvailable = false;
         }
 
-        $query = Customer::query();
+        $query = User::whereNot(function ($q) {
+            $q->where('email', 'like', 'anon_%@livechat.best')
+              ->where('name', 'Guest');
+        });
         if ($channel !== null) {
             $query->where('origin', $channel);
         }
@@ -341,8 +351,9 @@ class ContactReportService
                 SELECT grp.hour AS hour, COUNT(*) AS count
                 FROM (
                     SELECT HOUR(CONVERT_TZ(created_at, '+00:00', ?)) AS hour
-                    FROM customers
+                    FROM users
                     WHERE DATE(CONVERT_TZ(created_at, '+00:00', ?)) BETWEEN ? AND ?
+                    AND NOT (email LIKE 'anon_%@livechat.best' AND name = 'Guest')
                     {$channelWhere}
                 ) AS grp
                 GROUP BY grp.hour
@@ -420,7 +431,10 @@ class ContactReportService
             $convertTzAvailable = false;
         }
 
-        $query = Customer::query();
+        $query = User::whereNot(function ($q) {
+            $q->where('email', 'like', 'anon_%@livechat.best')
+              ->where('name', 'Guest');
+        });
         if ($channel !== null) {
             $query->where('origin', $channel);
         }
@@ -435,8 +449,9 @@ class ContactReportService
                 SELECT grp.dow AS dow, COUNT(*) AS count
                 FROM (
                     SELECT DAYOFWEEK(CONVERT_TZ(created_at, '+00:00', ?)) AS dow
-                    FROM customers
+                    FROM users
                     WHERE DATE(CONVERT_TZ(created_at, '+00:00', ?)) BETWEEN ? AND ?
+                    AND NOT (email LIKE 'anon_%@livechat.best' AND name = 'Guest')
                     {$channelWhere}
                 ) AS grp
                 GROUP BY grp.dow
