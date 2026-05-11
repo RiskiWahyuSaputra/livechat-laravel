@@ -21,11 +21,38 @@ class ConversationFlowService
     ) {
     }
 
-    private function getSystemMode(): string
+    public function getSystemMode(): string
     {
         $mode = Setting::get('system_mode', 'office_hour');
+
+        if ($mode === 'office_hour') {
+            if (!$this->isWithinOfficeHours()) {
+                return 'closed';
+            }
+        }
+
         $validModes = ['office_hour', 'outside_office_hour', 'closed'];
         return in_array($mode, $validModes) ? $mode : 'office_hour';
+    }
+
+    /**
+     * Check if current time is within office hours.
+     */
+    public function isWithinOfficeHours(): bool
+    {
+        $hours = $this->getOfficeHoursForToday();
+
+        if (!$hours['is_active']) {
+            return false;
+        }
+
+        try {
+            $now = now($hours['timezone'])->format('H:i');
+        } catch (\Exception $e) {
+            $now = now()->format('H:i');
+        }
+
+        return $now >= $hours['start'] && $now <= $hours['end'];
     }
 
     public function createConversation(User $user, ?int $selectedMenuId = null): array
@@ -171,6 +198,22 @@ class ConversationFlowService
 
     public function processInboundMessage(User $user, Conversation $conversation, string $content, string $messageType = 'text', bool $broadcast = true): array
     {
+        $systemMode = $this->getSystemMode();
+
+        if ($systemMode === 'closed') {
+            $defaultMessage = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
+            $rejectMessage = Setting::get('bot_greeting_closed', $defaultMessage) ?? $defaultMessage;
+
+            return [
+                'message' => null,
+                'bot_replies' => [],
+                'bot_messages' => [],
+                'bot_phase' => $conversation->bot_phase,
+                'rejected' => true,
+                'reject_message' => $rejectMessage,
+            ];
+        }
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $user->id,

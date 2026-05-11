@@ -16,6 +16,12 @@ class SettingController extends Controller
         return view('admin.settings.index', compact('settings'));
     }
 
+    public function operationalHours()
+    {
+        $settings = Setting::all()->pluck('value', 'key');
+        return view('admin.settings.operational-hours', compact('settings'));
+    }
+
     public function update(Request $request)
     {
         $rules = [
