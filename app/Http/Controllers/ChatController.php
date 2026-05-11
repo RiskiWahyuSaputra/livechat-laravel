@@ -228,7 +228,7 @@ class ChatController extends Controller
             ->first();
 
         // Cek mode closed — tolak meski ada conversation lama (kecuali sudah active dengan agent)
-        $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+        $systemMode = $this->conversationFlowService->getSystemMode();
         if ($systemMode === 'closed') {
             $hasActiveWithAgent = $activeConversation && $activeConversation->status === 'active' && $activeConversation->admin_id;
             if (!$hasActiveWithAgent) {
@@ -489,7 +489,7 @@ class ChatController extends Controller
 
             if (!$token) {
                 // Cek mode closed bahkan untuk user yang belum login
-                $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+                $systemMode = $this->conversationFlowService->getSystemMode();
                 if ($systemMode === 'closed') {
                     $defaultMsg = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
                     return response()->json(array_merge($publicData, [
@@ -502,7 +502,7 @@ class ChatController extends Controller
 
             $user = User::where('email', $token)->first();
             if (!$user) {
-                $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+                $systemMode = $this->conversationFlowService->getSystemMode();
                 if ($systemMode === 'closed') {
                     $defaultMsg = 'Mohon maaf, layanan chat kami sedang tidak tersedia. Silakan hubungi kami kembali nanti.';
                     return response()->json(array_merge($publicData, [
@@ -531,7 +531,7 @@ class ChatController extends Controller
             }
 
             // Jika mode closed, tolak kecuali conversation sudah active dengan agent
-            $systemMode = \App\Models\Setting::get('system_mode', 'office_hour');
+            $systemMode = $this->conversationFlowService->getSystemMode();
             if ($systemMode === 'closed') {
                 $hasActiveWithAgent = $activeConversation && $activeConversation->status === 'active' && $activeConversation->admin_id;
                 if (!$hasActiveWithAgent) {
@@ -645,6 +645,14 @@ class ChatController extends Controller
             messageType: $messageType,
             broadcast: true
         );
+
+        if ($result['rejected'] ?? false) {
+            return response()->json([
+                'success'        => false,
+                'rejected'       => true,
+                'reject_message' => $result['reject_message'],
+            ], 503);
+        }
 
         $message = $result['message'];
         $botReplies = $result['bot_replies'];
