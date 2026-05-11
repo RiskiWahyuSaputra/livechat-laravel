@@ -80,8 +80,30 @@ class LaporanController extends Controller
         $endDate   = Carbon::parse($request->get('end_date',   Carbon::now()->endOfDay()));
 
         $topPerformers    = $this->analyticsService->getTopPerformers();
-        $agentWorkload    = $this->analyticsService->getAgentWorkload();
-        $agentPerformance = $this->analyticsService->getAgentPerformance();
+        $agentWorkloadData = $this->analyticsService->getAgentWorkload();
+        
+        // Pagination untuk all agents
+        $perPage = 10;
+        $allAgents = collect($topPerformers['all']);
+        $currentPage = $request->get('page', 1);
+        $agentsPaginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $allAgents->forPage($currentPage, $perPage),
+            $allAgents->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        // Pagination untuk workload
+        $workloadCollection = collect($agentWorkloadData);
+        $workloadPage = $request->get('workload_page', 1);
+        $agentWorkload = new \Illuminate\Pagination\LengthAwarePaginator(
+            $workloadCollection->forPage($workloadPage, $perPage),
+            $workloadCollection->count(),
+            $perPage,
+            $workloadPage,
+            ['path' => $request->url(), 'query' => $request->query(), 'pageName' => 'workload_page']
+        );
 
         // Additional: agents per status count
         $agentStatusCount = Admin::select('status', DB::raw('count(*) as count'))
@@ -90,7 +112,7 @@ class LaporanController extends Controller
             ->toArray();
 
         return view('admin.laporan.performa-agen', compact(
-            'topPerformers', 'agentWorkload', 'agentPerformance',
+            'topPerformers', 'agentWorkload', 'agentsPaginated',
             'agentStatusCount', 'startDate', 'endDate'
         ));
     }
