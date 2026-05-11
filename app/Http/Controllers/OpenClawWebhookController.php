@@ -105,6 +105,14 @@ class OpenClawWebhookController extends Controller
             broadcast: true
         );
 
+        if (!empty($result['rejected'])) {
+            $rejectText = $result['reject_message'] ?? '';
+            if ($rejectText !== '') {
+                $this->openClawWhatsappService->sendText($user, $rejectText);
+            }
+            return response()->json(['status' => 'ok', 'rejected' => true]);
+        }
+
         $this->sendBotMessagesToWhatsapp($user, $result['bot_messages']);
 
         return response()->json([
