@@ -218,7 +218,6 @@
     <form action="{{ route('admin.settings.update') }}" method="POST">
         @csrf
         @method('PUT')
-        <input type="hidden" name="ai_provider" value="openclaw">
         <input type="hidden" name="messaging_provider" value="openclaw">
 
         {{-- ── AI & OpenClaw ── --}}
@@ -229,6 +228,24 @@
             </div>
             <div class="settings-card-body">
 
+                {{-- AI Provider --}}
+                <div class="field-group" style="margin-bottom:24px;">
+                    <label class="field-label">AI Provider</label>
+                    <select name="ai_provider" class="field-input">
+                        @foreach(['openclaw' => 'OpenClaw (Local)', 'groq' => 'Groq (Cloud - Gratis)', 'gemini' => 'Gemini (Cloud)'] as $val => $label)
+                            <option value="{{ $val }}" {{ ($settings['ai_provider'] ?? 'openclaw') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <div class="field-hint">
+                        <strong>⚙️ Pilih provider AI:</strong><br>
+                        • <strong>OpenClaw</strong>: Lokal, unlimited, butuh gateway running<br>
+                        • <strong>Groq</strong>: Cloud, gratis, cepat, rate limit tinggi → <strong>Isi "Groq API Key" di bawah</strong><br>
+                        • <strong>Gemini</strong>: Cloud, rate limit rendah → <strong>Isi "Gemini API Key" di bawah</strong>
+                    </div>
+                </div>
+
+                <hr class="field-divider">
+
                 {{-- Gemini --}}
                 <div class="fields-grid">
                     <div class="field-group">
@@ -236,6 +253,9 @@
                         <input type="password" name="gemini_api_key" class="field-input"
                                value="{{ $settings['gemini_api_key'] ?? env('GEMINI_API_KEY') }}">
                         <div class="field-hint">Fallback jika ingin kembali ke Gemini.</div>
+                        <div style="margin-top:8px;padding:8px 12px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:#92400e;">
+                            <strong>⚠️ Rate Limit:</strong> API Key gratis Gemini memiliki batasan ~15-60 request/menit. Jika user bertanya lebih dari 3x dalam waktu singkat, sistem akan error selama 2-5 menit. Gunakan OpenClaw atau upgrade ke API Key berbayar.
+                        </div>
                     </div>
                     <div class="field-group">
                         <label class="field-label">Model Gemini</label>
@@ -245,6 +265,28 @@
                             @endforeach
                         </select>
                         <div class="field-hint">Dipakai saat provider AI masih Gemini.</div>
+                    </div>
+                </div>
+
+                <hr class="field-divider">
+
+                {{-- Groq --}}
+                <div class="fields-grid">
+                    <div class="field-group">
+                        <label class="field-label">Groq API Key</label>
+                        <input type="password" name="groq_api_key" class="field-input"
+                               value="{{ $settings['groq_api_key'] ?? env('GROQ_API_KEY') }}"
+                               placeholder="gsk_...">
+                        <div class="field-hint">API Key dari <a href="https://console.groq.com" target="_blank" style="color:#4f46e5;">console.groq.com</a> (Gratis & Cepat)</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Model Groq</label>
+                        <select name="groq_model" class="field-input">
+                            @foreach(['llama-3.3-70b-versatile' => 'Llama 3.3 70B (Recommended)', 'llama-3.1-70b-versatile' => 'Llama 3.1 70B', 'mixtral-8x7b-32768' => 'Mixtral 8x7B'] as $val => $label)
+                                <option value="{{ $val }}" {{ ($settings['groq_model'] ?? 'llama-3.3-70b-versatile') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <div class="field-hint">Model yang digunakan saat provider = Groq</div>
                     </div>
                 </div>
 

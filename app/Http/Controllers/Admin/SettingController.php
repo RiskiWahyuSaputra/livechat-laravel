@@ -61,6 +61,7 @@ class SettingController extends Controller
             // Tentukan group berdasarkan prefix key (opsional)
             $group = 'general';
             if (str_starts_with($key, 'gemini_')) $group = 'gemini';
+            if (str_starts_with($key, 'groq_')) $group = 'groq';
             if (str_starts_with($key, 'openclaw_')) $group = 'openclaw';
             if (str_starts_with($key, 'ai_')) $group = 'ai';
             if (str_starts_with($key, 'messaging_')) $group = 'messaging';
