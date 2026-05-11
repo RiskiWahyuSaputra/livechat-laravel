@@ -6,15 +6,15 @@
 <div x-data="{
     showModal: false,
     isEdit: false,
-    form: { id: '', title: '', content: '' },
+    form: { id: '', title: '', command: '', content: '' },
     openCreate() {
         this.isEdit = false;
-        this.form = { id: '', title: '', content: '' };
+        this.form = { id: '', title: '', command: '', content: '' };
         this.showModal = true;
     },
     openEdit(reply) {
         this.isEdit = true;
-        this.form = { id: reply.id, title: reply.title, content: reply.content };
+        this.form = { id: reply.id, title: reply.title, command: reply.command ?? '', content: reply.content };
         this.showModal = true;
     }
 }">
@@ -38,6 +38,7 @@
                             <thead class="thead-light">
                                 <tr>
                                     <th>Judul / Singkatan</th>
+                                    <th>Command</th>
                                     <th>Isi Pesan</th>
                                     <th class="text-end">Aksi</th>
                                 </tr>
@@ -46,6 +47,13 @@
                                 @forelse($replies as $reply)
                                 <tr>
                                     <td><strong>{{ $reply->title }}</strong></td>
+                                    <td>
+                                        @if($reply->command)
+                                            <code>{{ $reply->command }}</code>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
                                     <td><div class="text-wrap" style="max-width: 400px;">{{ $reply->content }}</div></td>
                                     <td class="text-end">
                                         <button @click="openEdit({{ $reply->toJson() }})" class="btn btn-sm btn-white text-primary me-2"><i class="fe fe-edit"></i></button>
@@ -58,7 +66,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="3" class="text-center p-5 text-muted">Belum ada balasan cepat.</td>
+                                    <td colspan="4" class="text-center p-5 text-muted">Belum ada balasan cepat.</td>
                                 </tr>
                                 @endforelse
                             </tbody>
@@ -90,6 +98,10 @@
                         <div class="form-group mb-3">
                             <label class="form-label">Judul / Singkatan</label>
                             <input type="text" name="title" x-model="form.title" class="form-control" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Command</label>
+                            <input type="text" name="command" x-model="form.command" class="form-control" placeholder="/contoh_command" maxlength="50">
                         </div>
                         <div class="form-group mb-3">
                             <label class="form-label">Isi Pesan</label>

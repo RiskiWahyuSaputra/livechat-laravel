@@ -645,9 +645,12 @@
                 get filteredReplies() {
                     if (!this.showSlash) return [];
                     const q = this.slashQuery.toLowerCase();
+                    // Requirement 5.4: entries without command must not appear in slash-command popup
                     return this.quickReplies.filter(r =>
-                        r.command.toLowerCase().includes(q) ||
-                        r.title.toLowerCase().includes(q)
+                        r.command && r.command.trim() !== '' && (
+                            r.command.toLowerCase().includes(q) ||
+                            r.title.toLowerCase().includes(q)
+                        )
                     ).slice(0, 8);
                 },
                 
