@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\EmbedDocsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\UserDashboardController; // Changed from UserHomeController
 use App\Http\Controllers\UserProductController;
@@ -17,30 +18,43 @@ Route::get('/', function () {
 
 // Home page dapat diakses publik
 Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home');
+
+// Embed docs — public, no auth required
+Route::get('/embed-docs', [EmbedDocsController::class, 'index'])->name('embed.docs');
 Route::get('/category/{slug}', [UserProductController::class, 'showCategoryProducts'])->name('user.category.products');
 Route::get('/about', [UserDashboardController::class, 'about'])->name('user.about');
 Route::get('/contact', [UserDashboardController::class, 'contact'])->name('user.contact');
 
-// Route registrasi chat
-Route::post('/chat/register', [ChatController::class , 'register'])->name('chat.register');
+// Route registrasi chat (non-widget, no embed middleware)
 Route::get('/chat/register/whatsapp/{token}', [ChatController::class, 'showWhatsappRegister'])->name('chat.register.whatsapp');
 Route::post('/chat/register/whatsapp', [ChatController::class, 'submitWhatsappRegister'])->name('chat.register.whatsapp.submit');
-Route::post('/chat/register-anonymous', [ChatController::class , 'registerAnonymous'])->name('chat.registerAnonymous');
-Route::post('/chat/update-profile', [ChatController::class , 'updateProfile'])->name('chat.updateProfile');
-Route::match(['get', 'post'], '/chat/logout', [ChatController::class , 'logout'])->name('chat.logout');
 
-// Routes Chat
+// Routes Chat (non-widget)
 Route::get('/chat', [ChatController::class, 'showChat'])->name('chat.index');
-Route::get('/chat-widget', [ChatController::class, 'showWidget'])->name('chat.widget');
-Route::get('/chat/init', [ChatController::class , 'initChat'])->name('chat.init')
-    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
-Route::post('/chat/send', [ChatController::class , 'sendMessage'])->name('chat.send');
-Route::patch('/chat/message/{message}', [ChatController::class, 'updateMessage'])->name('chat.message.update');
-Route::delete('/chat/message/{message}', [ChatController::class, 'deleteMessage'])->name('chat.message.destroy');
-Route::post('/chat/typing', [ChatController::class , 'typing'])->name('chat.typing');
 Route::get('/chat/summary', [ChatController::class, 'conversationSummary'])->name('chat.summary');
 Route::post('/chat/conversation/{conversation}/feedback', [ChatController::class, 'submitFeedback'])->name('chat.feedback.submit');
 Route::post('/chat/conversation/{conversation}/feedback/skip', [ChatController::class, 'skipFeedback'])->name('chat.feedback.skip');
+
+// Widget routes — wrapped in CORS + whitelist middleware (Requirements: 2.1, 2.2, 4.4)
+Route::middleware(['embed.cors', 'embed.whitelist'])->group(function () {
+    Route::get('/chat-widget', [ChatController::class, 'showWidget'])->name('chat.widget');
+    Route::get('/chat/init', [ChatController::class, 'initChat'])->name('chat.init')
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+    Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
+    Route::post('/chat/update-profile', [ChatController::class, 'updateProfile'])->name('chat.updateProfile');
+    Route::match(['get', 'post'], '/chat/logout', [ChatController::class, 'logout'])->name('chat.logout');
+    Route::post('/chat/typing', [ChatController::class, 'typing'])->name('chat.typing');
+    Route::patch('/chat/message/{message}', [ChatController::class, 'updateMessage'])->name('chat.message.update');
+    Route::delete('/chat/message/{message}', [ChatController::class, 'deleteMessage'])->name('chat.message.destroy');
+
+    // Register routes also get embed.cookie middleware for guest_chat_token (Requirements: 1.1, 5.1)
+    Route::post('/chat/register', [ChatController::class, 'register'])
+        ->name('chat.register')
+        ->middleware('embed.cookie');
+    Route::post('/chat/register-anonymous', [ChatController::class, 'registerAnonymous'])
+        ->name('chat.registerAnonymous')
+        ->middleware('embed.cookie');
+});
 
 
 // Routes yang butuh login user (jika ada fitur user biasa)

@@ -14,6 +14,7 @@ use App\Models\Message;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\ConversationFlowService;
 use App\Services\ConversationSummaryService;
 use App\Services\MessageSearchService;
 use App\Services\OpenClawWhatsappService;
@@ -26,16 +27,19 @@ class DashboardController extends Controller
     protected $analyticsService;
     protected $openClawWhatsappService;
     protected $conversationSummaryService;
+    protected $conversationFlowService;
 
     public function __construct(
         AnalyticsService $analyticsService,
         OpenClawWhatsappService $openClawWhatsappService,
-        ConversationSummaryService $conversationSummaryService
+        ConversationSummaryService $conversationSummaryService,
+        ConversationFlowService $conversationFlowService
     )
     {
         $this->analyticsService = $analyticsService;
         $this->openClawWhatsappService = $openClawWhatsappService;
         $this->conversationSummaryService = $conversationSummaryService;
+        $this->conversationFlowService = $conversationFlowService;
     }
 
     /**
@@ -341,7 +345,7 @@ class DashboardController extends Controller
         }
 
         // Update posisi antrian untuk conversation lain yang masih queued
-        $this->reorderQueue();
+        $this->conversationFlowService->reorderQueue();
 
         return response()->json(['success' => true, 'conversation_id' => $conversation->id]);
     }
@@ -851,8 +855,7 @@ class DashboardController extends Controller
     public static function calculateQueuePosition(Conversation $conversation): int
     {
         return Conversation::whereIn('status', ['pending', 'queued'])
-            ->where('created_at', '<=', $conversation->created_at)
-            ->where('id', '<=', $conversation->id)
-            ->count();
+            ->where('created_at', '<', $conversation->created_at)
+            ->count() + 1;
     }
 }

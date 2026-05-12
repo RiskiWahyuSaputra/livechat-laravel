@@ -1381,8 +1381,8 @@
                                     this.fetchChats();
                                 }
 
-                                // Play sound if it's a new or queued request
-                                if (['pending', 'queued'].includes(e.status)) {
+                                // Play sound only when user has truly entered the agent queue (bot_phase === 'off' or no bot)
+                                if (['pending', 'queued'].includes(e.status) && (e.bot_phase === 'off' || e.bot_phase === null || e.bot_phase === undefined)) {
                                     this.playNotification();
                                 }
                             });

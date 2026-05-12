@@ -28,12 +28,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'chat/conversation/*/feedback',
             'chat/conversation/*/feedback/skip',
             'chat/message/*',
-            'admin/chat/message/*'
+            'admin/chat/message/*',
+            'broadcasting/auth',
         ]);
 
         $middleware->alias([
-            'admin.auth' => \App\Http\Middleware\AdminAuthenticated::class,
+            'admin.auth'       => \App\Http\Middleware\AdminAuthenticated::class,
             'admin.permission' => \App\Http\Middleware\CheckAdminPermission::class,
+            'embed.cors'       => \App\Http\Middleware\EmbedCorsMiddleware::class,
+            'embed.whitelist'  => \App\Http\Middleware\DomainWhitelistMiddleware::class,
+            'embed.cookie'     => \App\Http\Middleware\CrossDomainCookieMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
