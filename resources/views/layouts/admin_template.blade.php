@@ -448,10 +448,9 @@
             margin: 0 !important;
             overflow: hidden;
             max-height: 0;
-            transition: max-height 0.3s ease, padding 0.3s ease;
+            transition: max-height 0.35s ease-in, padding 0.35s ease-in;
         }
         .sidebar-menu .lap-submenu.open {
-            max-height: 300px;
             display: block !important;
             padding-top: 2px !important;
             padding-bottom: 4px !important;
@@ -646,7 +645,7 @@
                             </li>
                             <li class="{{ request()->routeIs('admin.laporan.*') || request()->routeIs('admin.contact-report.*') ? 'active' : '' }}">
                                 <a href="javascript:void(0);" class="lap-parent-link"
-                                   onclick="(function(el){var ul=el.closest('li').querySelector('.lap-submenu');var ch=el.querySelector('.lap-chevron');var isOpen=ul.classList.toggle('open');ch.classList.toggle('open',isOpen);ul.style.display=isOpen?'block':'none';})(this); return false;">
+                                   onclick="lapToggle(this); return false;">
                                     <i class="fe fe-bar-chart-2"></i>
                                     <span>Laporan</span>
                                     <i class="fe fe-chevron-right lap-chevron {{ request()->routeIs('admin.laporan.*') || request()->routeIs('admin.contact-report.*') ? 'open' : '' }}"></i>
@@ -762,13 +761,43 @@
 
     <script>
         // Toggle Laporan submenu
+        function lapToggle(el) {
+            var ul = el.closest('li').querySelector('.lap-submenu');
+            var ch = el.querySelector('.lap-chevron');
+            if (ul.classList.contains('open')) {
+                ul.style.maxHeight = ul.scrollHeight + 'px';
+                ul.classList.remove('open');
+                ch.classList.remove('open');
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        ul.style.maxHeight = '0';
+                    });
+                });
+            } else {
+                ul.style.display = 'block';
+                ul.classList.add('open');
+                ch.classList.add('open');
+                var h = ul.scrollHeight;
+                ul.style.maxHeight = '0';
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        ul.style.maxHeight = h + 'px';
+                    });
+                });
+                ul.addEventListener('transitionend', function() {
+                    ul.style.maxHeight = 'none';
+                }, {once: true});
+            }
+        }
+
         // GLOBAL FIX UNTUK SIDEBAR DI MOBILE
         document.addEventListener('DOMContentLoaded', function () {
 
-            // Fix: jika lap-submenu punya class 'open' tapi Alpine inject display:none, paksa display:block
+            // Fix: jika lap-submenu punya class 'open', paksa display:block dan maxHeight:none
             var lapSubmenu = document.querySelector('.lap-submenu.open');
             if (lapSubmenu) {
                 lapSubmenu.style.display = 'block';
+                lapSubmenu.style.maxHeight = 'none';
             }
 
             const mobileBtn = document.getElementById('mobile_btn');
