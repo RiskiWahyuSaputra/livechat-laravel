@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Services\ConversationFlowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 
 class SettingController extends Controller
 {
@@ -29,6 +30,28 @@ class SettingController extends Controller
             'office_hours_start' => ['sometimes', 'nullable', 'regex:/^\d{2}:\d{2}$/'],
             'office_hours_end'   => ['sometimes', 'nullable', 'regex:/^\d{2}:\d{2}$/'],
             'office_hours_timezone' => 'sometimes|string',
+            'embed_allowed_domains' => [
+                'sometimes',
+                'nullable',
+                'string',
+                function ($attribute, $value, $fail) {
+                    if (empty($value)) {
+                        return;
+                    }
+                    $lines = preg_split('/\r?\n/', $value);
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if ($line === '') {
+                            continue;
+                        }
+                        // Allow wildcard subdomain format: *.hostname or plain hostname
+                        if (!preg_match('/^(\*\.)?[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$/', $line)) {
+                            $fail("Format domain tidak valid: \"{$line}\". Gunakan format hostname (contoh: example.com) atau wildcard (contoh: *.example.com).");
+                            return;
+                        }
+                    }
+                },
+            ],
         ];
 
         $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -72,6 +95,12 @@ class SettingController extends Controller
         // Notify queued conversations if mode changed to outside_office_hour or closed
         if ($newMode && $newMode !== $oldMode && in_array($newMode, ['outside_office_hour', 'closed'])) {
             app(ConversationFlowService::class)->notifyQueuedConversationsOfModeChange($newMode);
+        }
+
+        // Save embed_allowed_domains explicitly and clear parsed cache
+        if ($request->has('embed_allowed_domains')) {
+            Setting::set('embed_allowed_domains', $request->input('embed_allowed_domains', ''), 'embed');
+            Cache::forget('embed_allowed_domains_parsed');
         }
 
         // Opsional: Clear cache atau restart service jika perlu

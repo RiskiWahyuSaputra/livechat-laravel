@@ -23,6 +23,7 @@ use Illuminate\Support\Str;
 
 use App\Models\User;
 use App\Services\ConversationFlowService;
+use App\Services\DomainWhitelistService;
 use App\Services\GeminiService;
 
 class ChatController extends Controller
@@ -52,10 +53,28 @@ class ChatController extends Controller
             }
         }
 
+        /** @var DomainWhitelistService $whitelistService */
+        $whitelistService = app(DomainWhitelistService::class);
+        $allowedDomains   = $whitelistService->getAllowedDomains();
+
+        if (empty($allowedDomains)) {
+            $cspValue = 'frame-ancestors *';
+        } else {
+            $origins = array_map(function (string $domain) {
+                // Prefix with https:// if no scheme is present
+                if (!str_starts_with($domain, 'http://') && !str_starts_with($domain, 'https://')) {
+                    return 'https://' . $domain;
+                }
+                return $domain;
+            }, $allowedDomains);
+
+            $cspValue = 'frame-ancestors ' . implode(' ', $origins);
+        }
+
         return response()
             ->view('chat.widget', ['isAuthenticated' => $isAuthenticated])
-            ->header('X-Frame-Options', 'ALLOWALL') // or remove it
-            ->header('Content-Security-Policy', "frame-ancestors *");
+            ->header('X-Frame-Options', 'ALLOWALL')
+            ->header('Content-Security-Policy', $cspValue);
     }
 
     /**
