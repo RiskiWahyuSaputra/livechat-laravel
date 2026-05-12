@@ -268,26 +268,26 @@
                 @if($customerSatisfaction['has_data'])
                     @php
                         $avgRating = $customerSatisfaction['average_rating'];
-                        $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                        $ratingEmoji = ['1f621','1f61e','1f610','1f60a','1f929'];
                         $ratingLabel = ['Sangat Tidak Puas','Tidak Puas','Cukup Puas','Puas','Sangat Puas'];
                         $ratingIndex = max(0, min(4, round($avgRating) - 1));
                     @endphp
-                    <div style="font-size:64px;line-height:1;margin-bottom:8px;">{{ $ratingEmoji[$ratingIndex] }}</div>
+                    <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $ratingEmoji[$ratingIndex] }}.svg" style="width:64px;height:64px;margin-bottom:8px;" alt="rating">
                     <div class="rating-big" style="font-size:32px;">{{ number_format($avgRating, 1) }}</div>
                     <div style="font-size:15px;font-weight:600;color:var(--lp-gray-700);margin-top:4px;">{{ $ratingLabel[$ratingIndex] }}</div>
                     <p style="color:var(--lp-gray-500);font-size:13px;margin-top:8px;">Dari {{ $customerSatisfaction['total_ratings'] }} ulasan</p>
                     <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap;">
                         @foreach([5,4,3,2,1] as $i => $rating)
-                        <div style="text-align:center;padding:8px 12px;background:var(--lp-gray-50);border-radius:8px;border:1px solid var(--lp-gray-200);min-width:70px;">
-                            <div style="font-size:24px;line-height:1;">{{ $ratingEmoji[$rating-1] }}</div>
-                            <div style="font-weight:700;color:var(--lp-dark);margin-top:4px;">{{ $customerSatisfaction['distribution'][$rating] ?? 0 }}</div>
-                            <small style="color:var(--lp-gray-500);font-size:10px;">{{ explode(' ', $ratingLabel[$rating-1])[0] }}</small>
+                        <div style="text-align:center;padding:8px 12px;background:var(--lp-gray-50);border-radius:8px;border:1px solid var(--lp-gray-200);min-width:80px;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                            <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $ratingEmoji[$rating-1] }}.svg" style="width:28px;height:28px;" alt="rating {{ $rating }}">
+                            <div style="font-weight:700;color:var(--lp-dark);">{{ $customerSatisfaction['distribution'][$rating] ?? 0 }}</div>
+                            <small style="color:var(--lp-gray-500);font-size:10px;line-height:1.3;">{{ $ratingLabel[$rating-1] }}</small>
                         </div>
                         @endforeach
                     </div>
                 @else
                     <div style="padding:40px 0;color:var(--lp-gray-500);">
-                        <div style="font-size:48px;opacity:0.3;margin-bottom:12px;">😐</div>
+                        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f610.svg" style="width:48px;height:48px;opacity:0.3;margin-bottom:12px;" alt="no data">
                         Belum ada data rating
                     </div>
                 @endif

@@ -856,6 +856,8 @@
     </script>
 
     @stack('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+    <script>twemoji.parse(document.body, {folder: 'svg', ext: '.svg'});</script>
 </body>
 
 </html>

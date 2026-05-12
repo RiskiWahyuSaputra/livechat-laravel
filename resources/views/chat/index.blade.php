@@ -489,15 +489,22 @@
                     </div>
 
                     <div class="flex items-stretch justify-center gap-2 mb-4">
-                        <template x-for="opt in [{v:1,emoji:'😡',label:'Sangat\nTidak Puas'},{v:2,emoji:'😞',label:'Tidak\nPuas'},{v:3,emoji:'😐',label:'Cukup\nPuas'},{v:4,emoji:'😊',label:'Puas'},{v:5,emoji:'😍',label:'Sangat\nPuas'}]" :key="opt.v">
+                        @foreach([
+                            ['v'=>1,'emoji'=>'1f621','label'=>"Sangat\nTidak Puas"],
+                            ['v'=>2,'emoji'=>'1f61e','label'=>"Tidak\nPuas"],
+                            ['v'=>3,'emoji'=>'1f610','label'=>"Cukup\nPuas"],
+                            ['v'=>4,'emoji'=>'1f60a','label'=>"Puas"],
+                            ['v'=>5,'emoji'=>'1f929','label'=>"Sangat\nPuas"],
+                        ] as $opt)
                             <button type="button"
-                                    @click="selectedRating = opt.v"
+                                    @click="selectedRating = {{ $opt['v'] }}"
                                     class="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl border-2 transition-all flex-1 min-w-0"
-                                    :class="selectedRating === opt.v ? 'border-blue-500 bg-blue-50 shadow-md scale-105' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'">
-                                <span class="text-2xl md:text-3xl leading-none" x-text="opt.emoji"></span>
-                                <span class="text-[9px] md:text-[10px] font-semibold text-slate-600 text-center leading-tight whitespace-pre-line" x-text="opt.label"></span>
+                                    :class="selectedRating === {{ $opt['v'] }} ? 'border-blue-500 bg-blue-50 shadow-md scale-105' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'">
+                                <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $opt['emoji'] }}.svg"
+                                     class="w-8 h-8 md:w-10 md:h-10" alt="{{ $opt['label'] }}">
+                                <span class="text-[9px] md:text-[10px] font-semibold text-slate-600 text-center leading-tight whitespace-pre-line">{{ $opt['label'] }}</span>
                             </button>
-                        </template>
+                        @endforeach
                     </div>
 
                     <textarea x-model="feedbackComment"
@@ -1277,5 +1284,7 @@
     </script>
 
     @include('partials.image-lightbox')
+    <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+    <script>twemoji.parse(document.body, {folder: 'svg', ext: '.svg'});</script>
 </body>
 </html>

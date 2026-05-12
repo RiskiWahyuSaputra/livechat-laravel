@@ -164,16 +164,15 @@
         <div class="podium">
             @foreach($topPerformers['top'] as $i => $agent)
             @php 
-                $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                $ratingEmoji = ['1f621','1f61e','1f610','1f60a','1f929'];
                 $ratingIndex = $agent['avg_rating'] > 0 ? max(0, min(4, round($agent['avg_rating']) - 1)) : null;
                 $medals = ['🥇','🥈','🥉'];
             @endphp
             <div class="podium-card">
-                <div style="font-size:20px;margin-bottom:4px;">{{ $medals[$i] }}</div>
                 <div class="podium-avatar">{{ strtoupper(substr($agent['username'], 0, 2)) }}</div>
                 <div class="podium-name">{{ $agent['username'] }}</div>
                 <div class="podium-score">{{ $agent['score'] }} pts</div>
-                <div class="podium-meta">{{ $agent['closed_chats'] }} chat • {{ $ratingIndex !== null ? $ratingEmoji[$ratingIndex].' '.number_format($agent['avg_rating'],1) : 'N/A' }}</div>
+                <div class="podium-meta">{{ $agent['closed_chats'] }} chat • @if($ratingIndex !== null)<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $ratingEmoji[$ratingIndex] }}.svg" style="width:16px;height:16px;vertical-align:middle;" alt="rating"> {{ number_format($agent['avg_rating'],1) }}@else N/A @endif</div>
             </div>
             @endforeach
         </div>
@@ -229,12 +228,14 @@
                             <td class="text-center">
                                 @if($agent['total_ratings'] > 0)
                                     @php
-                                        $ratingEmoji = ['😡','😞','😐','😊','😍'];
+                                        $ratingEmoji = ['1f621','1f61e','1f610','1f60a','1f929'];
                                         $ratingIndex = max(0, min(4, round($agent['avg_rating']) - 1));
                                     @endphp
-                                    <div style="font-size:20px;line-height:1;">{{ $ratingEmoji[$ratingIndex] }}</div>
-                                    <div style="font-weight:600;color:var(--lp-dark);font-size:13px;margin-top:4px;">{{ number_format($agent['avg_rating'],1) }}</div>
-                                    <div style="font-size:10px;color:var(--lp-gray-400);">({{ $agent['total_ratings'] }} ulasan)</div>
+                                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                                        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $ratingEmoji[$ratingIndex] }}.svg" style="width:24px;height:24px;" alt="rating">
+                                        <div style="font-weight:600;color:var(--lp-dark);font-size:13px;">{{ number_format($agent['avg_rating'],1) }}</div>
+                                        <div style="font-size:10px;color:var(--lp-gray-400);">({{ $agent['total_ratings'] }} ulasan)</div>
+                                    </div>
                                 @else <span style="color:var(--lp-gray-400);">N/A</span> @endif
                             </td>
                             <td class="text-center">
