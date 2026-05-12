@@ -839,7 +839,7 @@
             },
 
             shouldRenderFeedbackConversationSummary() {
-                return this.status === 'closed' && this.feedbackPending && this.shouldRenderConversationSummary();
+                return false;
             },
 
             summaryFingerprint() {
