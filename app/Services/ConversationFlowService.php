@@ -1471,6 +1471,8 @@ class ConversationFlowService
     /**
      * Urutkan ulang posisi antrian setelah ada yang diklaim/ditutup/masuk.
      * Metode ini adalah satu-satunya sumber kebenaran untuk reorder antrian.
+     * Setelah reorder, update isi pesan antrian di setiap conversation agar
+     * user melihat nomor antrian terbaru secara real-time.
      */
     public function reorderQueue(): void
     {
@@ -1481,7 +1483,36 @@ class ConversationFlowService
                 ->get();
 
             foreach ($queued as $i => $conv) {
-                $conv->update(['queue_position' => $i + 1]);
+                $newPosition = $i + 1;
+                $conv->update(['queue_position' => $newPosition]);
+
+                // Cari pesan antrian terakhir di conversation ini dan update isinya
+                $queueMessage = Message::where('conversation_id', $conv->id)
+                    ->where('sender_type', 'admin')
+                    ->where(function ($q) {
+                        $q->where('content', 'like', '%antrean ke-%')
+                          ->orWhere('content', 'like', '%Antrean ke-%');
+                    })
+                    ->latest()
+                    ->first();
+
+                if ($queueMessage) {
+                    // Ganti nomor antrian di isi pesan dengan regex
+                    $updatedContent = preg_replace(
+                        '/antrean ke-\d+/i',
+                        "antrean ke-{$newPosition}",
+                        $queueMessage->content
+                    );
+
+                    if ($updatedContent !== $queueMessage->content) {
+                        $queueMessage->update(['content' => $updatedContent]);
+                        try {
+                            broadcast(new \App\Events\MessageUpdated($queueMessage));
+                        } catch (\Exception $e) {
+                            \Log::warning('Broadcast queue message update failed: ' . $e->getMessage());
+                        }
+                    }
+                }
             }
         });
     }
