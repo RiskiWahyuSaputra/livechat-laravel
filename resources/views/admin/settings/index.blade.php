@@ -524,6 +524,28 @@
             </div>
         </div>
 
+        {{-- ── Embed Widget Settings ── --}}
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <i class="fe fe-code" style="color:#8b5cf6;"></i>
+                <h5>Embed Widget Settings</h5>
+            </div>
+            <div class="settings-card-body">
+                <div class="field-group">
+                    <label class="field-label">Allowed Embed Domains</label>
+                    <textarea name="embed_allowed_domains"
+                              class="field-input"
+                              rows="5"
+                              placeholder="example.com&#10;*.mysite.org&#10;sub.another.com"
+                              style="resize:vertical; font-family:monospace; font-size:13px;">{{ old('embed_allowed_domains', \App\Models\Setting::get('embed_allowed_domains', '')) }}</textarea>
+                    <div class="field-hint">
+                        Satu domain per baris. Gunakan <code>*.example.com</code> untuk mengizinkan semua subdomain.
+                        Kosongkan untuk mengizinkan semua domain (tanpa pembatasan).
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- ── Save ── --}}
         <div style="margin-top:8px; margin-bottom:32px;">
             <button type="submit" class="btn-save">
