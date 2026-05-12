@@ -855,8 +855,7 @@ class DashboardController extends Controller
     public static function calculateQueuePosition(Conversation $conversation): int
     {
         return Conversation::whereIn('status', ['pending', 'queued'])
-            ->where('created_at', '<=', $conversation->created_at)
-            ->where('id', '<=', $conversation->id)
-            ->count();
+            ->where('created_at', '<', $conversation->created_at)
+            ->count() + 1;
     }
 }

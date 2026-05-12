@@ -1496,8 +1496,8 @@ class ConversationFlowService
     public function calculateQueuePosition(Conversation $conversation): int
     {
         return Conversation::whereIn('status', ['pending', 'queued'])
-            ->where('created_at', '<=', $conversation->created_at)
-            ->count();
+            ->where('created_at', '<', $conversation->created_at)
+            ->count() + 1;
     }
 
     private function resolveAwaitingSubmenuParentMenu(Conversation $conversation): ?BotMenu
