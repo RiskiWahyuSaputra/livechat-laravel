@@ -426,8 +426,8 @@ class ConversationFlowService
                 } else {
                     $conversation->update(['bot_phase' => 'off']);
                     $this->reorderQueue();
-                    $queuePosition = $this->calculateQueuePosition($conversation);
-                    $conversation->update(['queue_position' => $queuePosition]);
+                    $conversation = $conversation->fresh();
+                    $queuePosition = $conversation->queue_position ?? Conversation::whereIn('status', ['pending', 'queued'])->count();
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id' => 0,
@@ -481,8 +481,8 @@ class ConversationFlowService
                 } else {
                     $conversation->update(['bot_phase' => 'off']);
                     $this->reorderQueue();
-                    $queuePosition = $this->calculateQueuePosition($conversation);
-                    $conversation->update(['queue_position' => $queuePosition]);
+                    $conversation = $conversation->fresh();
+                    $queuePosition = $conversation->queue_position ?? Conversation::whereIn('status', ['pending', 'queued'])->count();
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id' => 0,
@@ -618,8 +618,8 @@ class ConversationFlowService
                 $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan {$conversation->problem_category}: ");
                 $conversation->update(['bot_phase' => 'off']);
                 $this->reorderQueue();
-                $queuePosition = $this->calculateQueuePosition($conversation);
-                $conversation->update(['queue_position' => $queuePosition]);
+                $conversation = $conversation->fresh();
+                $queuePosition = $conversation->queue_position ?? Conversation::whereIn('status', ['pending', 'queued'])->count();
 
                 $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
                 $newBotMessages[] = Message::create([
