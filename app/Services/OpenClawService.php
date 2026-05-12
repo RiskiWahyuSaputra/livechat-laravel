@@ -51,6 +51,7 @@ class OpenClawService
 
             $request = Http::withoutVerifying()
                 ->acceptJson()
+                ->withHeaders(['ngrok-skip-browser-warning' => 'true'])
                 ->timeout($this->timeoutSeconds + 5);
 
             if ($this->hookToken !== '') {

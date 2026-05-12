@@ -399,99 +399,6 @@
             </div>
         </div>
 
-        {{-- ── Mode Operasional ── --}}
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <i class="fe fe-activity" style="color:#10b981;"></i>
-                <h5>Mode Operasional Chat</h5>
-            </div>
-            <div class="settings-card-body">
-
-                @php $currentMode = $settings['system_mode'] ?? 'office_hour'; @endphp
-                <div class="field-group">
-                    <label class="field-label">Mode Aktif Saat Ini</label>
-                    <div class="mode-options">
-                        <label class="mode-option {{ $currentMode === 'office_hour' ? 'active-green' : '' }}">
-                            <input type="radio" name="system_mode" value="office_hour" {{ $currentMode === 'office_hour' ? 'checked' : '' }}>
-                            <div>
-                                <div class="mode-label">🟢 Jam Kerja</div>
-                                <div class="mode-desc">Customer bisa chat & antri ke Agent</div>
-                            </div>
-                        </label>
-                        <label class="mode-option {{ $currentMode === 'outside_office_hour' ? 'active-yellow' : '' }}">
-                            <input type="radio" name="system_mode" value="outside_office_hour" {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }}>
-                            <div>
-                                <div class="mode-label">🟡 Di Luar Jam Kerja</div>
-                                <div class="mode-desc">Hanya dilayani AI</div>
-                            </div>
-                        </label>
-                        <label class="mode-option {{ $currentMode === 'closed' ? 'active-red' : '' }}">
-                            <input type="radio" name="system_mode" value="closed" {{ $currentMode === 'closed' ? 'checked' : '' }}>
-                            <div>
-                                <div class="mode-label">🔴 Tutup</div>
-                                <div class="mode-desc">Chat ditolak sepenuhnya</div>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <hr class="field-divider">
-
-                <div class="field-group">
-                    <label class="field-label">Zona Waktu</label>
-                    <select name="office_hours_timezone" class="field-input" style="max-width:280px;">
-                        @foreach(['Asia/Jakarta' => 'WIB (Asia/Jakarta)', 'Asia/Makassar' => 'WITA (Asia/Makassar)', 'Asia/Jayapura' => 'WIT (Asia/Jayapura)', 'UTC' => 'UTC'] as $tz => $tzLabel)
-                            <option value="{{ $tz }}" {{ ($settings['office_hours_timezone'] ?? 'Asia/Jakarta') == $tz ? 'selected' : '' }}>{{ $tzLabel }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Jam Operasional Per Hari</label>
-                    @foreach(['monday' => 'Senin', 'tuesday' => 'Selasa', 'wednesday' => 'Rabu', 'thursday' => 'Kamis', 'friday' => 'Jumat', 'saturday' => 'Sabtu', 'sunday' => 'Minggu'] as $day => $dayLabel)
-                    @php
-                        $isWeekend = in_array($day, ['saturday', 'sunday']);
-                        $isActive = ($settings["office_hours_{$day}_active"] ?? ($isWeekend ? '0' : '1')) == '1';
-                    @endphp
-                    <div class="day-row" id="container_{{ $day }}">
-                        <div class="day-toggle">
-                            <div class="form-check form-switch mb-0">
-                                <input type="checkbox" name="office_hours_{{ $day }}_active" value="1"
-                                       class="form-check-input" id="check_{{ $day }}"
-                                       {{ $isActive ? 'checked' : '' }}
-                                       onchange="toggleDayInputs('{{ $day }}')">
-                                <label class="form-check-label" for="check_{{ $day }}">{{ $dayLabel }}</label>
-                            </div>
-                        </div>
-                        <div>
-                            <div id="inputs_{{ $day }}" class="time-inputs {{ $isActive ? '' : 'd-none' }}">
-                                <div class="time-input-wrap">
-                                    <span>Mulai</span>
-                                    <input type="time" name="office_hours_{{ $day }}_start"
-                                           value="{{ $settings["office_hours_{$day}_start"] ?? '08:00' }}">
-                                </div>
-                                <span style="color:#94a3b8;font-size:12px;">–</span>
-                                <div class="time-input-wrap">
-                                    <span>Selesai</span>
-                                    <input type="time" name="office_hours_{{ $day }}_end"
-                                           value="{{ $settings["office_hours_{$day}_end"] ?? '17:00' }}">
-                                </div>
-                            </div>
-                            <div id="closed_text_{{ $day }}" class="day-closed {{ $isActive ? 'd-none' : '' }}">
-                                Libur / Tutup
-                            </div>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-
-                <div class="field-hint mt-2">
-                    Pesan otomatis tiap mode diatur di <a href="{{ route('admin.bot-menus.index') }}" style="color:#6366f1;font-weight:600;">Alur Chat → Edit Sapaan</a>.
-                </div>
-
-            </div>
-        </div>
-
         {{-- ── Umum ── --}}
         <div class="settings-card">
             <div class="settings-card-header">
@@ -562,31 +469,7 @@
 
 @push('scripts')
 <script>
-    function toggleDayInputs(day) {
-        const cb = document.getElementById('check_' + day);
-        const inputs = document.getElementById('inputs_' + day);
-        const closed = document.getElementById('closed_text_' + day);
-        if (cb.checked) {
-            inputs.classList.remove('d-none');
-            closed.classList.add('d-none');
-        } else {
-            inputs.classList.add('d-none');
-            closed.classList.remove('d-none');
-        }
-    }
-
-    // Mode option visual toggle
-    document.querySelectorAll('.mode-option input[type=radio]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            document.querySelectorAll('.mode-option').forEach(opt => {
-                opt.classList.remove('active-green', 'active-yellow', 'active-red');
-            });
-            const label = radio.closest('.mode-option');
-            if (radio.value === 'office_hour') label.classList.add('active-green');
-            else if (radio.value === 'outside_office_hour') label.classList.add('active-yellow');
-            else label.classList.add('active-red');
-        });
-    });
+    // Integration logic or other scripts can stay if any
 </script>
 @endpush
 

@@ -1335,27 +1335,6 @@ class ConversationFlowService
         return $value > 0 ? $value : null;
     }
 
-    private function resolveAwaitingSubmenuParentMenu(Conversation $conversation): ?BotMenu
-    {
-        // Use stored selected_menu_id — reliable, no guessing from message history
-        if ($conversation->selected_menu_id) {
-            return BotMenu::find($conversation->selected_menu_id);
-        }
-
-        // Fallback: scan last user messages (legacy path, less reliable)
-        $lastUserMessage = Message::where('conversation_id', $conversation->id)
-            ->where('sender_type', 'user')
-            ->orderBy('created_at', 'desc')
-            ->skip(1)
-            ->first();
-
-        if (!$lastUserMessage) {
-            return null;
-        }
-
-        return $this->findRootMenuSelection($lastUserMessage->content);
-    }
-
     /**
      * Get office hours for today based on per-day settings and timezone.
      */
@@ -1519,5 +1498,26 @@ class ConversationFlowService
         return Conversation::whereIn('status', ['pending', 'queued'])
             ->where('created_at', '<=', $conversation->created_at)
             ->count();
+    }
+
+    private function resolveAwaitingSubmenuParentMenu(Conversation $conversation): ?BotMenu
+    {
+        // Use stored selected_menu_id — reliable, no guessing from message history
+        if ($conversation->selected_menu_id) {
+            return BotMenu::find($conversation->selected_menu_id);
+        }
+
+        // Fallback: scan last user messages (legacy path, less reliable)
+        $lastUserMessage = Message::where('conversation_id', $conversation->id)
+            ->where('sender_type', 'user')
+            ->orderBy('created_at', 'desc')
+            ->skip(1)
+            ->first();
+
+        if (!$lastUserMessage) {
+            return null;
+        }
+
+        return $this->findRootMenuSelection($lastUserMessage->content);
     }
 }

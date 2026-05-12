@@ -9,6 +9,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\EmbedDocsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\UserDashboardController; // Changed from UserHomeController
+use App\Http\Controllers\UserProductController;
 
 // Halaman utama → redirect ke user home
 Route::get('/', function () {
@@ -20,6 +21,7 @@ Route::get('/home', [UserDashboardController::class , 'index'])->name('user.home
 
 // Embed docs — public, no auth required
 Route::get('/embed-docs', [EmbedDocsController::class, 'index'])->name('embed.docs');
+Route::get('/category/{slug}', [UserProductController::class, 'showCategoryProducts'])->name('user.category.products');
 Route::get('/about', [UserDashboardController::class, 'about'])->name('user.about');
 Route::get('/contact', [UserDashboardController::class, 'contact'])->name('user.contact');
 
@@ -172,11 +174,13 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
                     ->name('contact-report.data');
             });
 
-            // --- Menu 9: Settings ---
-            Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
-            Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
-            Route::get('/operational-hours', [App\Http\Controllers\Admin\SettingController::class, 'operationalHours'])->name('settings.operational_hours');
-            Route::post('/settings/cleanup', [App\Http\Controllers\Admin\SettingController::class, 'runCleanup'])->name('settings.cleanup');
+            // --- Settings & Operational Hours ---
+            Route::middleware('admin.permission:manage_settings')->group(function () {
+                Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+                Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
+                Route::get('/operational-hours', [App\Http\Controllers\Admin\SettingController::class, 'operationalHours'])->name('settings.operational_hours');
+                Route::post('/settings/cleanup', [App\Http\Controllers\Admin\SettingController::class, 'runCleanup'])->name('settings.cleanup');
+            });
 
             // --- Menu 10: Bot Menus Management ---
             Route::post('/bot-menus/greeting', [App\Http\Controllers\Admin\BotMenuController::class, 'updateGreeting'])->name('bot-menus.greeting');
