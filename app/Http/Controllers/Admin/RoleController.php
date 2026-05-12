@@ -17,6 +17,7 @@ class RoleController extends Controller
         'view_history' => 'Lihat Riwayat & Arsip Chat',
         'manage_quick_replies' => 'Kelola Balasan Cepat',
         'manage_customers' => 'Kelola Data Pelanggan',
+        'manage_settings' => 'Kelola Pengaturan & Jam Operasional',
         'manage_roles' => 'Kelola Role & Akses (Superadmin)',
     ];
 

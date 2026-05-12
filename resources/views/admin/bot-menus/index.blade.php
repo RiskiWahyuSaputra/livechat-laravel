@@ -222,7 +222,7 @@
 .zoom-btn:hover { background: #f1f5f9; color: #0f172a; }
 </style>
 
-<div x-data="{
+    <div x-data="{
     activeFlow: '{{ session('active_flow', 'office_hour') }}',
     showModal: false,
     showGreetingModal: false,

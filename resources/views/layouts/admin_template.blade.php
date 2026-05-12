@@ -692,8 +692,14 @@
                             </li>
                         @endif
 
+                        @if(auth('admin')->user()->is_superadmin || auth('admin')->user()->hasPermission('manage_settings'))
+                            <li class="{{ request()->routeIs('admin.settings.operational_hours') ? 'active' : '' }}">
+                                <a href="{{ route('admin.settings.operational_hours') }}"><i class="fe fe-clock"></i> <span>Jam Operasional</span></a>
+                            </li>
+                        @endif
+
                         @if(auth('admin')->user()->is_superadmin)
-                            <li class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                            <li class="{{ request()->routeIs('admin.settings.index') ? 'active' : '' }}">
                                 <a href="{{ route('admin.settings.index') }}"><i class="fe fe-settings"></i>
                                     <span>Pengaturan</span></a>
                             </li>
