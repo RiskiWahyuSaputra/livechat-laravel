@@ -10,6 +10,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -54,11 +55,11 @@ class ConversationFlowService
         $anyOnline = Admin::whereIn('status', ['online', 'busy'])->exists();
 
         $status = 'pending';
-        $queuePosition = null;
+        $needsQueuePosition = false;
 
         if ($anyOnline && !$availableAdmin) {
             $status = 'queued';
-            $queuePosition = Conversation::where('status', 'queued')->count() + 1;
+            $needsQueuePosition = true;
         }
 
         $menu = $selectedMenuId ? BotMenu::find($selectedMenuId) : null;
@@ -76,14 +77,23 @@ class ConversationFlowService
                 : 'awaiting_category';
         }
 
-        $conversation = Conversation::create([
-            'user_id' => $user->id,
-            'status' => $status,
-            'bot_phase' => $botPhase,
-            'selected_menu_id' => ($menu && $menu->action_type === 'submenu') ? $menu->id : null,
-            'queue_position' => $queuePosition,
-            'last_message_at' => now(),
-        ]);
+        $conversation = DB::transaction(function () use ($user, $status, $botPhase, $menu, $needsQueuePosition) {
+            $conv = Conversation::create([
+                'user_id' => $user->id,
+                'status' => $status,
+                'bot_phase' => $botPhase,
+                'selected_menu_id' => ($menu && $menu->action_type === 'submenu') ? $menu->id : null,
+                'queue_position' => null,
+                'last_message_at' => now(),
+            ]);
+
+            if ($needsQueuePosition) {
+                $this->reorderQueue();
+                $conv = $conv->fresh();
+            }
+
+            return $conv;
+        });
 
         $isAnonymousCS = ($user->name === 'Guest' && $menu && $menu->action_type === 'connect_cs');
         $intro = null;
@@ -371,14 +381,16 @@ class ConversationFlowService
                         'content' => 'Oke, saya sambungkan ke Agent ya. Silakan isi form data diri dulu di layar kamu.',
                     ]);
                 } else {
-                    $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
-                    $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
+                    $conversation->update(['bot_phase' => 'off']);
+                    $this->reorderQueue();
+                    $queuePosition = $this->calculateQueuePosition($conversation);
+                    $conversation->update(['queue_position' => $queuePosition]);
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id' => 0,
                         'sender_type' => 'admin',
                         'message_type' => 'text',
-                        'content' => "Oke, saya sambungkan ke Agent ya. Kamu sekarang ada di antrean ke-{$queueCount}. Tunggu sebentar ya.",
+                        'content' => "Oke, saya sambungkan ke Agent ya. Kamu sekarang ada di antrean ke-{$queuePosition}. Tunggu sebentar ya.",
                     ]);
                 }
                 return $this->formatBotReplies($newBotMessages, $conversation, $broadcast);
@@ -424,14 +436,16 @@ class ConversationFlowService
                         'content' => 'Oke, saya sambungkan ke Agent ya. Silakan isi form data diri dulu di layar kamu.',
                     ]);
                 } else {
-                    $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
-                    $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
+                    $conversation->update(['bot_phase' => 'off']);
+                    $this->reorderQueue();
+                    $queuePosition = $this->calculateQueuePosition($conversation);
+                    $conversation->update(['queue_position' => $queuePosition]);
                     $newBotMessages[] = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id' => 0,
                         'sender_type' => 'admin',
                         'message_type' => 'text',
-                        'content' => "Oke, saya sambungkan ke Agent ya. Kamu sekarang ada di antrean ke-{$queueCount}. Tunggu sebentar ya.",
+                        'content' => "Oke, saya sambungkan ke Agent ya. Kamu sekarang ada di antrean ke-{$queuePosition}. Tunggu sebentar ya.",
                     ]);
                 }
             } elseif ($this->wantsContinueWithAi($userMessage)) {
@@ -559,8 +573,10 @@ class ConversationFlowService
                 $newBotMessages[] = $msg;
             } else {
                 $aiResponse = $this->geminiService->askGemini($userMessage, "Pertanyaan {$conversation->problem_category}: ");
-                $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $conversation->id)->count();
-                $conversation->update(['bot_phase' => 'off', 'queue_position' => $queueCount]);
+                $conversation->update(['bot_phase' => 'off']);
+                $this->reorderQueue();
+                $queuePosition = $this->calculateQueuePosition($conversation);
+                $conversation->update(['queue_position' => $queuePosition]);
 
                 $newBotMessages = array_merge($newBotMessages, $this->createAiReplyMessages($conversation, $userMessage, $aiResponse));
                 $newBotMessages[] = Message::create([
@@ -568,7 +584,7 @@ class ConversationFlowService
                     'sender_id' => 0,
                     'sender_type' => 'admin',
                     'message_type' => 'text',
-                    'content' => "Pesan diterima. Antrean ke-{$queueCount}. Sambil menunggu, silakan baca jawaban AI di atas.",
+                    'content' => "Pesan diterima. Antrean ke-{$queuePosition}. Sambil menunggu, silakan baca jawaban AI di atas.",
                 ]);
             }
         } elseif ($conversation->bot_phase === 'off' && is_null($conversation->admin_id)) {
@@ -1428,5 +1444,37 @@ class ConversationFlowService
             'rejected' => false,
             'reject_message' => '',
         ];
+    }
+
+    /**
+     * Urutkan ulang posisi antrian setelah ada yang diklaim/ditutup/masuk.
+     * Metode ini adalah satu-satunya sumber kebenaran untuk reorder antrian.
+     */
+    public function reorderQueue(): void
+    {
+        DB::transaction(function () {
+            $queued = Conversation::whereIn('status', ['pending', 'queued'])
+                ->orderBy('created_at')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($queued as $i => $conv) {
+                $conv->update(['queue_position' => $i + 1]);
+            }
+        });
+    }
+
+    /**
+     * Hitung posisi antrian untuk satu percakapan berdasarkan created_at FIFO.
+     * Metode ini adalah satu-satunya sumber kebenaran untuk perhitungan posisi antrian.
+     *
+     * Menghitung berapa banyak percakapan pending/queued yang created_at-nya
+     * lebih awal atau sama dengan percakapan yang diberikan.
+     */
+    public function calculateQueuePosition(Conversation $conversation): int
+    {
+        return Conversation::whereIn('status', ['pending', 'queued'])
+            ->where('created_at', '<=', $conversation->created_at)
+            ->count();
     }
 }

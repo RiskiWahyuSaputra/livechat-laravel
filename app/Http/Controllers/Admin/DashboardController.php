@@ -14,6 +14,7 @@ use App\Models\Message;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\ConversationFlowService;
 use App\Services\ConversationSummaryService;
 use App\Services\MessageSearchService;
 use App\Services\OpenClawWhatsappService;
@@ -26,16 +27,19 @@ class DashboardController extends Controller
     protected $analyticsService;
     protected $openClawWhatsappService;
     protected $conversationSummaryService;
+    protected $conversationFlowService;
 
     public function __construct(
         AnalyticsService $analyticsService,
         OpenClawWhatsappService $openClawWhatsappService,
-        ConversationSummaryService $conversationSummaryService
+        ConversationSummaryService $conversationSummaryService,
+        ConversationFlowService $conversationFlowService
     )
     {
         $this->analyticsService = $analyticsService;
         $this->openClawWhatsappService = $openClawWhatsappService;
         $this->conversationSummaryService = $conversationSummaryService;
+        $this->conversationFlowService = $conversationFlowService;
     }
 
     /**
@@ -341,7 +345,7 @@ class DashboardController extends Controller
         }
 
         // Update posisi antrian untuk conversation lain yang masih queued
-        $this->reorderQueue();
+        $this->conversationFlowService->reorderQueue();
 
         return response()->json(['success' => true, 'conversation_id' => $conversation->id]);
     }
@@ -817,5 +821,31 @@ class DashboardController extends Controller
         foreach ($queued as $i => $conv) {
             $conv->update(['queue_position' => $i + 1]);
         }
+    }
+
+    /**
+     * AI Conversation Summary untuk admin.
+     */
+    public function conversationSummary(Request $request, $id)
+    {
+        $conversation = Conversation::withTrashed()->findOrFail($id);
+        $summary = $this->conversationSummaryService->summarizeConversation($conversation);
+
+        if (!$summary) {
+            return response()->json([
+                'available' => false,
+                'message'   => 'Ringkasan AI belum tersedia. Percakapan perlu memiliki cukup pesan dari pelanggan dan agen.',
+            ]);
+        }
+
+        // Simpan summary ke database
+        $conversation->update(['summary' => $summary['summary']]);
+
+        return response()->json([
+            'available'  => true,
+            'summary'    => $summary['summary'],
+            'sentiment'  => $summary['sentiment'],
+            'updated_at' => now()->format('H:i'),
+        ]);
     }
 }

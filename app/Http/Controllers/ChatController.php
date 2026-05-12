@@ -158,8 +158,12 @@ class ChatController extends Controller
             ->first();
 
         if ($activeConversation) {
-            $queueCount = Conversation::whereIn('status', ['pending', 'queued'])->whereNull('admin_id')->where('id', '<=', $activeConversation->id)->count();
-            
+            // Reorder queue first to ensure accurate positions (centralized service)
+            $this->conversationFlowService->reorderQueue();
+
+            // Calculate queue position using centralized created_at-based FIFO method
+            $queueCount = $this->conversationFlowService->calculateQueuePosition($activeConversation);
+
             $activeConversation->update([
                 'bot_phase' => 'off',
                 'queue_position' => $queueCount
@@ -371,23 +375,31 @@ class ChatController extends Controller
             ->first();
 
         if ($activeConversation) {
-             // Hitung posisi antrian berdasarkan waktu (FIFO), bukan ID
-             $queueCount = Conversation::whereIn('status', ['pending', 'queued'])
-                 ->whereNull('admin_id')
-                 ->where('created_at', '<=', $activeConversation->created_at)
-                 ->count();
+             // Reorder antrian terlebih dahulu untuk memastikan posisi akurat
+             $this->conversationFlowService->reorderQueue();
+
+             // Hitung posisi antrian menggunakan metode terpusat berbasis created_at (FIFO)
+             $queueCount = $this->conversationFlowService->calculateQueuePosition($activeConversation);
+
              $activeConversation->update([
                  'bot_phase' => 'off',
                  'queue_position' => $queueCount
              ]);
              
-             Message::create([
+             $msg = Message::create([
                  'conversation_id' => $activeConversation->id,
                  'sender_id'       => 0,
                  'sender_type'     => 'admin',
                  'message_type'    => 'text',
                  'content'         => "Terima kasih, datanya sudah dikonfirmasi. Kamu sekarang ada di antrean ke-{$queueCount} untuk terhubung dengan Agent.",
              ]);
+
+             try {
+                 broadcast(new MessageSent($msg));
+                 broadcast(new ConversationStatusChanged($activeConversation, 'system'));
+             } catch (\Exception $e) {
+                 \Log::warning('Broadcast failed during updateProfile: ' . $e->getMessage());
+             }
         }
 
         return response()->json([
