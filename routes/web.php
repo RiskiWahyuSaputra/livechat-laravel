@@ -160,10 +160,13 @@ Route::resource('/roles', \App\Http\Controllers\RoleController::class)->names([
                     ->name('contact-report.data');
             });
 
-            Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
-            Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
-            Route::get('/operational-hours', [App\Http\Controllers\Admin\SettingController::class, 'operationalHours'])->name('settings.operational_hours');
-            Route::post('/settings/cleanup', [App\Http\Controllers\Admin\SettingController::class, 'runCleanup'])->name('settings.cleanup');
+            // --- Settings & Operational Hours ---
+            Route::middleware('admin.permission:manage_settings')->group(function () {
+                Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+                Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
+                Route::get('/operational-hours', [App\Http\Controllers\Admin\SettingController::class, 'operationalHours'])->name('settings.operational_hours');
+                Route::post('/settings/cleanup', [App\Http\Controllers\Admin\SettingController::class, 'runCleanup'])->name('settings.cleanup');
+            });
 
             // --- Menu 10: Bot Menus Management ---
             Route::post('/bot-menus/greeting', [App\Http\Controllers\Admin\BotMenuController::class, 'updateGreeting'])->name('bot-menus.greeting');
