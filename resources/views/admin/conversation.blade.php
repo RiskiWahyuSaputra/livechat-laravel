@@ -507,48 +507,59 @@
         <div id="scroll-anchor" style="height:4px;"></div>
     </main>
 
-    <!-- AI CONVERSATION SUMMARY -->
-    <div x-show="summary.loading || summary.available || summary.error" x-cloak
-         class="border-t border-slate-100 bg-white px-4 py-3 flex-shrink-0">
-        <div class="rounded-2xl border border-blue-100 bg-blue-50 overflow-hidden">
+    <!-- AI CONVERSATION SUMMARY SLIDE-UP -->
+    <div x-show="summary.showModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="transform translate-y-full"
+         x-transition:enter-end="transform translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="transform translate-y-0"
+         x-transition:leave-end="transform translate-y-full"
+         x-cloak
+         class="border-t border-slate-200 bg-white flex-shrink-0"
+         style="max-height: 50vh; overflow-y: auto;">
+        <div class="px-4 py-3">
             <!-- Header -->
-            <div class="flex items-center justify-between px-4 py-2.5 cursor-pointer"
-                 @click="summary.expanded = !summary.expanded">
+            <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
-                    <span class="text-blue-600 text-sm">✨</span>
-                    <span class="text-sm font-semibold text-slate-700">AI Conversation Summary</span>
+                    <span class="text-blue-600 text-base">✨</span>
+                    <span class="text-sm font-semibold text-slate-800">AI Conversation Summary</span>
                     <span x-show="summary.sentiment && summary.available" x-cloak
-                          class="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                          :class="summary.sentiment === 'Positive' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : summary.sentiment === 'Negative' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'"
+                          class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                          :class="summary.sentiment === 'Positive' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : summary.sentiment === 'Negative' ? 'bg-rose-100 text-rose-700 border border-rose-300' : 'bg-amber-100 text-amber-700 border border-amber-300'"
                           x-text="summary.sentiment"></span>
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button"
-                            @click.stop="fetchConversationSummary(true)"
+                            @click="fetchConversationSummary(true)"
                             :disabled="summary.loading"
-                            class="text-blue-400 hover:text-blue-600 disabled:opacity-40 transition-colors"
+                            class="text-blue-500 hover:text-blue-700 disabled:opacity-40 transition-colors p-1 rounded-lg hover:bg-blue-50"
                             title="Refresh summary">
-                        <svg class="w-3.5 h-3.5" :class="summary.loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <svg class="w-4 h-4" :class="summary.loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     </button>
-                    <svg class="w-4 h-4 text-slate-400 transition-transform" :class="summary.expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <button type="button"
+                            @click="summary.showModal = false"
+                            class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
                 </div>
             </div>
             <!-- Body -->
-            <div x-show="summary.expanded" x-cloak class="border-t border-blue-100 px-4 py-3">
+            <div>
                 <!-- Loading skeleton -->
                 <div x-show="summary.loading" class="space-y-2">
-                    <div class="h-3 bg-blue-100 rounded animate-pulse w-full"></div>
-                    <div class="h-3 bg-blue-100 rounded animate-pulse w-5/6"></div>
-                    <div class="h-3 bg-blue-100 rounded animate-pulse w-4/6"></div>
+                    <div class="h-3 bg-slate-200 rounded animate-pulse w-full"></div>
+                    <div class="h-3 bg-slate-200 rounded animate-pulse w-5/6"></div>
+                    <div class="h-3 bg-slate-200 rounded animate-pulse w-4/6"></div>
                 </div>
                 <!-- Summary text -->
                 <div x-show="!summary.loading && summary.available" x-cloak>
-                    <p class="text-sm text-slate-700 leading-relaxed" x-text="summary.text"></p>
-                    <p x-show="summary.updatedAt" class="mt-2 text-[11px] text-slate-400" x-text="`Diperbarui ${summary.updatedAt}`"></p>
+                    <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-line" x-text="summary.text"></p>
+                    <p x-show="summary.updatedAt" class="mt-2 text-xs text-slate-400" x-text="`Diperbarui ${summary.updatedAt}`"></p>
                 </div>
                 <!-- Error -->
                 <div x-show="!summary.loading && summary.error" x-cloak
-                     class="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"
+                     class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2"
                      x-text="summary.error"></div>
             </div>
         </div>
@@ -711,7 +722,7 @@
                 summary: {
                     loading: false,
                     available: false,
-                    expanded: false,
+                    showModal: false,
                     text: '',
                     sentiment: 'Neutral',
                     error: '',
@@ -912,6 +923,16 @@
                     this.scrollToBottom();
                     this.listenForEvents();
                     this.fetchConversationSummary();
+
+                    // Listen for parent window messages
+                    window.addEventListener('message', (event) => {
+                        if (event.data.action === 'toggleSummary') {
+                            this.summary.showModal = !this.summary.showModal;
+                            if (this.summary.showModal && !this.summary.available && !this.summary.loading) {
+                                this.fetchConversationSummary();
+                            }
+                        }
+                    });
 
                     // Inactivity Timer
                     setInterval(() => {

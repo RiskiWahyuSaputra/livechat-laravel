@@ -921,6 +921,10 @@
                                 </template>
                                 <template x-if="selectedChat && selectedChat.status === 'active' && (selectedChat.admin_id === adminId || adminRole === 'super_admin' || adminRole === 'agent1')">
                                     <li class="d-flex ms-2">
+                                        <button class="btn btn-sm btn-outline-primary me-1" @click="toggleSummary()" title="AI Summary">
+                                            <i class="fe fe-file-text"></i>
+                                        </button>
+
                                         <button class="btn btn-sm btn-outline-secondary me-1" @click="showTagModal = true" title="Tambah Tag">
                                             <i class="fe fe-tag"></i>
                                         </button>
@@ -1585,6 +1589,16 @@
                     });
                 } finally {
                     this.isClaiming = false;
+                }
+            },
+
+            toggleSummary() {
+                if (!this.selectedChat) return;
+                const iframe = document.querySelector('iframe');
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                        action: 'toggleSummary'
+                    }, '*');
                 }
             },
 
