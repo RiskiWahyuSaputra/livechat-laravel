@@ -302,13 +302,14 @@
 
         /* ===== TESTIMONIAL SECTION ===== */
         .testimonial-section { padding:80px 0; background:#f8fbff; }
-        .testimonial-card { background:#fff; border-radius:20px; padding:35px 30px; box-shadow:0 10px 40px rgba(0,123,255,.07); border:1px solid rgba(0,123,255,.08); position:relative; height:100%; transition:transform .3s,box-shadow .3s; }
+        .testimonial-card { background:#fff; border-radius:20px; padding:35px 30px; box-shadow:0 10px 40px rgba(0,123,255,.07); border:1px solid rgba(0,123,255,.08); position:relative; height:100%; min-height:320px; width:100%; display:flex; flex-direction:column; transition:transform .3s,box-shadow .3s; }
         .testimonial-card:hover { transform:translateY(-8px); box-shadow:0 20px 50px rgba(0,123,255,.13); }
         .testimonial-card::before { content:'\201C'; position:absolute; top:20px; left:25px; font-size:5rem; color:#007bff; opacity:.12; font-family:Georgia,serif; line-height:1; }
         .testimonial-avatar { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#007bff,#0056b3); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:1.1rem; flex-shrink:0; }
         .testimonial-stars { color:#f59e0b; font-size:.85rem; margin-bottom:10px; display:flex; align-items:center; gap:3px; }
         .testimonial-stars .star-muted { color:#d7dee8; }
-        .testi-text { color:#555; font-size:.95rem; line-height:1.7; font-style:italic; margin-bottom:20px; min-height:92px; }
+        .testi-text { color:#555; font-size:.95rem; line-height:1.7; font-style:italic; margin-bottom:20px; min-height:112px; max-height:112px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; }
+        .testimonial-author { margin-top:auto; min-height:56px; }
         .partner-testimonial-slider .owl-stage { display:flex; }
         .partner-testimonial-slider .owl-item { display:flex; }
         .partner-testimonial-slider .testimonial-slide { width:100%; display:flex; padding:8px 0 18px; }
@@ -776,7 +777,7 @@
 										<span class="ms-2 text-muted" style="font-size:.8rem;">{{ $rating }}/5</span>
 									</div>
 									<p class="testi-text">"{{ $testimonial->comment }}"</p>
-									<div class="d-flex align-items-center gap-3">
+									<div class="testimonial-author d-flex align-items-center gap-3">
 										<div class="testimonial-avatar">{{ $initials }}</div>
 										<div>
 											<strong style="color:#0a1d37;">{{ $name }}</strong><br>
