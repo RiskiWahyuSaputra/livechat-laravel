@@ -1110,20 +1110,38 @@
 
     @stack('scripts')
     <script>
+    if (window.AOS) {
+        AOS.init({
+            duration: 1200,
+            once: false,
+            mirror: true
+        });
+        AOS.refreshHard();
+    }
+
     // Animated counter
     function animateCounter(el) {
         const target = +el.getAttribute('data-count');
         const duration = 2000;
         const step = target / (duration / 16);
         let current = 0;
-        const timer = setInterval(() => {
+        clearInterval(el.counterTimer);
+        el.textContent = '0';
+        el.counterTimer = setInterval(() => {
             current += step;
-            if (current >= target) { current = target; clearInterval(timer); }
+            if (current >= target) { current = target; clearInterval(el.counterTimer); }
             el.textContent = target >= 1000 ? Math.floor(current).toLocaleString('id-ID') + '+' : Math.floor(current) + (target <= 50 ? '+' : '');
         }, 16);
     }
     const observer = new IntersectionObserver((entries) => {
-        entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); observer.unobserve(e.target); } });
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                animateCounter(e.target);
+            } else {
+                clearInterval(e.target.counterTimer);
+                e.target.textContent = '0';
+            }
+        });
     }, { threshold: 0.5 });
     document.querySelectorAll('.stat-number[data-count]').forEach(el => observer.observe(el));
 
@@ -1133,11 +1151,14 @@
             const workObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
+                        entry.target.classList.remove('is-visible');
+                        void entry.target.offsetWidth;
                         entry.target.classList.add('is-visible');
-                        workObserver.unobserve(entry.target);
+                    } else {
+                        entry.target.classList.remove('is-visible');
                     }
                 });
-            }, { threshold: 0.35 });
+            }, { threshold: 0.28 });
 
             workObserver.observe(workProgress);
         } else {
