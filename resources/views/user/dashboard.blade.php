@@ -360,8 +360,55 @@
         .pulse-dot::before { content:''; position:absolute; inset:-4px; border-radius:50%; background:rgba(40,167,69,.4); animation:pulse-ring 2s ease-out infinite; }
         @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
         .shimmer-badge { background:linear-gradient(90deg,#e0f0ff 25%,#b8daff 50%,#e0f0ff 75%); background-size:200% 100%; animation:shimmer 2.5s infinite; border-radius:50px; padding:6px 16px; font-size:.8rem; font-weight:600; color:#004aad; display:inline-block; margin-bottom:16px; }
-        .work-box { transition:transform .35s,box-shadow .35s; border-radius:16px; }
-        .work-box:hover { transform:translateY(-10px); box-shadow:0 20px 40px rgba(0,123,255,.12); }
+        .work-progress-wrap { position:relative; padding-top:46px; }
+        .work-progress-track { position:absolute; top:24px; left:13%; right:13%; height:7px; border-radius:99px; background:#dbe8f8; overflow:hidden; box-shadow:inset 0 1px 3px rgba(10,29,55,.08); }
+        .work-progress-fill { width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#0056b3,#007bff,#4dabff); box-shadow:0 8px 20px rgba(0,123,255,.24); }
+        .work-progress-wrap.is-visible .work-progress-fill { animation:workProgressLine 1.8s cubic-bezier(.22,1,.36,1) forwards; }
+        .work-step { position:relative; --work-accent:#007bff; --work-accent-soft:rgba(0,123,255,.1); --work-accent-shadow:rgba(0,123,255,.2); }
+        .work-step-marker { position:absolute; top:-36px; left:50%; transform:translateX(-50%) scale(.9); z-index:2; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#fff; border:5px solid #dbeafe; color:var(--work-accent); font-weight:900; font-size:.85rem; box-shadow:0 14px 34px var(--work-accent-shadow); opacity:0; transition:transform .35s ease,background .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease; }
+        .work-progress-wrap.is-visible .work-step-marker { animation:workMarkerPop .55s cubic-bezier(.2,1.4,.4,1) forwards; }
+        .work-step:nth-child(1) .work-step-marker { animation-delay:.15s; }
+        .work-step:nth-child(2) .work-step-marker { animation-delay:.75s; }
+        .work-step:nth-child(3) .work-step-marker { animation-delay:1.35s; }
+        .work-box { isolation:isolate; background:linear-gradient(180deg,#fff 0%,#f8fbff 100%); border:1px solid rgba(0,123,255,.08); box-shadow:0 12px 34px rgba(10,29,55,.07); transition:transform .35s ease,box-shadow .35s ease,border-color .35s ease,background .35s ease; border-radius:18px; min-height:255px; overflow:hidden; }
+        .work-box::before { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(135deg,var(--work-accent-soft),rgba(255,255,255,0) 45%); opacity:0; transition:opacity .35s ease; }
+        .work-box::after { content:''; position:absolute; top:-80%; left:-40%; width:58%; height:230%; z-index:-1; background:linear-gradient(90deg,transparent,rgba(255,255,255,.74),transparent); transform:rotate(18deg) translateX(-140%); transition:transform .75s ease; }
+        .work-icon span { transition:transform .35s ease,background .35s ease,box-shadow .35s ease; background:var(--work-accent-soft) !important; }
+        .work-icon span img { transition:transform .35s ease; }
+        .work-box h5 { color:#0a1d37; transition:color .35s ease,transform .35s ease; }
+        .work-box p { transition:color .35s ease; }
+        .work-box h4 { color:rgba(0,123,255,.08); transition:transform .35s ease,color .35s ease; }
+        .work-progress-wrap.is-visible .work-box { animation:workCardRise .7s ease-out backwards; }
+        .work-progress-wrap.is-visible .work-step:nth-child(1) .work-box { animation-delay:.08s; }
+        .work-progress-wrap.is-visible .work-step:nth-child(2) .work-box { animation-delay:.28s; }
+        .work-progress-wrap.is-visible .work-step:nth-child(3) .work-box { animation-delay:.48s; }
+        .work-step:hover .work-step-marker { background:var(--work-accent); border-color:#fff; color:#fff; box-shadow:0 18px 38px var(--work-accent-shadow); transform:translateX(-50%) scale(1.06); }
+        .work-box:hover { transform:translateY(-12px); background:#fff; box-shadow:0 24px 55px var(--work-accent-shadow); border-color:var(--work-accent); }
+        .work-box:hover::before { opacity:1; }
+        .work-box:hover::after { transform:rotate(18deg) translateX(260%); }
+        .work-box:hover .work-icon span { transform:translateY(-6px) scale(1.07); background:var(--work-accent) !important; box-shadow:0 14px 30px var(--work-accent-shadow); }
+        .work-box:hover .work-icon span img { transform:scale(1.08); filter:brightness(0) invert(1); }
+        .work-box:hover h5 { color:var(--work-accent); transform:translateY(-2px); }
+        .work-box:hover p { color:#46566c; }
+        .work-box:hover h4 { color:var(--work-accent-soft); transform:translate(8px,-4px) scale(1.04); }
+        @keyframes workProgressLine { from { width:0; } to { width:100%; } }
+        @keyframes workMarkerPop { from { opacity:0; transform:translateX(-50%) scale(.55); } to { opacity:1; transform:translateX(-50%) scale(1); } }
+        @keyframes workCardRise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes workProgressVertical { from { height:0; } to { height:100%; } }
+        @media (max-width: 767.98px) {
+            .work-progress-wrap { padding-top:0; padding-left:42px; }
+            .work-progress-track { top:18px; bottom:42px; left:18px; right:auto; width:7px; height:auto; }
+            .work-progress-fill { width:100%; height:0; }
+            .work-progress-wrap.is-visible .work-progress-fill { animation:workProgressVertical 1.8s cubic-bezier(.22,1,.36,1) forwards; }
+            .work-step { margin-bottom:20px; }
+            .work-step-marker { top:26px; left:-24px; width:46px; height:46px; border-width:4px; transform:scale(.9); }
+            .work-step:hover .work-step-marker { transform:scale(1.06); }
+            .work-progress-wrap.is-visible .work-step-marker { animation:workMarkerPopMobile .55s cubic-bezier(.2,1.4,.4,1) forwards; }
+            .work-box { min-height:auto; text-align:left; padding:26px 24px; }
+            .work-icon span { margin:0 0 22px; }
+            .work-box h4 { right:18px; left:auto; top:12px; font-size:48px; }
+        }
+        @keyframes workMarkerPopMobile { from { opacity:0; transform:scale(.55); } to { opacity:1; transform:scale(1); } }
 
         /* Keep centered nav on desktop without breaking the mobile drawer layout */
         @media (min-width: 992px) {
@@ -714,42 +761,47 @@
 						</div>
 					</div>
 				</div>
-				<div class="row">
-					<div class="col-md-4">
-						<div class="work-box aos" data-aos="fade-up">
-							<div class="work-icon">
-								<span>
-									<img src="{{ asset('template/assets/img/icons/work-icon.svg') }}" alt="img">
-								</span>
-							</div>
-							<h5>Daftar Mitra</h5>
-							<p>Bergabunglah dengan komunitas bisnis kami yang berkembang pesat.</p>
-							<h4>01</h4>
-						</div>						
+				<div class="work-progress-wrap">
+					<div class="work-progress-track" aria-hidden="true">
+						<div class="work-progress-fill"></div>
 					</div>
-					<div class="col-md-4">
-						<div class="work-box aos" data-aos="fade-up">
-							<div class="work-icon">
-								<span>
-									<img src="{{ asset('template/assets/img/icons/find-icon.svg') }}" alt="img">
-								</span>
-							</div>
-							<h5>Pilih Produk</h5>
-							<p>Gunakan dan pasarkan produk-produk unggulan dari BRILLIAN BIZ.</p>
-							<h4>02</h4>
-						</div>						
-					</div>
-					<div class="col-md-4">
-						<div class="work-box aos" data-aos="fade-up">
-							<div class="work-icon">
-								<span>
-									<img src="{{ asset('template/assets/img/icons/place-icon.svg') }}" alt="img">
-								</span>
-							</div>
-							<h5>Raih Reward</h5>
-							<p>Dapatkan manfaat finansial dan reward prestasi yang luar biasa.</p>
-							<h4>03</h4>
-						</div>						
+					<div class="row">
+						<div class="col-md-4 work-step">
+							<div class="work-step-marker">01</div>
+							<div class="work-box aos" data-aos="fade-up">
+								<div class="work-icon">
+									<span>
+										<img src="{{ asset('template/assets/img/icons/work-icon.svg') }}" alt="img">
+									</span>
+								</div>
+								<h5>Daftar Mitra</h5>
+								<p>Bergabunglah dengan komunitas bisnis kami yang berkembang pesat.</p>
+							</div>						
+						</div>
+						<div class="col-md-4 work-step">
+							<div class="work-step-marker">02</div>
+							<div class="work-box aos" data-aos="fade-up">
+								<div class="work-icon">
+									<span>
+										<img src="{{ asset('template/assets/img/icons/find-icon.svg') }}" alt="img">
+									</span>
+								</div>
+								<h5>Pilih Produk</h5>
+								<p>Gunakan dan pasarkan produk-produk unggulan dari BRILLIAN BIZ.</p>
+							</div>						
+						</div>
+						<div class="col-md-4 work-step">
+							<div class="work-step-marker">03</div>
+							<div class="work-box aos" data-aos="fade-up">
+								<div class="work-icon">
+									<span>
+										<img src="{{ asset('template/assets/img/icons/place-icon.svg') }}" alt="img">
+									</span>
+								</div>
+								<h5>Raih Reward</h5>
+								<p>Dapatkan manfaat finansial dan reward prestasi yang luar biasa.</p>
+							</div>						
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1074,6 +1126,24 @@
         entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); observer.unobserve(e.target); } });
     }, { threshold: 0.5 });
     document.querySelectorAll('.stat-number[data-count]').forEach(el => observer.observe(el));
+
+    const workProgress = document.querySelector('.work-progress-wrap');
+    if (workProgress) {
+        if ('IntersectionObserver' in window) {
+            const workObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        workObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.35 });
+
+            workObserver.observe(workProgress);
+        } else {
+            workProgress.classList.add('is-visible');
+        }
+    }
 
     // Open chat from CTA
     document.addEventListener('open-chat', () => { if (window.Alpine) { document.querySelector('[x-data]').__x.$data.isOpen = true; } });
