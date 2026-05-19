@@ -320,6 +320,13 @@
         .partner-testimonial-slider .owl-dot span { width:8px; height:8px; border-radius:50%; background:#c9d8ea; display:block; transition:all .25s ease; }
         .partner-testimonial-slider .owl-dot.active span { width:24px; border-radius:99px; background:#007bff; }
         .testimonial-empty { max-width:620px; margin:0 auto; background:#fff; border:1px dashed rgba(0,123,255,.28); border-radius:16px; padding:28px; color:#5d6d7e; box-shadow:0 10px 35px rgba(0,123,255,.06); }
+        @media (max-width: 767.98px) {
+            .partner-testimonial-slider { touch-action: pan-y pinch-zoom; }
+            .partner-testimonial-slider .owl-stage-outer { overflow: visible; cursor: grab; }
+            .partner-testimonial-slider .owl-stage-outer:active { cursor: grabbing; }
+            .partner-testimonial-slider .owl-dots,
+            .partner-testimonial-slider .owl-nav { display:none !important; }
+        }
 
         /* ===== FAQ SECTION ===== */
         .faq-section { padding:80px 0; background:#fff; }
@@ -1085,12 +1092,30 @@
                 autoplay: testimonialCount > 3,
                 autoplayTimeout: 4500,
                 autoplayHoverPause: true,
+                mouseDrag: testimonialCount > 1,
+                touchDrag: testimonialCount > 1,
+                pullDrag: testimonialCount > 1,
                 smartSpeed: 900,
                 navText: ["<i class='fa-solid fa-angle-left'></i>", "<i class='fa-solid fa-angle-right'></i>"],
                 responsive: {
-                    0: { items: 1 },
-                    768: { items: Math.min(testimonialCount, 2) },
-                    1000: { items: Math.min(testimonialCount, 3) }
+                    0: {
+                        items: 1,
+                        dots: false,
+                        nav: false,
+                        stagePadding: testimonialCount > 1 ? 18 : 0
+                    },
+                    768: {
+                        items: Math.min(testimonialCount, 2),
+                        dots: testimonialCount > 1,
+                        nav: false,
+                        stagePadding: 0
+                    },
+                    1000: {
+                        items: Math.min(testimonialCount, 3),
+                        dots: testimonialCount > 1,
+                        nav: testimonialCount > 3,
+                        stagePadding: 0
+                    }
                 }
             });
         }
