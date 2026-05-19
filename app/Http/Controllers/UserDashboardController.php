@@ -8,6 +8,7 @@ use App\Models\Conversation; // Assuming Conversation model exists
 
 use App\Models\User;
 use App\Models\Category;
+use App\Models\ConversationRating;
 
 class UserDashboardController extends Controller
 {
@@ -24,8 +25,14 @@ class UserDashboardController extends Controller
         }
 
         $featuredCategories = Category::where('is_featured', true)->get();
+        $testimonials = ConversationRating::with(['user', 'conversation.customer'])
+            ->whereNotNull('comment')
+            ->where('comment', '!=', '')
+            ->latest()
+            ->take(12)
+            ->get();
 
-        return view('user.dashboard', compact('isAuthenticated', 'featuredCategories'));
+        return view('user.dashboard', compact('isAuthenticated', 'featuredCategories', 'testimonials'));
     }
 
     public function about(Request $request)

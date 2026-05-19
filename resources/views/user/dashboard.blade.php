@@ -306,8 +306,19 @@
         .testimonial-card:hover { transform:translateY(-8px); box-shadow:0 20px 50px rgba(0,123,255,.13); }
         .testimonial-card::before { content:'\201C'; position:absolute; top:20px; left:25px; font-size:5rem; color:#007bff; opacity:.12; font-family:Georgia,serif; line-height:1; }
         .testimonial-avatar { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#007bff,#0056b3); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:1.1rem; flex-shrink:0; }
-        .testimonial-stars { color:#f59e0b; font-size:.85rem; margin-bottom:10px; }
-        .testi-text { color:#555; font-size:.95rem; line-height:1.7; font-style:italic; margin-bottom:20px; }
+        .testimonial-stars { color:#f59e0b; font-size:.85rem; margin-bottom:10px; display:flex; align-items:center; gap:3px; }
+        .testimonial-stars .star-muted { color:#d7dee8; }
+        .testi-text { color:#555; font-size:.95rem; line-height:1.7; font-style:italic; margin-bottom:20px; min-height:92px; }
+        .partner-testimonial-slider .owl-stage { display:flex; }
+        .partner-testimonial-slider .owl-item { display:flex; }
+        .partner-testimonial-slider .testimonial-slide { width:100%; display:flex; padding:8px 0 18px; }
+        .partner-testimonial-slider .owl-nav { display:flex; justify-content:center; gap:10px; margin-top:12px; }
+        .partner-testimonial-slider .owl-nav button { width:42px; height:42px; border-radius:50% !important; background:#fff !important; color:#007bff !important; box-shadow:0 8px 24px rgba(0,123,255,.12); border:1px solid rgba(0,123,255,.12) !important; transition:all .25s ease; }
+        .partner-testimonial-slider .owl-nav button:hover { background:#007bff !important; color:#fff !important; transform:translateY(-2px); }
+        .partner-testimonial-slider .owl-dots { display:flex; justify-content:center; gap:8px; margin-top:4px; }
+        .partner-testimonial-slider .owl-dot span { width:8px; height:8px; border-radius:50%; background:#c9d8ea; display:block; transition:all .25s ease; }
+        .partner-testimonial-slider .owl-dot.active span { width:24px; border-radius:99px; background:#007bff; }
+        .testimonial-empty { max-width:620px; margin:0 auto; background:#fff; border:1px dashed rgba(0,123,255,.28); border-radius:16px; padding:28px; color:#5d6d7e; box-shadow:0 10px 35px rgba(0,123,255,.06); }
 
         /* ===== FAQ SECTION ===== */
         .faq-section { padding:80px 0; background:#fff; }
@@ -745,38 +756,43 @@
 					<h2 style="color:#0a1d37;font-weight:800;">Testimoni Mitra Kami</h2>
 					<p class="text-muted">Ribuan mitra telah merasakan manfaat bergabung bersama BRILLIAN BIZ</p>
 				</div>
-				<div class="row g-4">
-					<div class="col-md-4 aos" data-aos="fade-up" data-aos-delay="0">
-						<div class="testimonial-card">
-							<div class="testimonial-stars">★★★★★</div>
-							<p class="testi-text">"Bergabung dengan BRILLIAN BIZ adalah keputusan terbaik saya. Dalam 6 bulan, penghasilan saya meningkat 3x lipat!"</p>
-							<div class="d-flex align-items-center gap-3">
-								<div class="testimonial-avatar">AS</div>
-								<div><strong style="color:#0a1d37;">Andi Saputra</strong><br><small class="text-muted">Mitra Platinum, Jakarta</small></div>
+				@if($testimonials->isNotEmpty())
+					<div class="owl-carousel partner-testimonial-slider" data-count="{{ $testimonials->count() }}">
+						@foreach($testimonials as $testimonial)
+							@php
+								$customer = $testimonial->user ?? optional($testimonial->conversation)->customer;
+								$name = $customer->name ?? 'Mitra BRILLIAN BIZ';
+								$origin = $customer->origin ?? null;
+								$nameParts = preg_split('/\s+/', trim($name));
+								$initials = strtoupper(substr($nameParts[0] ?? 'M', 0, 1) . substr($nameParts[1] ?? '', 0, 1));
+								$rating = max(1, min(5, (int) $testimonial->rating));
+							@endphp
+							<div class="testimonial-slide aos" data-aos="fade-up">
+								<div class="testimonial-card">
+									<div class="testimonial-stars" aria-label="Rating {{ $rating }} dari 5">
+										@for($star = 1; $star <= 5; $star++)
+											<i class="fas fa-star {{ $star <= $rating ? '' : 'star-muted' }}"></i>
+										@endfor
+										<span class="ms-2 text-muted" style="font-size:.8rem;">{{ $rating }}/5</span>
+									</div>
+									<p class="testi-text">"{{ $testimonial->comment }}"</p>
+									<div class="d-flex align-items-center gap-3">
+										<div class="testimonial-avatar">{{ $initials }}</div>
+										<div>
+											<strong style="color:#0a1d37;">{{ $name }}</strong><br>
+											<small class="text-muted">{{ $origin ? 'Mitra, ' . $origin : 'Mitra BRILLIAN BIZ' }}</small>
+										</div>
+									</div>
+								</div>
 							</div>
-						</div>
+						@endforeach
 					</div>
-					<div class="col-md-4 aos" data-aos="fade-up" data-aos-delay="150">
-						<div class="testimonial-card">
-							<div class="testimonial-stars">★★★★★</div>
-							<p class="testi-text">"Produknya berkualitas tinggi dan sistem bisnisnya transparan. Saya sangat merekomendasikan BRILLIAN BIZ!"</p>
-							<div class="d-flex align-items-center gap-3">
-								<div class="testimonial-avatar" style="background:linear-gradient(135deg,#28a745,#20c997);">SR</div>
-								<div><strong style="color:#0a1d37;">Sari Rahayu</strong><br><small class="text-muted">Mitra Gold, Bandung</small></div>
-							</div>
-						</div>
+				@else
+					<div class="testimonial-empty text-center aos" data-aos="fade-up">
+						<i class="fas fa-star mb-3" style="color:#f59e0b;font-size:1.6rem;"></i>
+						<p class="mb-0">Belum ada testimoni dari rating pelanggan. Testimoni akan tampil otomatis setelah pelanggan memberikan rating dan komentar.</p>
 					</div>
-					<div class="col-md-4 aos" data-aos="fade-up" data-aos-delay="300">
-						<div class="testimonial-card">
-							<div class="testimonial-stars">★★★★★</div>
-							<p class="testi-text">"Dukungan tim BRILLIAN BIZ luar biasa. Setiap pertanyaan langsung dijawab via LiveChat, sangat responsif!"</p>
-							<div class="d-flex align-items-center gap-3">
-								<div class="testimonial-avatar" style="background:linear-gradient(135deg,#fd7e14,#dc3545);">BW</div>
-								<div><strong style="color:#0a1d37;">Budi Wijaya</strong><br><small class="text-muted">Mitra Silver, Surabaya</small></div>
-							</div>
-						</div>
-					</div>
-				</div>
+				@endif
 			</div>
 		</section>
 		<!-- /Testimonial Section -->
@@ -1053,6 +1069,31 @@
 
     // Open chat from CTA
     document.addEventListener('open-chat', () => { if (window.Alpine) { document.querySelector('[x-data]').__x.$data.isOpen = true; } });
+
+    $(function () {
+        const $testimonialSlider = $('.partner-testimonial-slider');
+
+        if ($testimonialSlider.length) {
+            const testimonialCount = Number($testimonialSlider.data('count')) || $testimonialSlider.children().length;
+
+            $testimonialSlider.owlCarousel({
+                loop: testimonialCount > 3,
+                margin: 24,
+                nav: testimonialCount > 3,
+                dots: testimonialCount > 1,
+                autoplay: testimonialCount > 3,
+                autoplayTimeout: 4500,
+                autoplayHoverPause: true,
+                smartSpeed: 900,
+                navText: ["<i class='fa-solid fa-angle-left'></i>", "<i class='fa-solid fa-angle-right'></i>"],
+                responsive: {
+                    0: { items: 1 },
+                    768: { items: Math.min(testimonialCount, 2) },
+                    1000: { items: Math.min(testimonialCount, 3) }
+                }
+            });
+        }
+    });
     </script>
 </body>
 </html>
