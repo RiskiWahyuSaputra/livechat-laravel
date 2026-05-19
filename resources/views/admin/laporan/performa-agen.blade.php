@@ -87,19 +87,96 @@
     .prog-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: #fff; background: var(--lp-gray-700); }
 
     /* Top 3 podium */
-    .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
-    .podium-card { background: var(--lp-white); border-radius: 10px; border: 1px solid var(--lp-gray-200); padding: 12px; text-align: center; transition: transform 0.2s; }
-    .podium-card:hover { transform: translateY(-2px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .podium-avatar { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; margin: 0 auto 8px; background: var(--lp-gray-700); }
-    .podium-name { font-weight: 600; font-size: 13px; color: var(--lp-dark); margin-bottom: 4px; }
-    .podium-score { font-size: 18px; font-weight: 700; color: var(--lp-dark); margin-bottom: 4px; }
-    .podium-meta { font-size: 10px; color: var(--lp-gray-500); }
+    .podium-section { margin-bottom: 24px; }
+    .podium-section-header {
+        display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .podium-section-title {
+        font-size: 15px; font-weight: 700; color: var(--lp-dark); margin: 0;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .podium-section-title i { font-size: 18px; }
+    .podium-section-line {
+        flex: 1; height: 1px; background: var(--lp-gray-200);
+    }
+    .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .podium-card {
+        background: var(--lp-white); border-radius: 12px;
+        border: 1px solid var(--lp-gray-200);
+        overflow: hidden; text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+    }
+    .podium-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    /* Accent bar — uniform neutral */
+    .podium-accent { height: 3px; width: 100%; background: var(--lp-gray-200); }
+    .podium-inner { padding: 24px 16px 20px; }
+
+    /* Medal badge — clean monochrome */
+    .podium-medal {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 26px; height: 26px; border-radius: 50%;
+        font-size: 11px; font-weight: 700; color: var(--lp-white);
+        margin-bottom: 12px;
+        background: var(--lp-gray-700);
+    }
+
+    /* Avatar — single neutral tone */
+    .podium-avatar {
+        width: 52px; height: 52px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 16px; color: #fff;
+        margin: 0 auto 12px;
+        background: var(--lp-gray-700);
+    }
+    .podium-name { font-weight: 600; font-size: 14px; color: var(--lp-dark); margin-bottom: 2px; }
+    .podium-role { font-size: 11px; color: var(--lp-gray-500); margin-bottom: 14px; }
+    .podium-score-wrap { margin-bottom: 16px; }
+    .podium-score-value {
+        font-size: 26px; font-weight: 800; line-height: 1; color: var(--lp-dark);
+    }
+    .podium-score-label { font-size: 11px; color: var(--lp-gray-500); font-weight: 500; margin-top: 2px; }
+
+    /* Stats row */
+    .podium-stats {
+        display: flex; justify-content: center; gap: 8px;
+        border-top: 1px solid var(--lp-gray-100); padding-top: 14px;
+    }
+    .podium-stat-item {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 6px 10px; border-radius: 8px; background: var(--lp-gray-50);
+        min-width: 64px; flex: 1;
+    }
+    .podium-stat-val { font-size: 13px; font-weight: 700; color: var(--lp-dark); }
+    .podium-stat-lbl { font-size: 9px; color: var(--lp-gray-500); font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 1px; }
 
     .chart-wrap { height: 250px; position: relative; }
     .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
 
+    /* Entrance animations */
+    @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .anim-in {
+        animation: fadeSlideUp 0.5s cubic-bezier(.4,0,.2,1) both;
+    }
+    .stats-grid .stat-card { animation: fadeSlideUp 0.45s cubic-bezier(.4,0,.2,1) both; }
+    .stats-grid .stat-card:nth-child(1) { animation-delay: 0.08s; }
+    .stats-grid .stat-card:nth-child(2) { animation-delay: 0.14s; }
+    .stats-grid .stat-card:nth-child(3) { animation-delay: 0.20s; }
+    .stats-grid .stat-card:nth-child(4) { animation-delay: 0.26s; }
+    .podium .podium-card { animation: fadeSlideUp 0.5s cubic-bezier(.4,0,.2,1) both; }
+    .podium .podium-card:nth-child(1) { animation-delay: 0.30s; }
+    .podium .podium-card:nth-child(2) { animation-delay: 0.38s; }
+    .podium .podium-card:nth-child(3) { animation-delay: 0.46s; }
+
     @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr 1fr; } .grid-2 { grid-template-columns: 1fr; } .podium { grid-template-columns: 1fr; } .laporan-page { padding: 16px; } }
+    @media (prefers-reduced-motion: reduce) { .anim-in, .stats-grid .stat-card, .podium .podium-card { animation: none; } }
 </style>
 @endpush
 
@@ -107,7 +184,7 @@
 <div class="laporan-page">
 
     {{-- Header --}}
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4 anim-in">
         <div>
             <h1 class="lp-title"><i class="fe fe-users" style="color:var(--lp-primary);margin-right:8px;"></i>Laporan Performa Agen</h1>
             <p class="lp-subtitle">Analisis kinerja dan produktivitas setiap agen</p>
@@ -157,22 +234,58 @@
 
     {{-- Top 3 Performers --}}
     @if(count($topPerformers['top']) > 0)
-    <div class="lp-card mb-4" style="border:none;background:transparent;box-shadow:none;">
-        <div style="margin-bottom:12px;">
-            <h6 style="font-weight:700;color:var(--lp-dark);font-size:15px;"><i class="fe fe-award" style="color:#fbbf24;margin-right:8px;"></i>Top 3 Agen Terbaik</h6>
+    <div class="podium-section">
+        <div class="podium-section-header anim-in" style="animation-delay:0.25s;">
+            <h6 class="podium-section-title">
+                <i class="fe fe-award" style="color:#fbbf24;"></i> Top 3 Agen Terbaik
+            </h6>
+            <div class="podium-section-line"></div>
         </div>
         <div class="podium">
             @foreach($topPerformers['top'] as $i => $agent)
             @php 
                 $ratingEmoji = ['1f621','1f61e','1f610','1f60a','1f929'];
                 $ratingIndex = $agent['avg_rating'] > 0 ? max(0, min(4, round($agent['avg_rating']) - 1)) : null;
-                $medals = ['🥇','🥈','🥉'];
+                $rankLabels = ['1st','2nd','3rd'];
             @endphp
-            <div class="podium-card">
-                <div class="podium-avatar">{{ strtoupper(substr($agent['username'], 0, 2)) }}</div>
-                <div class="podium-name">{{ $agent['username'] }}</div>
-                <div class="podium-score">{{ $agent['score'] }} pts</div>
-                <div class="podium-meta">{{ $agent['closed_chats'] }} chat • @if($ratingIndex !== null)<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $ratingEmoji[$ratingIndex] }}.svg" style="width:16px;height:16px;vertical-align:middle;" alt="rating"> {{ number_format($agent['avg_rating'],1) }}@else N/A @endif</div>
+            <div class="podium-card podium-rank-{{ $i + 1 }}">
+                <div class="podium-accent"></div>
+                <div class="podium-inner">
+                    <div class="podium-medal">{{ $i + 1 }}</div>
+                    <div class="podium-avatar">{{ strtoupper(substr($agent['username'], 0, 2)) }}</div>
+                    <div class="podium-name">{{ $agent['username'] }}</div>
+                    <div class="podium-role">{{ $rankLabels[$i] }} Place</div>
+                    <div class="podium-score-wrap">
+                        <div class="podium-score-value">{{ $agent['score'] }}</div>
+                        <div class="podium-score-label">Poin Performa</div>
+                    </div>
+                    <div class="podium-stats">
+                        <div class="podium-stat-item">
+                            <span class="podium-stat-val">{{ $agent['closed_chats'] }}</span>
+                            <span class="podium-stat-lbl">Chat</span>
+                        </div>
+                        <div class="podium-stat-item">
+                            <span class="podium-stat-val">
+                                @if($ratingIndex !== null)
+                                    <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $ratingEmoji[$ratingIndex] }}.svg" style="width:16px;height:16px;vertical-align:middle;" alt="rating"> {{ number_format($agent['avg_rating'],1) }}
+                                @else
+                                    N/A
+                                @endif
+                            </span>
+                            <span class="podium-stat-lbl">Rating</span>
+                        </div>
+                        <div class="podium-stat-item">
+                            <span class="podium-stat-val">
+                                @if(isset($agent['avg_response_time']) && $agent['avg_response_time'] > 0)
+                                    {{ $agent['avg_response_time'] < 60 ? '<1m' : number_format($agent['avg_response_time']/60,1).'m' }}
+                                @else
+                                    N/A
+                                @endif
+                            </span>
+                            <span class="podium-stat-lbl">Respon</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             @endforeach
         </div>
@@ -180,7 +293,7 @@
     @endif
 
     {{-- Main Table + Workload --}}
-    <div class="grid-2">
+    <div class="grid-2 anim-in" style="animation-delay:0.5s;">
         {{-- Full Performance Table --}}
         <div class="lp-card">
             <div class="lp-card-header">
