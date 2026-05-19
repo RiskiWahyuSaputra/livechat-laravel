@@ -36,7 +36,7 @@
                                     <input type="radio" name="system_mode" value="office_hour"
                                         {{ $currentMode === 'office_hour' ? 'checked' : '' }} class="form-check-input mt-0" style="width:16px;height:16px;">
                                     <div>
-                                        <div class="fw-semibold small text-success" style="font-size:13px;">Jam Kerja</div>
+                                        <div class="fw-semibold small text-dark" style="font-size:13px;">Jam Kerja</div>
                                         <div class="text-muted" style="font-size:11px;">Customer bisa chat & antri ke Agent</div>
                                     </div>
                                 </label>
@@ -47,7 +47,7 @@
                                         {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }}
                                         class="form-check-input mt-0" style="width:16px;height:16px;">
                                     <div>
-                                        <div class="fw-semibold small text-warning" style="font-size:13px;">Di Luar Jam Kerja</div>
+                                        <div class="fw-semibold small text-dark" style="font-size:13px;">Di Luar Jam Kerja</div>
                                         <div class="text-muted" style="font-size:11px;">Hanya dilayani AI, tidak ada Agent</div>
                                     </div>
                                 </label>
@@ -57,7 +57,7 @@
                                     <input type="radio" name="system_mode" value="closed"
                                         {{ $currentMode === 'closed' ? 'checked' : '' }} class="form-check-input mt-0" style="width:16px;height:16px;">
                                     <div>
-                                        <div class="fw-semibold small text-danger" style="font-size:13px;">Tutup</div>
+                                        <div class="fw-semibold small text-dark" style="font-size:13px;">Tutup</div>
                                         <div class="text-muted" style="font-size:11px;">Chat ditolak sepenuhnya</div>
                                     </div>
                                 </label>
