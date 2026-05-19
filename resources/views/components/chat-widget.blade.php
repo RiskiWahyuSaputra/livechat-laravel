@@ -846,7 +846,7 @@
             },
 
             shouldRenderFeedbackConversationSummary() {
-                return false;
+                return this.status === 'closed' && this.feedbackPending && this.shouldRenderConversationSummary();
             },
 
             summaryFingerprint() {

@@ -508,13 +508,21 @@
     </main>
 
     <!-- AI CONVERSATION SUMMARY SLIDE-UP -->
+    <style>
+        .summary-enter { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease; }
+        .summary-enter-from { transform: translateY(100%); opacity: 0; }
+        .summary-enter-to { transform: translateY(0); opacity: 1; }
+        .summary-leave { transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease; }
+        .summary-leave-from { transform: translateY(0); opacity: 1; }
+        .summary-leave-to { transform: translateY(100%); opacity: 0; }
+    </style>
     <div x-show="summary.showModal" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="transform translate-y-full"
-         x-transition:enter-end="transform translate-y-0"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="transform translate-y-0"
-         x-transition:leave-end="transform translate-y-full"
+         x-transition:enter="summary-enter"
+         x-transition:enter-start="summary-enter-from"
+         x-transition:enter-end="summary-enter-to"
+         x-transition:leave="summary-leave"
+         x-transition:leave-start="summary-leave-from"
+         x-transition:leave-end="summary-leave-to"
          x-cloak
          class="border-t border-slate-200 bg-white flex-shrink-0"
          style="max-height: 50vh; overflow-y: auto;">
