@@ -27,38 +27,38 @@
                     <div class="card-body pt-3 pb-4">
                         {{-- System Mode --}}
                         <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Mode Aktif Saat Ini</label>
+                            <label class="form-label fw-semibold small text-dark mb-2">Mode Aktif Saat Ini</label>
                             @php $currentMode = $settings['system_mode'] ?? 'office_hour'; @endphp
-                            <div class="d-flex gap-3 flex-wrap mt-1">
+                            <div class="d-flex gap-2 flex-wrap mt-1">
                                 <label
-                                    class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'office_hour' ? 'border-success bg-success bg-opacity-10' : 'border-light bg-light' }}"
-                                    style="cursor:pointer">
+                                    class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border {{ $currentMode === 'office_hour' ? 'border-success bg-success bg-opacity-10' : 'border bg-white' }}"
+                                    style="cursor:pointer;flex:1;min-width:160px;">
                                     <input type="radio" name="system_mode" value="office_hour"
-                                        {{ $currentMode === 'office_hour' ? 'checked' : '' }} class="form-check-input mt-0">
+                                        {{ $currentMode === 'office_hour' ? 'checked' : '' }} class="form-check-input mt-0" style="width:16px;height:16px;">
                                     <div>
-                                        <div class="fw-bold text-success">🟢 Jam Kerja</div>
-                                        <div class="text-muted small">Customer bisa chat & antri ke Agent</div>
+                                        <div class="fw-semibold small text-success" style="font-size:13px;">Jam Kerja</div>
+                                        <div class="text-muted" style="font-size:11px;">Customer bisa chat & antri ke Agent</div>
                                     </div>
                                 </label>
                                 <label
-                                    class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'outside_office_hour' ? 'border-warning bg-warning bg-opacity-10' : 'border-light bg-light' }}"
-                                    style="cursor:pointer">
+                                    class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border {{ $currentMode === 'outside_office_hour' ? 'border-warning bg-warning bg-opacity-10' : 'border bg-white' }}"
+                                    style="cursor:pointer;flex:1;min-width:160px;">
                                     <input type="radio" name="system_mode" value="outside_office_hour"
                                         {{ $currentMode === 'outside_office_hour' ? 'checked' : '' }}
-                                        class="form-check-input mt-0">
+                                        class="form-check-input mt-0" style="width:16px;height:16px;">
                                     <div>
-                                        <div class="fw-bold text-warning">🟡 Di Luar Jam Kerja</div>
-                                        <div class="text-muted small">Hanya dilayani AI, tidak ada Agent</div>
+                                        <div class="fw-semibold small text-warning" style="font-size:13px;">Di Luar Jam Kerja</div>
+                                        <div class="text-muted" style="font-size:11px;">Hanya dilayani AI, tidak ada Agent</div>
                                     </div>
                                 </label>
                                 <label
-                                    class="d-flex align-items-center gap-2 px-4 py-3 rounded-3 border cursor-pointer {{ $currentMode === 'closed' ? 'border-danger bg-danger bg-opacity-10' : 'border-light bg-light' }}"
-                                    style="cursor:pointer">
+                                    class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border {{ $currentMode === 'closed' ? 'border-danger bg-danger bg-opacity-10' : 'border bg-white' }}"
+                                    style="cursor:pointer;flex:1;min-width:160px;">
                                     <input type="radio" name="system_mode" value="closed"
-                                        {{ $currentMode === 'closed' ? 'checked' : '' }} class="form-check-input mt-0">
+                                        {{ $currentMode === 'closed' ? 'checked' : '' }} class="form-check-input mt-0" style="width:16px;height:16px;">
                                     <div>
-                                        <div class="fw-bold text-danger">🔴 Tutup</div>
-                                        <div class="text-muted small">Chat ditolak sepenuhnya</div>
+                                        <div class="fw-semibold small text-danger" style="font-size:13px;">Tutup</div>
+                                        <div class="text-muted" style="font-size:11px;">Chat ditolak sepenuhnya</div>
                                     </div>
                                 </label>
                             </div>
