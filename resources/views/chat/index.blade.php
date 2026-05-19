@@ -502,7 +502,7 @@
                                     :class="selectedRating === {{ $opt['v'] }} ? 'border-blue-500 bg-blue-50 shadow-md scale-105' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'">
                                 <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{{ $opt['emoji'] }}.svg"
                                      class="w-8 h-8 md:w-10 md:h-10" alt="{{ $opt['label'] }}">
-                                <span class="text-[9px] md:text-[10px] font-semibold text-slate-600 text-center leading-tight whitespace-pre-line">{{ $opt['label'] }}</span>
+                                <span class="font-semibold text-slate-600 text-center leading-tight whitespace-pre-line" style="font-size:9px;">{{ $opt['label'] }}</span>
                             </button>
                         @endforeach
                     </div>
