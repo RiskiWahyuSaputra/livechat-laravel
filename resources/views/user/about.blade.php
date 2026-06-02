@@ -178,7 +178,7 @@
 								<a href="{{ route('user.about') }}">Tentang Kami</a>
 							</li>
                             <li>
-								<a href="{{ route('user.contact') }}">Kontak</a>
+								<a href="{{ route('user.contact') }}">Contact</a>
 							</li>
 						</ul>
 					</div>
