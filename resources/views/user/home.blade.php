@@ -11,7 +11,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <style>
+<style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
@@ -64,6 +64,27 @@
         .rounded-full {
             border-radius: 9999px !important;
         }
+
+        /* Shrink-on-scroll styles for the navbar */
+        #site-navbar {
+            height: 88px; /* default navbar height */
+            transition: height 240ms ease, background-color 240ms ease, box-shadow 240ms ease, backdrop-filter 240ms;
+            will-change: height, box-shadow, backdrop-filter;
+        }
+        #site-navbar .nav-inner { height: 100%; transition: padding 240ms ease; }
+        #site-navbar .brand { display: inline-block; transform-origin: left center; transition: transform 240ms ease, font-size 240ms ease; }
+
+        /* small state when scrolled */
+        #site-navbar.shrink {
+            height: 56px; /* smaller */
+            backdrop-filter: blur(8px);
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+        }
+        #site-navbar.shrink .brand { transform: scale(0.92); font-size: 1rem; }
+
+        /* keep page content from jumping under fixed navbar */
+        body { padding-top: 88px; }
     </style>
 </head>
 
@@ -74,19 +95,19 @@
     <div class="blob bottom-[-10%] right-[-10%] bg-blue-500/5"></div>
 
     <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-slate-100">
+    <nav id="site-navbar" class="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-slate-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
+            <div class="flex justify-between items-center nav-inner h-20">
                 <div class="flex items-center gap-3">
                     <img src="{{ asset('images/logo-brilian-min2.png') }}" alt="Logo"
                         class="w-10 h-10 object-contain">
                     <div>
-                        <span class="text-xl font-extrabold tracking-tighter text-slate-900">BRILLIAN <span
+                        <span class="brand text-xl font-extrabold tracking-tighter text-slate-900">BRILLIAN <span
                                 class="text-blue-600">CORP</span></span>
                     </div>
                 </div>
 
-                <div class="hidden md:flex items-center gap-8">
+                <div class="hidden md:flex items-center gap-8 nav-links">
                     <a href="#home"
                         class="text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors">Beranda</a>
                     <a href="#solusi"
@@ -423,6 +444,29 @@
             Chat dengan CS Kami
         </span>
     </a>
+
+<script>
+(function(){
+  const nav = document.getElementById('site-navbar');
+  if(!nav) return;
+  const shrinkAt = 60; // px
+  let ticking = false;
+  function onScroll(){
+    if(!ticking){
+      window.requestAnimationFrame(()=>{
+        const sc = window.scrollY || document.documentElement.scrollTop;
+        if(sc > shrinkAt) nav.classList.add('shrink');
+        else nav.classList.remove('shrink');
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  // run once on load
+  onScroll();
+})();
+</script>
 
 </body>
 
