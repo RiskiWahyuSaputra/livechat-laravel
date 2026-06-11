@@ -237,7 +237,7 @@
                         @endforeach
                     </select>
                     <div class="field-hint">
-                        <strong>⚙️ Pilih provider AI:</strong><br>
+                        <strong> Pilih provider AI:</strong><br>
                         • <strong>OpenClaw</strong>: Lokal, unlimited, butuh gateway running<br>
                         • <strong>Groq</strong>: Cloud, gratis, cepat, rate limit tinggi → <strong>Isi "Groq API Key" di bawah</strong><br>
                         • <strong>Gemini</strong>: Cloud, rate limit rendah → <strong>Isi "Gemini API Key" di bawah</strong>
@@ -254,7 +254,7 @@
                                value="{{ $settings['gemini_api_key'] ?? env('GEMINI_API_KEY') }}">
                         <div class="field-hint">Fallback jika ingin kembali ke Gemini.</div>
                         <div style="margin-top:8px;padding:8px 12px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:#92400e;">
-                            <strong>⚠️ Rate Limit:</strong> API Key gratis Gemini memiliki batasan ~15-60 request/menit. Jika user bertanya lebih dari 3x dalam waktu singkat, sistem akan error selama 2-5 menit. Gunakan OpenClaw atau upgrade ke API Key berbayar.
+                            <strong> Rate Limit:</strong> API Key gratis Gemini memiliki batasan ~15-60 request/menit. Jika user bertanya lebih dari 3x dalam waktu singkat, sistem akan error selama 2-5 menit. Gunakan OpenClaw atau upgrade ke API Key berbayar.
                         </div>
                     </div>
                     <div class="field-group">
