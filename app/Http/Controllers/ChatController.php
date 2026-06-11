@@ -242,7 +242,7 @@ class ChatController extends Controller
         }
 
         // Set Cookie & Login
-        Cookie::queue('guest_chat_token', $user->email, 35);
+        Cookie::queue('guest_chat_token', $user->email, 60);
         Auth::guard('web')->login($user, true);
 
         // Pastikan conversation dan pesan otomatis dibuat
@@ -317,7 +317,7 @@ class ChatController extends Controller
         ]);
 
         // Set Cookie & Login
-        Cookie::queue('guest_chat_token', $user->email, 35);
+        Cookie::queue('guest_chat_token', $user->email, 60);
         Auth::guard('web')->login($user, true);
 
         // Pastikan conversation otomatis dibuat
