@@ -105,7 +105,7 @@ erDiagram
 
     CONVERSATION_RATINGS {
         bigint id PK
-        bigint conversation_id FK UK "→ conversations.id"
+        bigint conversation_id FK,UK "→ conversations.id"
         bigint user_id FK "nullable → users.id"
         bigint admin_id FK "nullable → admins.id"
         int rating "tinyint 1-5"
