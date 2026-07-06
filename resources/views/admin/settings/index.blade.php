@@ -9,6 +9,14 @@
     .settings-header h3 { font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
     .settings-header p { color: #64748b; font-size: 14px; margin: 0; }
 
+    .settings-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .settings-header h3 .fe,
+    .settings-header h3 svg.feather { font-size: 22px; line-height: 1; }
+
     .settings-card {
         background: #fff;
         border: 1px solid #e2e8f0;
@@ -32,7 +40,24 @@
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
-    .settings-card-header i { font-size: 16px; }
+    .settings-card-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 34px;
+        font-size: 16px;
+        line-height: 1;
+    }
+    .settings-card-icon.primary { color: #6366f1; background: #eef2ff; }
+    .settings-card-icon.muted { color: #64748b; background: #f1f5f9; }
+    .settings-card-icon.purple { color: #8b5cf6; background: #f5f3ff; }
+    .settings-card-icon .fe { margin: 0; }
+    .settings-card-icon + h5 {
+        line-height: 1.3;
+    }
     .settings-card-body { padding: 20px 24px; }
 
     .field-group { margin-bottom: 18px; }
@@ -63,6 +88,45 @@
         box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
     }
     .field-hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+    .provider-hint {
+        line-height: 1.65;
+    }
+    .provider-hint .hint-title,
+    .warning-hint .hint-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 700;
+    }
+    .provider-hint .hint-icon,
+    .warning-hint .hint-icon {
+        width: 16px;
+        height: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        line-height: 1;
+        border-radius: 999px;
+        flex: 0 0 16px;
+    }
+    .provider-hint .hint-icon { color: #4f46e5; background: #eef2ff; }
+    .warning-hint {
+        margin-top: 8px;
+        padding: 10px 12px;
+        background: #fef3c7;
+        border-left: 3px solid #f59e0b;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #92400e;
+        line-height: 1.45;
+    }
+    .warning-hint .hint-icon { color: #b45309; background: #fde68a; }
+    .provider-hint ul {
+        margin: 4px 0 0 0;
+        padding-left: 16px;
+    }
 
     .field-divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
 
@@ -211,7 +275,7 @@
 <div class="settings-page">
 
     <div class="settings-header">
-        <h3><i class="fe fe-settings" style="color:#6366f1;margin-right:8px;"></i>Pengaturan Sistem</h3>
+        <h3><i class="fe fe-settings" style="color:#6366f1;"></i>Pengaturan Sistem</h3>
         <p>Konfigurasi integrasi, mode operasional, dan pengaturan umum aplikasi.</p>
     </div>
 
@@ -223,7 +287,7 @@
         {{-- ── AI & OpenClaw ── --}}
         <div class="settings-card">
             <div class="settings-card-header">
-                <i class="fe fe-cpu" style="color:#6366f1;"></i>
+                <span class="settings-card-icon primary"><i class="fe fe-cpu"></i></span>
                 <h5>Kecerdasan Buatan & OpenClaw</h5>
             </div>
             <div class="settings-card-body">
@@ -236,11 +300,13 @@
                             <option value="{{ $val }}" {{ ($settings['ai_provider'] ?? 'openclaw') == $val ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
-                    <div class="field-hint">
-                        <strong> Pilih provider AI:</strong><br>
-                        • <strong>OpenClaw</strong>: Lokal, unlimited, butuh gateway running<br>
-                        • <strong>Groq</strong>: Cloud, gratis, cepat, rate limit tinggi → <strong>Isi "Groq API Key" di bawah</strong><br>
-                        • <strong>Gemini</strong>: Cloud, rate limit rendah → <strong>Isi "Gemini API Key" di bawah</strong>
+                    <div class="field-hint provider-hint">
+                        <span class="hint-title"><span class="hint-icon"><i class="fe fe-settings"></i></span>Pilih provider AI:</span>
+                        <ul>
+                            <li><strong>OpenClaw</strong>: Lokal, unlimited, butuh gateway running</li>
+                            <li><strong>Groq</strong>: Cloud, gratis, cepat, rate limit tinggi, <strong>isi "Groq API Key" di bawah</strong></li>
+                            <li><strong>Gemini</strong>: Cloud, rate limit rendah, <strong>isi "Gemini API Key" di bawah</strong></li>
+                        </ul>
                     </div>
                 </div>
 
@@ -253,8 +319,9 @@
                         <input type="password" name="gemini_api_key" class="field-input"
                                value="{{ $settings['gemini_api_key'] ?? env('GEMINI_API_KEY') }}">
                         <div class="field-hint">Fallback jika ingin kembali ke Gemini.</div>
-                        <div style="margin-top:8px;padding:8px 12px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:#92400e;">
-                            <strong> Rate Limit:</strong> API Key gratis Gemini memiliki batasan ~15-60 request/menit. Jika user bertanya lebih dari 3x dalam waktu singkat, sistem akan error selama 2-5 menit. Gunakan OpenClaw atau upgrade ke API Key berbayar.
+                        <div class="warning-hint">
+                            <span class="hint-title"><span class="hint-icon"><i class="fe fe-alert-triangle"></i></span>Rate Limit:</span>
+                            API Key gratis Gemini memiliki batasan ~15-60 request/menit. Jika user bertanya lebih dari 3x dalam waktu singkat, sistem akan error selama 2-5 menit. Gunakan OpenClaw atau upgrade ke API Key berbayar.
                         </div>
                     </div>
                     <div class="field-group">
@@ -402,7 +469,7 @@
         {{-- ── Umum ── --}}
         <div class="settings-card">
             <div class="settings-card-header">
-                <i class="fe fe-sliders" style="color:#64748b;"></i>
+                <span class="settings-card-icon muted"><i class="fe fe-sliders"></i></span>
                 <h5>Umum & Sistem</h5>
             </div>
             <div class="settings-card-body">
@@ -434,7 +501,7 @@
         {{-- ── Embed Widget Settings ── --}}
         <div class="settings-card">
             <div class="settings-card-header">
-                <i class="fe fe-code" style="color:#8b5cf6;"></i>
+                <span class="settings-card-icon purple"><i class="fe fe-code"></i></span>
                 <h5>Embed Widget Settings</h5>
             </div>
             <div class="settings-card-body">
