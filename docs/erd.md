@@ -16,8 +16,9 @@ erDiagram
         boolean is_online
         boolean is_blocked
         string registration_token "nullable"
-        remember_token
-        timestamps
+        string remember_token
+        timestamp created_at
+        timestamp updated_at
     }
 
     CUSTOMERS {
@@ -27,7 +28,8 @@ erDiagram
         string contact
         string origin
         boolean is_blocked
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ==================== CORE MODULE: ADMIN & ROLE & DIVISION ====================
@@ -37,15 +39,16 @@ erDiagram
         string email UK
         string password
         bigint role_id FK "nullable"
-        enum role "super_admin | agent"
+        string role "super_admin | agent"
         boolean is_superadmin
-        json permissions "nullable"
-        enum status "online | busy | offline"
+        string permissions "json nullable"
+        string status "online | busy | offline"
         int max_active_chats "default 5"
         int level "nullable"
         string division "nullable → divisions.slug"
-        remember_token
-        timestamps
+        string remember_token
+        timestamp created_at
+        timestamp updated_at
     }
 
     ROLES {
@@ -54,7 +57,8 @@ erDiagram
         string slug UK
         text description "nullable"
         int level "nullable"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     DIVISIONS {
@@ -63,7 +67,8 @@ erDiagram
         string slug UK
         text description "nullable"
         bigint supervisor_id FK "nullable → admins.id"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ==================== CORE MODULE: CONVERSATION ====================
@@ -71,7 +76,7 @@ erDiagram
         bigint id PK
         bigint user_id FK "→ users.id"
         bigint admin_id FK "nullable → admins.id"
-        enum status "pending | active | closed | queued"
+        string status "pending | active | closed | queued"
         string bot_phase "nullable"
         int queue_position "nullable"
         string problem_category "nullable"
@@ -81,19 +86,21 @@ erDiagram
         int selected_menu_id "nullable"
         int reminder_count "nullable"
         timestamp last_message_at "nullable"
-        timestamps
-        softDeletes
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at "nullable softDeletes"
     }
 
     MESSAGES {
         bigint id PK
         bigint conversation_id FK "→ conversations.id"
         bigint sender_id "polymorphic"
-        enum sender_type "user | admin | system"
-        enum message_type "text | image | file | whisper"
+        string sender_type "user | admin | system"
+        string message_type "text | image | file | whisper"
         text content
         boolean is_read
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     CONVERSATION_RATINGS {
@@ -101,36 +108,40 @@ erDiagram
         bigint conversation_id FK UK "→ conversations.id"
         bigint user_id FK "nullable → users.id"
         bigint admin_id FK "nullable → admins.id"
-        tinyint rating
+        int rating "tinyint 1-5"
         text comment "nullable"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     TAGS {
         bigint id PK
         string name UK
         string color "nullable"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     CONVERSATION_TAG {
         bigint id PK
         bigint conversation_id FK "→ conversations.id"
         bigint tag_id FK "→ tags.id"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ==================== MODULE: BOT / AI ====================
     BOT_MENUS {
         bigint id PK
-        bigint parent_id FK "nullable → bot_menus.id (self)"
+        bigint parent_id FK "nullable → bot_menus.id self"
         string flow_type "nullable"
         string label
         text message_response "nullable"
         string action_type "default: submenu"
         string action_value "nullable"
         int order_index "default 0"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ==================== MODULE: INTERNAL ADMIN CHAT ====================
@@ -139,7 +150,8 @@ erDiagram
         bigint user_one_id FK "→ admins.id"
         bigint user_two_id FK "→ admins.id"
         timestamp last_message_at "nullable"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     INTERNAL_MESSAGES {
@@ -149,7 +161,8 @@ erDiagram
         text content
         string message_type "default: text"
         boolean is_read
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     ADMIN_CONVERSATIONS {
@@ -157,7 +170,8 @@ erDiagram
         bigint admin_1_id FK "→ admins.id"
         bigint admin_2_id FK "→ admins.id"
         timestamp last_message_at "nullable"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     ADMIN_MESSAGES {
@@ -167,7 +181,8 @@ erDiagram
         string message_type
         text content
         boolean is_read
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ==================== MODULE: SUPPORTING ====================
@@ -176,7 +191,8 @@ erDiagram
         string title
         string command "nullable"
         text content
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     CATEGORIES {
@@ -185,17 +201,19 @@ erDiagram
         string slug UK
         string icon_image "nullable"
         boolean is_featured
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     PRODUCTS {
         bigint id PK
         bigint category_id FK "→ categories.id"
         string name
-        decimal price "15,2"
+        string price "decimal 15,2"
         text description "nullable"
         string image "nullable"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     CHATS {
@@ -204,7 +222,8 @@ erDiagram
         string name "nullable"
         text message
         text response "nullable"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     SETTINGS {
@@ -212,7 +231,8 @@ erDiagram
         string key UK
         text value "nullable"
         string group "default: general"
-        timestamps
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ==================== RELATIONSHIPS ====================
